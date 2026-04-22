@@ -132,6 +132,20 @@ def handler(event: dict, context) -> dict:
         body = json.loads(event.get('body') or '{}')
         action = body.get('action', '')
 
+        if action == 'confirm_payment':
+            order_id = body.get('order_id')
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE orders SET payment_confirmed = TRUE, status = 'waiting', updated_at = NOW() WHERE id = %s AND is_archived = FALSE",
+                (order_id,)
+            )
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
         if action == 'set_status':
             order_ids = body.get('order_ids', [])
             new_status = body.get('status', '')

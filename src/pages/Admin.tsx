@@ -276,9 +276,13 @@ export default function Admin() {
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="text-orange-400 font-semibold">{order.total_price} ₽</span>
-                      {order.payment_amount && (
-                        <div className={`text-xs mt-0.5 ${order.payment_confirmed ? 'text-green-400' : 'text-white/30'}`}>
-                          {order.payment_confirmed ? '✓' : '⏳'} {order.payment_amount} ₽
+                      {order.payment_amount && !order.payment_confirmed && (
+                        <ConfirmPayBtn order={order} onConfirmed={load} />
+                      )}
+                      {order.payment_confirmed && (
+                        <div className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                          <Icon name="CheckCircle" size={11} />
+                          {order.payment_amount} ₽
                         </div>
                       )}
                     </td>
@@ -310,6 +314,35 @@ export default function Admin() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function ConfirmPayBtn({ order, onConfirmed }: { order: AdminOrder; onConfirmed: () => void }) {
+  const [loading, setLoading] = useState(false)
+
+  const handle = async () => {
+    setLoading(true)
+    const res = await api.admin.confirmPayment(order.id)
+    setLoading(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Оплата @${order.nickname} подтверждена`)
+    onConfirmed()
+  }
+
+  return (
+    <div className="mt-1 text-right">
+      <div className="text-yellow-400/70 text-xs mb-1 flex items-center justify-end gap-1">
+        <Icon name="Clock" size={10} />
+        {order.payment_amount} ₽ · {order.payment_note || 'без комментария'}
+      </div>
+      <button
+        onClick={handle}
+        disabled={loading}
+        className="text-xs bg-green-500/15 hover:bg-green-500/25 text-green-400 border border-green-500/30 rounded px-2 py-0.5 transition-colors disabled:opacity-50"
+      >
+        {loading ? '...' : '✓ Подтвердить'}
+      </button>
     </div>
   )
 }

@@ -78,5 +78,8 @@ export const api = {
 
     setStatus: (order_ids: number[], status: string) =>
       post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status }),
+
+    confirmPayment: (order_id: number) =>
+      post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id }),
   },
 }
