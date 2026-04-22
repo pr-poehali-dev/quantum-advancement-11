@@ -176,21 +176,27 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
         if action == 'pay':
-            order_id = body.get('order_id')
+            # Принимаем order_ids (список) или order_id (один)
+            order_ids = body.get('order_ids') or ([body.get('order_id')] if body.get('order_id') else [])
             payment_amount = body.get('payment_amount')
             payment_note = body.get('payment_note', '')
-            if not order_id or not payment_amount:
-                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id и сумму'})}
+            if not order_ids or not payment_amount:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите заказы и сумму'})}
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("SELECT id, status FROM orders WHERE id = %s AND user_id = %s", (order_id, user['id']))
-            order = cur.fetchone()
-            if not order or order[1] not in PAYMENT_STATUSES:
-                conn.close()
-                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заказ не ожидает оплаты'})}
+            placeholders = ','.join(['%s'] * len(order_ids))
             cur.execute(
-                "UPDATE orders SET payment_amount = %s, payment_date = NOW(), payment_note = %s WHERE id = %s",
-                (float(payment_amount), payment_note, order_id)
+                f"SELECT id FROM orders WHERE id IN ({placeholders}) AND user_id = %s AND status = ANY(%s)",
+                list(order_ids) + [user['id'], list(PAYMENT_STATUSES)]
+            )
+            valid_ids = [r[0] for r in cur.fetchall()]
+            if not valid_ids:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет заказов, ожидающих оплаты'})}
+            ph2 = ','.join(['%s'] * len(valid_ids))
+            cur.execute(
+                f"UPDATE orders SET payment_amount = %s, payment_date = NOW(), payment_note = %s WHERE id IN ({ph2})",
+                [float(payment_amount), payment_note] + valid_ids
             )
             conn.commit()
             conn.close()

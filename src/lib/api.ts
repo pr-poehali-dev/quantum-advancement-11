@@ -60,7 +60,7 @@ export const api = {
     archive: (order_id: number) =>
       post(`${ORDERS_URL}/`, { action: 'archive', order_id }),
 
-    pay: (data: { order_id: number; payment_amount: number; payment_note: string }) =>
+    pay: (data: { order_ids?: number[]; order_id?: number; payment_amount: number; payment_note: string }) =>
       post(`${ORDERS_URL}/`, { action: 'pay', ...data }),
 
     pickup: (order_id: number, pickup_point: string) =>

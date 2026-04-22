@@ -55,8 +55,9 @@ export default function Cabinet() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'active' | 'payment'>('active')
 
-  // Форма оплаты
-  const [payForm, setPayForm] = useState<{ order_id: number; amount: string; note: string } | null>(null)
+  // Вкладка оплаты: чекбоксы + одна форма
+  const [paySelected, setPaySelected] = useState<Set<number>>(new Set())
+  const [payNote, setPayNote] = useState('')
   const [paying, setSaving] = useState(false)
 
   // Форма пункта выдачи
@@ -97,13 +98,18 @@ export default function Cabinet() {
   }
 
   const handlePay = async () => {
-    if (!payForm) return
+    if (paySelected.size === 0) { toast.error('Отметьте заказы, которые оплачиваете'); return }
     setSaving(true)
-    const res = await api.orders.pay({ order_id: payForm.order_id, payment_amount: Number(payForm.amount), payment_note: payForm.note })
+    const res = await api.orders.pay({
+      order_ids: Array.from(paySelected),
+      payment_amount: selectedPayTotal,
+      payment_note: payNote,
+    } as Parameters<typeof api.orders.pay>[0])
     setSaving(false)
     if (res.error) { toast.error(res.error); return }
     toast.success('Отметка об оплате отправлена! Модератор проверит.')
-    setPayForm(null)
+    setPaySelected(new Set())
+    setPayNote('')
     load()
   }
 
@@ -121,6 +127,27 @@ export default function Cabinet() {
   const awaitingPayment = orders.filter(o => o.status === 'awaiting_payment')
   const activeOrders = orders.filter(o => o.status !== 'awaiting_payment')
   const paymentTotal = awaitingPayment.reduce((s, o) => s + o.total_price, 0)
+
+  const selectedPayTotal = awaitingPayment
+    .filter(o => paySelected.has(o.id))
+    .reduce((s, o) => s + o.total_price, 0)
+
+  const togglePayOrder = (id: number) => {
+    setPaySelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+  }
+
+  const togglePayAll = () => {
+    const unpaid = awaitingPayment.filter(o => !o.payment_amount)
+    if (paySelected.size === unpaid.length) {
+      setPaySelected(new Set())
+    } else {
+      setPaySelected(new Set(unpaid.map(o => o.id)))
+    }
+  }
 
   if (!user) return null
 
@@ -231,73 +258,100 @@ export default function Cabinet() {
                 <div className="text-white/40 text-sm">Нет заказов, ожидающих оплаты</div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Блок реквизитов */}
-                <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-1">
-                  <div className="text-white/50 text-xs uppercase tracking-wider mb-3">Реквизиты для оплаты</div>
+              <div className="space-y-3">
+                {/* Реквизиты */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+                  <div className="text-white/40 text-xs uppercase tracking-wider mb-2">Реквизиты для оплаты</div>
                   <div className="text-white font-mono text-sm">Карта: <span className="text-orange-300">4276 •••• •••• 1234</span></div>
-                  <div className="text-white/50 text-xs">Получатель: Организатор распива</div>
-                  <div className="mt-3 pt-3 border-t border-white/10 flex justify-between">
-                    <span className="text-white/50 text-sm">Итого к оплате:</span>
-                    <span className="text-orange-400 font-bold">{paymentTotal.toFixed(2)} ₽</span>
-                  </div>
+                  <div className="text-white/40 text-xs">Получатель: Организатор распива</div>
                 </div>
 
+                {/* Выбрать все */}
+                {awaitingPayment.some(o => !o.payment_amount) && (
+                  <button
+                    onClick={togglePayAll}
+                    className="flex items-center gap-2 text-white/40 hover:text-white/70 text-xs transition-colors px-1"
+                  >
+                    <input
+                      type="checkbox"
+                      readOnly
+                      checked={paySelected.size === awaitingPayment.filter(o => !o.payment_amount).length}
+                      className="accent-orange-500 w-3.5 h-3.5 pointer-events-none"
+                    />
+                    Выбрать все неоплаченные
+                  </button>
+                )}
+
+                {/* Список заказов */}
                 {awaitingPayment.map(order => (
-                  <div key={order.id} className="bg-white/5 border border-orange-500/20 rounded-xl p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-purple-500/10 flex items-center justify-center shrink-0 text-lg">
-                        {order.image_url ? <img src={order.image_url} className="w-full h-full object-cover rounded-lg" /> : '🌸'}
+                  <div
+                    key={order.id}
+                    onClick={() => !order.payment_amount && togglePayOrder(order.id)}
+                    className={`border rounded-xl p-4 transition-all ${
+                      order.payment_amount
+                        ? 'bg-white/3 border-white/10 opacity-60'
+                        : paySelected.has(order.id)
+                          ? 'bg-orange-500/8 border-orange-500/40 cursor-pointer'
+                          : 'bg-white/5 border-white/10 cursor-pointer hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {!order.payment_amount && (
+                        <input
+                          type="checkbox"
+                          readOnly
+                          checked={paySelected.has(order.id)}
+                          className="accent-orange-500 w-4 h-4 shrink-0 pointer-events-none"
+                        />
+                      )}
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500/20 to-purple-500/10 flex items-center justify-center shrink-0 overflow-hidden text-base">
+                        {order.image_url ? <img src={order.image_url} className="w-full h-full object-cover" /> : '🌸'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-white/40 text-xs">{order.brand}</div>
                         <div className="text-white text-sm font-medium truncate">{order.product_name}</div>
-                        <div className="text-white/50 text-xs mt-0.5">{order.volume_ml} мл · {order.atomizer_name}</div>
+                        <div className="text-white/40 text-xs mt-0.5">{order.volume_ml} мл · {order.atomizer_name}</div>
                       </div>
-                      <div className="text-orange-400 font-bold shrink-0">{order.total_price} ₽</div>
+                      <div className="text-right shrink-0">
+                        <div className="text-orange-400 font-bold">{order.total_price} ₽</div>
+                        {order.payment_amount && (
+                          <div className="text-green-400 text-xs flex items-center gap-1 justify-end mt-0.5">
+                            <Icon name="Clock" size={10} />
+                            ожидает проверки
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    {order.payment_amount ? (
-                      <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2 text-green-400 text-xs flex items-center gap-2">
-                        <Icon name="Clock" size={12} />
-                        Оплата {order.payment_amount} ₽ — ожидаем подтверждения модератора
-                      </div>
-                    ) : (
-                      payForm?.order_id === order.id ? (
-                        <div className="space-y-2 pt-2 border-t border-white/10">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-white/40 text-xs mb-1 block">Сумма оплаты (₽)</label>
-                              <Input type="number" value={payForm.amount}
-                                onChange={e => setPayForm(f => f ? { ...f, amount: e.target.value } : f)}
-                                className="bg-white/10 border-white/20 text-white text-sm h-9" />
-                            </div>
-                            <div>
-                              <label className="text-white/40 text-xs mb-1 block">Комментарий (дата и время)</label>
-                              <Input value={payForm.note}
-                                onChange={e => setPayForm(f => f ? { ...f, note: e.target.value } : f)}
-                                placeholder="напр. 22 апр, 14:30"
-                                className="bg-white/10 border-white/20 text-white text-sm h-9" />
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button onClick={handlePay} disabled={paying || !payForm.amount}
-                              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm h-9">
-                              {paying ? 'Отправляем...' : 'Я оплатил(а) — отправить'}
-                            </Button>
-                            <Button variant="ghost" onClick={() => setPayForm(null)}
-                              className="text-white/40 hover:text-white text-sm h-9">Отмена</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <Button onClick={() => setPayForm({ order_id: order.id, amount: String(order.total_price), note: '' })}
-                          className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm h-9 mt-1">
-                          Отметить оплату
-                        </Button>
-                      )
-                    )}
                   </div>
                 ))}
+
+                {/* Форма оплаты — прикреплена к низу, показывается когда что-то выбрано */}
+                {paySelected.size > 0 && (
+                  <div className="sticky bottom-4 bg-zinc-900 border border-orange-500/30 rounded-xl p-4 space-y-3 shadow-2xl shadow-black/50">
+                    <div className="flex justify-between items-center">
+                      <div className="text-white/50 text-sm">
+                        Выбрано: <span className="text-white font-medium">{paySelected.size}</span> {paySelected.size === 1 ? 'заказ' : 'заказа'}
+                      </div>
+                      <div className="text-orange-400 font-bold text-xl">{selectedPayTotal.toFixed(2)} ₽</div>
+                    </div>
+                    <div>
+                      <label className="text-white/40 text-xs mb-1 block">Комментарий (дата, время, способ оплаты)</label>
+                      <Input
+                        value={payNote}
+                        onChange={e => setPayNote(e.target.value)}
+                        placeholder="напр. 22 апр, 14:30, Тинькофф"
+                        className="bg-white/10 border-white/20 text-white text-sm h-9"
+                      />
+                    </div>
+                    <Button
+                      onClick={handlePay}
+                      disabled={paying}
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-10"
+                    >
+                      {paying ? 'Отправляем...' : `Я оплатил(а) ${selectedPayTotal.toFixed(2)} ₽ — отправить`}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>
