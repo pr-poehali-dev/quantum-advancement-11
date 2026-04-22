@@ -18,25 +18,19 @@ def get_conn():
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
 }
 
 
 def get_session_user(headers: dict):
-    cookie = headers.get('X-Cookie', '') or headers.get('cookie', '')
-    session_id = None
-    for part in cookie.split(';'):
-        part = part.strip()
-        if part.startswith('session='):
-            session_id = part[8:]
-            break
-    if not session_id:
+    token = (headers.get('X-Auth-Token') or '').strip()
+    if not token:
         return None
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         "SELECT u.id, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
-        (session_id,)
+        (token,)
     )
     row = cur.fetchone()
     conn.close()

@@ -3,7 +3,7 @@
 POST /register — регистрация (nickname, email, phone, password)
 POST /login — вход (email, password)
 POST /logout — выход
-GET /me — текущий пользователь по сессии
+GET /me — текущий пользователь по токену X-Auth-Token
 """
 import json
 import os
@@ -21,34 +21,25 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-def get_session_user(headers: dict):
-    cookie = headers.get('X-Cookie', '') or headers.get('cookie', '')
-    session_id = None
-    for part in cookie.split(';'):
-        part = part.strip()
-        if part.startswith('session='):
-            session_id = part[8:]
-            break
-    if not session_id:
+def get_token_user(headers: dict):
+    token = headers.get('X-Auth-Token', '').strip()
+    if not token:
         return None
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         "SELECT u.id, u.nickname, u.email, u.phone, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
-        (session_id,)
+        (token,)
     )
     row = cur.fetchone()
     conn.close()
-    if not row:
-        return None
-    return {'id': row[0], 'nickname': row[1], 'email': row[2], 'phone': row[3], 'role': row[4]}
+    return {'id': row[0], 'nickname': row[1], 'email': row[2], 'phone': row[3], 'role': row[4]} if row else None
 
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Auth-Token',
-    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
 }
 
 
@@ -69,15 +60,13 @@ def handler(event: dict, context) -> dict:
 
         if not all([nickname, email, phone, password]):
             return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Все поля обязательны'})}
-
         if len(password) < 6:
             return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Пароль минимум 6 символов'})}
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("SELECT id FROM users WHERE nickname = %s OR email = %s OR phone = %s", (nickname, email, phone))
-        existing = cur.fetchone()
-        if existing:
+        if cur.fetchone():
             conn.close()
             return {'statusCode': 409, 'headers': CORS, 'body': json.dumps({'error': 'Ник, email или телефон уже заняты'})}
 
@@ -86,14 +75,14 @@ def handler(event: dict, context) -> dict:
             (nickname, email, phone, hash_password(password))
         )
         user_id, role = cur.fetchone()
-        session_id = secrets.token_hex(32)
+        token = secrets.token_hex(32)
         expires = datetime.now() + timedelta(days=30)
-        cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (session_id, user_id, expires))
+        cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (token, user_id, expires))
         conn.commit()
         conn.close()
 
-        resp_headers = {**CORS, 'X-Set-Cookie': f'session={session_id}; Path=/; HttpOnly; Max-Age=2592000'}
-        return {'statusCode': 200, 'headers': resp_headers, 'body': json.dumps({
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
+            'token': token,
             'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role}
         })}
 
@@ -110,36 +99,29 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Неверный email или пароль'})}
 
         user_id, nickname, email, phone, role = row
-        session_id = secrets.token_hex(32)
+        token = secrets.token_hex(32)
         expires = datetime.now() + timedelta(days=30)
-        cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (session_id, user_id, expires))
+        cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (token, user_id, expires))
         conn.commit()
         conn.close()
 
-        resp_headers = {**CORS, 'X-Set-Cookie': f'session={session_id}; Path=/; HttpOnly; Max-Age=2592000'}
-        return {'statusCode': 200, 'headers': resp_headers, 'body': json.dumps({
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
+            'token': token,
             'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role}
         })}
 
     if path.endswith('/logout') and method == 'POST':
-        cookie = headers.get('X-Cookie', '')
-        session_id = None
-        for part in cookie.split(';'):
-            part = part.strip()
-            if part.startswith('session='):
-                session_id = part[8:]
-                break
-        if session_id:
+        token = (headers.get('X-Auth-Token') or '').strip()
+        if token:
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
+            cur.execute("DELETE FROM sessions WHERE id = %s", (token,))
             conn.commit()
             conn.close()
-        resp_headers = {**CORS, 'X-Set-Cookie': 'session=; Path=/; Max-Age=0'}
-        return {'statusCode': 200, 'headers': resp_headers, 'body': json.dumps({'ok': True})}
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
     if path.endswith('/me') and method == 'GET':
-        user = get_session_user(headers)
+        user = get_token_user(headers)
         if not user:
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Не авторизован'})}
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'user': user})}

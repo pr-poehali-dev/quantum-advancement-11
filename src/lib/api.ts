@@ -2,55 +2,68 @@ const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
 const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
 
+export const getToken = () => localStorage.getItem('auth_token') || ''
+export const setToken = (t: string) => localStorage.setItem('auth_token', t)
+export const clearToken = () => localStorage.removeItem('auth_token')
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'X-Auth-Token': getToken(),
+})
+
+const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken() } }).then(r => r.json())
+const post = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data ?? {}) }).then(r => r.json())
+const put = (url: string, data: unknown) => fetch(url, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }).then(r => r.json())
+
 export const api = {
   auth: {
     register: (data: { nickname: string; email: string; phone: string; password: string }) =>
-      fetch(`${AUTH_URL}/register`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      post(`${AUTH_URL}/register`, data),
 
     login: (data: { email: string; password: string }) =>
-      fetch(`${AUTH_URL}/login`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      post(`${AUTH_URL}/login`, data),
 
     logout: () =>
-      fetch(`${AUTH_URL}/logout`, { method: 'POST', credentials: 'include' }).then(r => r.json()),
+      post(`${AUTH_URL}/logout`),
 
     me: () =>
-      fetch(`${AUTH_URL}/me`, { credentials: 'include' }).then(r => r.json()),
+      get(`${AUTH_URL}/me`),
   },
 
   catalog: {
     list: (sort?: string) =>
-      fetch(`${CATALOG_URL}/${sort ? '?sort=' + sort : ''}`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${CATALOG_URL}/${sort ? '?sort=' + sort : ''}`).then(r => r.json()),
 
     product: (id: number) =>
-      fetch(`${CATALOG_URL}/${id}`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${CATALOG_URL}/${id}`).then(r => r.json()),
 
     atomizers: () =>
-      fetch(`${CATALOG_URL}/atomizers`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${CATALOG_URL}/atomizers`).then(r => r.json()),
 
     update: (id: number, data: Record<string, unknown>) =>
-      fetch(`${CATALOG_URL}/${id}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      put(`${CATALOG_URL}/${id}`, data),
 
     create: (data: Record<string, unknown>) =>
-      fetch(`${CATALOG_URL}/`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      post(`${CATALOG_URL}/`, data),
   },
 
   orders: {
     place: (data: { product_id: number; volume_ml: number }) =>
-      fetch(`${ORDERS_URL}/place`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      post(`${ORDERS_URL}/place`, data),
 
     my: () =>
-      fetch(`${ORDERS_URL}/my`, { credentials: 'include' }).then(r => r.json()),
+      get(`${ORDERS_URL}/my`),
 
     delete: (order_id: number) =>
-      fetch(`${ORDERS_URL}/delete`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id }) }).then(r => r.json()),
+      post(`${ORDERS_URL}/delete`, { order_id }),
 
     archive: (order_id: number) =>
-      fetch(`${ORDERS_URL}/archive`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id }) }).then(r => r.json()),
+      post(`${ORDERS_URL}/archive`, { order_id }),
 
     pay: (data: { order_id: number; payment_amount: number; payment_note: string }) =>
-      fetch(`${ORDERS_URL}/pay`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+      post(`${ORDERS_URL}/pay`, data),
 
     pickup: (order_id: number, pickup_point: string) =>
-      fetch(`${ORDERS_URL}/pickup`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id, pickup_point }) }).then(r => r.json()),
+      post(`${ORDERS_URL}/pickup`, { order_id, pickup_point }),
   },
 }
