@@ -273,32 +273,50 @@ export default function Admin() {
           </Button>
         </div>
 
-        {/* Групповая смена статуса */}
-        {selected.size > 0 && (
-          <div className="flex items-center gap-3 mb-4 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
-            <span className="text-orange-300 text-sm font-medium">Выбрано: {selected.size}</span>
+        {/* Панель групповых действий — всегда видна */}
+        <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${selected.size > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/3 border-white/10'}`}>
+          <button
+            onClick={toggleAll}
+            className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors"
+          >
+            <input
+              type="checkbox"
+              readOnly
+              checked={orders.length > 0 && selected.size === orders.length}
+              className="accent-orange-500 w-4 h-4 pointer-events-none"
+            />
+            {selected.size > 0
+              ? <span className="text-orange-300 font-medium">Выбрано: {selected.size} из {orders.length}</span>
+              : <span>Выбрать все</span>
+            }
+          </button>
+
+          <div className="flex items-center gap-2 ml-auto">
             <select
               value={bulkStatus}
               onChange={e => setBulkStatus(e.target.value)}
-              className="bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-8 appearance-none"
+              disabled={selected.size === 0}
+              className="bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-8 appearance-none disabled:opacity-40"
             >
-              <option value="" className="bg-zinc-900">Выбрать статус...</option>
+              <option value="" className="bg-zinc-900">Сменить статус...</option>
               {ALL_STATUSES.map(s => (
                 <option key={s} value={s} className="bg-zinc-900">{STATUS_LABEL[s]}</option>
               ))}
             </select>
             <Button
               onClick={handleBulkStatus}
-              disabled={applying || !bulkStatus}
-              className="bg-orange-500 hover:bg-orange-600 text-white h-8 text-xs px-4"
+              disabled={applying || !bulkStatus || selected.size === 0}
+              className="bg-orange-500 hover:bg-orange-600 text-white h-8 text-xs px-4 disabled:opacity-40"
             >
               {applying ? 'Применяю...' : 'Применить'}
             </Button>
-            <button onClick={() => setSelected(new Set())} className="text-white/30 hover:text-white text-xs ml-auto">
-              Снять выбор
-            </button>
+            {selected.size > 0 && (
+              <button onClick={() => setSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">
+                Снять
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Таблица */}
         <div className="overflow-x-auto rounded-xl border border-white/10">
