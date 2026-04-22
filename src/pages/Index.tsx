@@ -3,6 +3,7 @@ import { ArrowRight, Menu } from "lucide-react"
 import { LineShadowText } from "@/components/line-shadow-text"
 import { ShimmerButton } from "@/components/shimmer-button"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 
 export default function Index() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -714,9 +715,11 @@ export default function Index() {
           <Menu className="w-6 h-6" />
         </button>
 
-        <ShimmerButton className="hidden md:flex bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-xl text-sm lg:text-base font-medium shadow-lg">
-          Войти
-        </ShimmerButton>
+        <Link to="/login">
+          <ShimmerButton className="hidden md:flex bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-xl text-sm lg:text-base font-medium shadow-lg">
+            Войти
+          </ShimmerButton>
+        </Link>
       </header>
 
       {mobileMenuOpen && (
@@ -734,9 +737,11 @@ export default function Index() {
             <a href="#" className="text-white/80 hover:text-white transition-colors">
               Контакты
             </a>
-            <ShimmerButton className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-lg w-fit">
-              Войти
-            </ShimmerButton>
+            <Link to="/login">
+              <ShimmerButton className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-lg w-fit">
+                Войти
+              </ShimmerButton>
+            </Link>
           </nav>
         </div>
       )}
@@ -768,14 +773,18 @@ export default function Index() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <Button className="group relative bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-xs lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border border-orange-400/30 shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5">
-            Зарегистрироваться
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 group-hover:-rotate-12 transition-transform duration-300" />
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </Button>
-          <Button variant="outline" className="border-white/30 text-white bg-white/5 hover:bg-white/10 px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-xs lg:text-lg font-semibold transition-all duration-300">
-            Перейти в каталог
-          </Button>
+          <Link to="/register">
+            <Button className="group relative bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-xs lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border border-orange-400/30 shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5">
+              Зарегистрироваться
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 group-hover:-rotate-12 transition-transform duration-300" />
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </Button>
+          </Link>
+          <Link to="/catalog">
+            <Button variant="outline" className="border-white/30 text-white bg-white/5 hover:bg-white/10 px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-xs lg:text-lg font-semibold transition-all duration-300">
+              Перейти в каталог
+            </Button>
+          </Link>
         </div>
 
         <div className="mt-8 sm:mt-12 flex items-center gap-6 sm:gap-10">

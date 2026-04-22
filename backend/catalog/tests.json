@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "GET catalog list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET catalog 404",
+      "method": "GET",
+      "path": "/999999",
+      "expectedStatus": 404,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
