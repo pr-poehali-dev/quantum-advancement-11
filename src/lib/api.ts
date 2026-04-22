@@ -1,6 +1,7 @@
 const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952354e'
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
 const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
+const ADMIN_URL = 'https://functions.poehali.dev/029f6170-ce3b-4284-acff-07d6c3c33519'
 
 export const getToken = () => localStorage.getItem('auth_token') || ''
 export const setToken = (t: string) => localStorage.setItem('auth_token', t)
@@ -64,5 +65,18 @@ export const api = {
 
     pickup: (order_id: number, pickup_point: string) =>
       post(`${ORDERS_URL}/`, { action: 'pickup', order_id, pickup_point }),
+  },
+
+  admin: {
+    orders: (filters: { nick?: string; product?: string; status?: string }) => {
+      const p = new URLSearchParams({ action: 'orders' })
+      if (filters.nick) p.set('nick', filters.nick)
+      if (filters.product) p.set('product', filters.product)
+      if (filters.status) p.set('status', filters.status)
+      return get(`${ADMIN_URL}/?${p.toString()}`)
+    },
+
+    setStatus: (order_ids: number[], status: string) =>
+      post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status }),
   },
 }

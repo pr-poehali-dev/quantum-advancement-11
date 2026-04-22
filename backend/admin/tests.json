@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "GET orders without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 403,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
