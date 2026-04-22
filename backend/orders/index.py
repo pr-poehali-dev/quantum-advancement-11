@@ -99,6 +99,26 @@ def handler(event: dict, context) -> dict:
                     'product_id': r[16],
                 })
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(orders)}
+
+        if action == 'my_debts':
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT id, type, amount, reason, resolved, created_at,
+                          client_request, client_card, client_request_at, order_id, resolve_note
+                   FROM debts WHERE user_id = %s ORDER BY resolved ASC, created_at DESC""",
+                (user['id'],)
+            )
+            rows = cur.fetchall()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+                'id': r[0], 'type': r[1], 'amount': float(r[2]),
+                'reason': r[3], 'resolved': r[4], 'created_at': str(r[5]),
+                'client_request': r[6], 'client_card': r[7],
+                'client_request_at': str(r[8]) if r[8] else None,
+                'order_id': r[9], 'resolve_note': r[10],
+            } for r in rows])}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     # POST /
@@ -215,6 +235,31 @@ def handler(event: dict, context) -> dict:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Выбор пункта недоступен'})}
             cur.execute("UPDATE orders SET pickup_point = %s WHERE id = %s", (pickup_point, order_id))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'debt_request':
+            # Клиент запрашивает возврат или зачёт по своему долгу (we_owe)
+            debt_id = body.get('debt_id')
+            request_type = body.get('request_type')  # 'refund' или 'credit'
+            card = (body.get('card') or '').strip()
+            if not debt_id or request_type not in ('refund', 'credit'):
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите debt_id и request_type (refund/credit)'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT id, type FROM debts WHERE id = %s AND user_id = %s AND resolved = FALSE", (debt_id, user['id']))
+            debt = cur.fetchone()
+            if not debt:
+                conn.close()
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Долг не найден'})}
+            if debt[1] != 'we_owe':
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Запрос возможен только по долгу организатора'})}
+            cur.execute(
+                "UPDATE debts SET client_request = %s, client_card = %s, client_request_at = NOW() WHERE id = %s",
+                (request_type, card if request_type == 'refund' else None, debt_id)
+            )
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

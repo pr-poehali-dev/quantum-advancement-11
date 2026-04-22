@@ -252,6 +252,23 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
+        if action == 'archive_order':
+            order_id = body.get('order_id')
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE orders SET is_archived = TRUE, updated_at = NOW() WHERE id = %s AND status IN ('delivery','declined')",
+                (order_id,)
+            )
+            if cur.rowcount == 0:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Архивировать можно только Раздача или Отказано'})}
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
         if action == 'set_status':
             order_ids = body.get('order_ids', [])
             new_status = body.get('status', '')

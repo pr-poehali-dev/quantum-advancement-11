@@ -379,6 +379,9 @@ export default function Admin() {
                     </td>
                     <td className="px-3 py-3">
                       <StatusCell order={order} onChanged={load} />
+                      {['delivery', 'declined'].includes(order.status) && (
+                        <ArchiveOrderBtn orderId={order.id} onDone={load} />
+                      )}
                     </td>
                   </tr>
                 ))
@@ -689,6 +692,23 @@ function DebtRow({ debt: d, onResolved }: { debt: Debt; onResolved: () => void }
         </div>
       )}
     </div>
+  )
+}
+
+function ArchiveOrderBtn({ orderId, onDone }: { orderId: number; onDone: () => void }) {
+  const [loading, setLoading] = useState(false)
+  const handle = async () => {
+    setLoading(true)
+    const res = await api.admin.archiveOrder(orderId)
+    setLoading(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Заказ архивирован'); onDone()
+  }
+  return (
+    <button onClick={handle} disabled={loading}
+      className="mt-1 text-xs text-white/25 hover:text-white/50 transition-colors block">
+      {loading ? '...' : '↓ в архив'}
+    </button>
   )
 }
 

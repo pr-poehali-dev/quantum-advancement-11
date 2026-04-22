@@ -19,13 +19,10 @@ export const api = {
   auth: {
     register: (data: { nickname: string; email: string; phone: string; password: string }) =>
       post(`${AUTH_URL}/`, { action: 'register', ...data }),
-
     login: (data: { email: string; password: string }) =>
       post(`${AUTH_URL}/`, { action: 'login', ...data }),
-
     logout: () =>
       post(`${AUTH_URL}/`, { action: 'logout' }),
-
     me: () =>
       get(`${AUTH_URL}/?action=me`),
   },
@@ -33,16 +30,12 @@ export const api = {
   catalog: {
     list: (sort?: string) =>
       fetch(`${CATALOG_URL}/?action=list${sort ? '&sort=' + sort : ''}`).then(r => r.json()),
-
     product: (id: number) =>
       fetch(`${CATALOG_URL}/?action=product&id=${id}`).then(r => r.json()),
-
     atomizers: () =>
       fetch(`${CATALOG_URL}/?action=atomizers`).then(r => r.json()),
-
     update: (id: number, data: Record<string, unknown>) =>
       post(`${CATALOG_URL}/`, { action: 'update', id, ...data }),
-
     create: (data: Record<string, unknown>) =>
       post(`${CATALOG_URL}/`, { action: 'create', ...data }),
   },
@@ -50,21 +43,20 @@ export const api = {
   orders: {
     place: (data: { product_id: number; volume_ml: number }) =>
       post(`${ORDERS_URL}/`, { action: 'place', ...data }),
-
     my: () =>
       get(`${ORDERS_URL}/?action=my`),
-
     delete: (order_id: number) =>
       post(`${ORDERS_URL}/`, { action: 'delete', order_id }),
-
     archive: (order_id: number) =>
       post(`${ORDERS_URL}/`, { action: 'archive', order_id }),
-
     pay: (data: { order_ids?: number[]; order_id?: number; payment_amount: number; payment_note: string }) =>
       post(`${ORDERS_URL}/`, { action: 'pay', ...data }),
-
     pickup: (order_id: number, pickup_point: string) =>
       post(`${ORDERS_URL}/`, { action: 'pickup', order_id, pickup_point }),
+    myDebts: () =>
+      get(`${ORDERS_URL}/?action=my_debts`),
+    debtRequest: (debt_id: number, request_type: 'refund' | 'credit', card?: string) =>
+      post(`${ORDERS_URL}/`, { action: 'debt_request', debt_id, request_type, card }),
   },
 
   admin: {
@@ -75,23 +67,19 @@ export const api = {
       if (filters.status) p.set('status', filters.status)
       return get(`${ADMIN_URL}/?${p.toString()}`)
     },
-
     setStatus: (order_ids: number[], status: string) =>
       post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status }),
-
     confirmPayment: (order_id: number, confirmed_amount: number, debt_note?: string) =>
       post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id, confirmed_amount, debt_note }),
-
     payments: () =>
       get(`${ADMIN_URL}/?action=payments`),
-
     debts: () =>
       get(`${ADMIN_URL}/?action=debts`),
-
     addDebt: (data: { user_id: number; type: 'client_owes' | 'we_owe'; amount: number; reason: string; order_id?: number }) =>
       post(`${ADMIN_URL}/`, { action: 'add_debt', ...data }),
-
     resolveDebt: (debt_id: number, resolve_note: string) =>
       post(`${ADMIN_URL}/`, { action: 'resolve_debt', debt_id, resolve_note }),
+    archiveOrder: (order_id: number) =>
+      post(`${ADMIN_URL}/`, { action: 'archive_order', order_id }),
   },
 }
