@@ -40,5 +40,17 @@ export const api = {
 
     my: () =>
       fetch(`${ORDERS_URL}/my`, { credentials: 'include' }).then(r => r.json()),
+
+    delete: (order_id: number) =>
+      fetch(`${ORDERS_URL}/delete`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id }) }).then(r => r.json()),
+
+    archive: (order_id: number) =>
+      fetch(`${ORDERS_URL}/archive`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id }) }).then(r => r.json()),
+
+    pay: (data: { order_id: number; payment_amount: number; payment_note: string }) =>
+      fetch(`${ORDERS_URL}/pay`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+
+    pickup: (order_id: number, pickup_point: string) =>
+      fetch(`${ORDERS_URL}/pickup`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id, pickup_point }) }).then(r => r.json()),
   },
 }
