@@ -126,6 +126,41 @@ def handler(event: dict, context) -> dict:
                 'count': len(orders),
             })}
 
+        if action == 'payments':
+            # Все заказы где клиент отметил оплату, но модератор ещё не подтвердил
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT o.id, o.created_at, u.nickname, p.name, p.brand,
+                       o.volume_ml, o.total_price, o.payment_amount, o.payment_note, o.payment_date
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                JOIN products p ON o.product_id = p.id
+                WHERE o.payment_amount IS NOT NULL
+                  AND o.payment_confirmed = FALSE
+                  AND o.is_archived = FALSE
+                ORDER BY o.payment_date ASC
+            """)
+            rows = cur.fetchall()
+            conn.close()
+            payments = []
+            for r in rows:
+                diff = round(float(r[7]) - float(r[6]), 2) if r[7] else 0
+                payments.append({
+                    'order_id': r[0],
+                    'created_at': str(r[1]),
+                    'nickname': r[2],
+                    'product_name': r[3],
+                    'brand': r[4],
+                    'volume_ml': r[5],
+                    'total_price': float(r[6]),
+                    'payment_amount': float(r[7]),
+                    'payment_note': r[8],
+                    'payment_date': str(r[9]) if r[9] else None,
+                    'diff': diff,
+                })
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(payments)}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':

@@ -81,5 +81,8 @@ export const api = {
 
     confirmPayment: (order_id: number) =>
       post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id }),
+
+    payments: () =>
+      get(`${ADMIN_URL}/?action=payments`),
   },
 }

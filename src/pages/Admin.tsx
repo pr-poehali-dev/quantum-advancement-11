@@ -51,9 +51,25 @@ function fmt(dt: string) {
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+interface Payment {
+  order_id: number
+  created_at: string
+  nickname: string
+  product_name: string
+  brand: string
+  volume_ml: number
+  total_price: number
+  payment_amount: number
+  payment_note: string | null
+  payment_date: string | null
+  diff: number
+}
+
 export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  const [tab, setTab] = useState<'orders' | 'payments'>('orders')
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [totalSum, setTotalSum] = useState(0)
@@ -67,6 +83,9 @@ export default function Admin() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [applying, setApplying] = useState(false)
+
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -84,9 +103,24 @@ export default function Admin() {
     setSelected(new Set())
   }, [filterNick, filterProduct, filterStatus])
 
+  const loadPayments = useCallback(async () => {
+    setPaymentsLoading(true)
+    const res = await api.admin.payments()
+    setPaymentsLoading(false)
+    if (res.error) { toast.error(res.error); return }
+    setPayments(Array.isArray(res) ? res : [])
+  }, [])
+
   useEffect(() => {
-    if (user?.role === 'admin' || user?.role === 'moderator') load()
-  }, [user, load])
+    if (user?.role === 'admin' || user?.role === 'moderator') {
+      load()
+      loadPayments()
+    }
+  }, [user, load, loadPayments])
+
+  useEffect(() => {
+    if (tab === 'payments') loadPayments()
+  }, [tab, loadPayments])
 
   const toggleSelect = (id: number) => {
     setSelected(prev => {
@@ -135,8 +169,30 @@ export default function Admin() {
       </header>
 
       <div className="px-4 sm:px-8 py-6 max-w-[1400px] mx-auto">
-        <h1 className="text-xl font-bold mb-6">Все заказы</h1>
+        {/* Табы */}
+        <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setTab('orders')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'orders' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Заказы
+          </button>
+          <button
+            onClick={() => setTab('payments')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors relative ${tab === 'payments' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Платежи
+            {payments.length > 0 && (
+              <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+            )}
+          </button>
+        </div>
 
+        {tab === 'payments' && (
+          <PaymentsTab payments={payments} loading={paymentsLoading} onConfirmed={() => { loadPayments(); load() }} />
+        )}
+
+        {tab === 'orders' && <>
         {/* Фильтры */}
         <div className="flex flex-wrap gap-3 mb-4 items-end">
           <div className="flex-1 min-w-[140px]">
@@ -276,12 +332,9 @@ export default function Admin() {
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="text-orange-400 font-semibold">{order.total_price} ₽</span>
-                      {order.payment_amount && !order.payment_confirmed && (
-                        <ConfirmPayBtn order={order} onConfirmed={load} />
-                      )}
-                      {order.payment_confirmed && (
-                        <div className="text-green-400 text-xs mt-1 flex items-center gap-1">
-                          <Icon name="CheckCircle" size={11} />
+                      {order.payment_amount && (
+                        <div className={`text-xs mt-1 flex items-center gap-1 ${order.payment_confirmed ? 'text-green-400' : 'text-yellow-400/70'}`}>
+                          <Icon name={order.payment_confirmed ? 'CheckCircle' : 'Clock'} size={10} />
                           {order.payment_amount} ₽
                         </div>
                       )}
@@ -313,7 +366,95 @@ export default function Admin() {
             </div>
           </div>
         )}
+        </>}
       </div>
+    </div>
+  )
+}
+
+function PaymentsTab({ payments, loading, onConfirmed }: { payments: Payment[]; loading: boolean; onConfirmed: () => void }) {
+  if (loading) return (
+    <div className="flex justify-center py-16">
+      <Icon name="Loader2" size={24} className="animate-spin text-white/30" />
+    </div>
+  )
+
+  if (payments.length === 0) return (
+    <div className="text-center py-16 text-white/30">
+      <Icon name="CheckCircle" size={32} className="mx-auto mb-3 text-green-500/40" />
+      <div>Неподтверждённых платежей нет</div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-3 max-w-2xl">
+      <div className="text-white/40 text-sm mb-4">
+        Ожидают подтверждения: <span className="text-white font-semibold">{payments.length}</span>
+      </div>
+      {payments.map(p => (
+        <PaymentCard key={p.order_id} payment={p} onConfirmed={onConfirmed} />
+      ))}
+    </div>
+  )
+}
+
+function PaymentCard({ payment: p, onConfirmed }: { payment: Payment; onConfirmed: () => void }) {
+  const [confirming, setConfirming] = useState(false)
+  const diff = p.payment_amount - p.total_price
+  const isShort = diff < -0.01
+  const isExact = Math.abs(diff) <= 0.01
+
+  const handle = async () => {
+    setConfirming(true)
+    const res = await api.admin.confirmPayment(p.order_id)
+    setConfirming(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Оплата @${p.nickname} подтверждена → статус «Ожидается»`)
+    onConfirmed()
+  }
+
+  return (
+    <div className={`border rounded-xl p-4 space-y-3 ${isShort ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-white/10 bg-white/5'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-white font-semibold">@{p.nickname}</span>
+            <span className="text-white/30 text-xs">#{p.order_id}</span>
+            {p.payment_date && <span className="text-white/30 text-xs">{new Date(p.payment_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
+          </div>
+          <div className="text-white/60 text-sm">{p.brand} · {p.product_name}</div>
+          <div className="text-white/40 text-xs">{p.volume_ml} мл</div>
+          {p.payment_note && (
+            <div className="text-white/40 text-xs mt-1 italic">«{p.payment_note}»</div>
+          )}
+        </div>
+
+        {/* Суммы */}
+        <div className="text-right shrink-0 space-y-1">
+          <div className="text-white/40 text-xs">Нужно оплатить</div>
+          <div className="text-white font-semibold">{p.total_price.toFixed(2)} ₽</div>
+          <div className="text-white/40 text-xs mt-1">Клиент указал</div>
+          <div className={`font-bold text-lg ${isShort ? 'text-yellow-400' : 'text-green-400'}`}>
+            {p.payment_amount.toFixed(2)} ₽
+          </div>
+          {isShort && (
+            <div className="text-yellow-400 text-xs font-medium">
+              Недоплата: {Math.abs(diff).toFixed(2)} ₽
+            </div>
+          )}
+          {isExact && (
+            <div className="text-green-400/60 text-xs">Сумма совпадает</div>
+          )}
+        </div>
+      </div>
+
+      <Button
+        onClick={handle}
+        disabled={confirming}
+        className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold h-9 text-sm"
+      >
+        {confirming ? 'Подтверждаю...' : '✓ Подтвердить оплату → перевести в «Ожидается»'}
+      </Button>
     </div>
   )
 }
