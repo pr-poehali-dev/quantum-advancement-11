@@ -79,10 +79,19 @@ export const api = {
     setStatus: (order_ids: number[], status: string) =>
       post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status }),
 
-    confirmPayment: (order_id: number) =>
-      post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id }),
+    confirmPayment: (order_id: number, confirmed_amount: number, debt_note?: string) =>
+      post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id, confirmed_amount, debt_note }),
 
     payments: () =>
       get(`${ADMIN_URL}/?action=payments`),
+
+    debts: () =>
+      get(`${ADMIN_URL}/?action=debts`),
+
+    addDebt: (data: { user_id: number; type: 'client_owes' | 'we_owe'; amount: number; reason: string; order_id?: number }) =>
+      post(`${ADMIN_URL}/`, { action: 'add_debt', ...data }),
+
+    resolveDebt: (debt_id: number, resolve_note: string) =>
+      post(`${ADMIN_URL}/`, { action: 'resolve_debt', debt_id, resolve_note }),
   },
 }
