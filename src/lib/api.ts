@@ -1,5 +1,6 @@
 const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952354e'
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
+const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
 
 export const api = {
   auth: {
@@ -25,5 +26,19 @@ export const api = {
 
     atomizers: () =>
       fetch(`${CATALOG_URL}/atomizers`, { credentials: 'include' }).then(r => r.json()),
+
+    update: (id: number, data: Record<string, unknown>) =>
+      fetch(`${CATALOG_URL}/${id}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+
+    create: (data: Record<string, unknown>) =>
+      fetch(`${CATALOG_URL}/`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+  },
+
+  orders: {
+    place: (data: { product_id: number; volume_ml: number }) =>
+      fetch(`${ORDERS_URL}/place`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+
+    my: () =>
+      fetch(`${ORDERS_URL}/my`, { credentials: 'include' }).then(r => r.json()),
   },
 }

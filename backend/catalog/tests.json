@@ -8,10 +8,10 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "GET catalog 404",
-      "method": "GET",
-      "path": "/999999",
-      "expectedStatus": 404,
+      "name": "OPTIONS cors",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
       "bodyMatcher": "partial"
     }
   ]

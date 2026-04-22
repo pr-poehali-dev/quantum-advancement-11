@@ -3,6 +3,8 @@
 GET / — список товаров (с шкалой мл)
 GET /{id} — карточка товара
 GET /atomizers — список атомайзеров
+PUT /{id} — редактировать товар (только модератор/admin)
+POST / — создать товар (только модератор/admin)
 """
 import json
 import os
@@ -15,9 +17,30 @@ def get_conn():
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
 }
+
+
+def get_session_user(headers: dict):
+    cookie = headers.get('X-Cookie', '') or headers.get('cookie', '')
+    session_id = None
+    for part in cookie.split(';'):
+        part = part.strip()
+        if part.startswith('session='):
+            session_id = part[8:]
+            break
+    if not session_id:
+        return None
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT u.id, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
+        (session_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    return {'id': row[0], 'role': row[1]} if row else None
 
 
 def handler(event: dict, context) -> dict:
@@ -25,12 +48,14 @@ def handler(event: dict, context) -> dict:
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
     path = event.get('path', '/')
+    method = event.get('httpMethod', 'GET')
     params = event.get('queryStringParameters') or {}
+    headers = event.get('headers') or {}
 
     conn = get_conn()
     cur = conn.cursor()
 
-    if path.endswith('/atomizers'):
+    if path.endswith('/atomizers') and method == 'GET':
         cur.execute("SELECT id, name, min_ml, max_ml, price FROM atomizers ORDER BY min_ml")
         rows = cur.fetchall()
         conn.close()
@@ -38,10 +63,12 @@ def handler(event: dict, context) -> dict:
             {'id': r[0], 'name': r[1], 'min_ml': r[2], 'max_ml': r[3], 'price': float(r[4])} for r in rows
         ])}
 
-    # /catalog/{id}
     parts = path.rstrip('/').split('/')
-    if parts and parts[-1].isdigit():
-        product_id = int(parts[-1])
+    last = parts[-1] if parts else ''
+    product_id = int(last) if last.isdigit() else None
+
+    # GET /{id} — карточка товара
+    if product_id and method == 'GET':
         cur.execute(
             "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url FROM products WHERE id = %s AND is_active = TRUE",
             (product_id,)
@@ -53,10 +80,60 @@ def handler(event: dict, context) -> dict:
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
             'id': row[0], 'name': row[1], 'brand': row[2], 'description': row[3],
             'price_per_ml': float(row[4]), 'bottle_ml': row[5], 'booked_ml': row[6],
-            'available_ml': row[5] - row[6], 'image_url': row[7]
+            'available_ml': row[5] - row[6], 'image_url': row[7],
+            'fill_percent': round(row[6] / row[5] * 100) if row[5] else 0
         })}
 
-    # Список товаров с фильтрацией
+    # PUT /{id} — редактировать товар
+    if product_id and method == 'PUT':
+        user = get_session_user(headers)
+        if not user or user['role'] not in ('admin', 'moderator'):
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Доступ запрещён'})}
+        body = json.loads(event.get('body') or '{}')
+        fields = []
+        values = []
+        for field in ('name', 'brand', 'description', 'image_url'):
+            if field in body:
+                fields.append(f"{field} = %s")
+                values.append(body[field])
+        for field in ('price_per_ml', 'bottle_ml'):
+            if field in body:
+                fields.append(f"{field} = %s")
+                values.append(float(body[field]) if field == 'price_per_ml' else int(body[field]))
+        if not fields:
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных для обновления'})}
+        values.append(product_id)
+        cur.execute(f"UPDATE products SET {', '.join(fields)} WHERE id = %s", values)
+        conn.commit()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+    # POST / — создать товар
+    if not product_id and method == 'POST':
+        user = get_session_user(headers)
+        if not user or user['role'] not in ('admin', 'moderator'):
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Доступ запрещён'})}
+        body = json.loads(event.get('body') or '{}')
+        name = body.get('name', '').strip()
+        brand = body.get('brand', '').strip()
+        price_per_ml = body.get('price_per_ml')
+        bottle_ml = body.get('bottle_ml')
+        if not all([name, brand, price_per_ml, bottle_ml]):
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заполните название, бренд, цену и объём флакона'})}
+        cur.execute(
+            "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            (name, brand, body.get('description', ''), float(price_per_ml), int(bottle_ml), body.get('image_url'))
+        )
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'id': new_id})}
+
+    # GET / — список товаров
     sort = params.get('sort', '')
     query = "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url FROM products WHERE is_active = TRUE"
     if sort == 'filling':
