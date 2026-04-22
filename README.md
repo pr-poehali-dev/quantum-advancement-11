@@ -1,3 +1,7 @@
-# quantum-advancement-11
+# Минималистичный анимированный Hero-блок
 
-Initial repository setup for pr-poehali-dev/quantum-advancement-11
+![Preview](preview.png)
+
+Стильный hero-блок для портфолио и творческих проектов. Черный фон с неоновыми анимированными линиями, которые плавно перемещаются по экрану. Включает навигацию, заголовок с анимацией тени и кнопку призыва к действию.
+
+`"tags": ["hero", "dark", "animations", "creative", "portfolio"]`

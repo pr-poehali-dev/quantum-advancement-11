@@ -1,0 +1,28 @@
+
+> vite_react_shadcn_ts@0.0.0 dev
+> vite
+
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react-oxc` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+  ROLLDOWN-VITE v7.1.13  ready in 840 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://10.112.159.245:5173/
+7:16:44 PM [vite] vite.config.ts changed, restarting server...
+7:16:44 PM [vite] (client) page reload index.html
+7:16:44 PM [vite] changed tsconfig file detected: /app/webapp/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react-oxc` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+7:16:44 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+7:16:44 PM [vite] server restarted.
+(!) Failed to run dependency scan. Skipping dependency pre-bundling. Error: The following dependencies are imported but could not be resolved:
+
+  framer-motion (imported by /app/webapp/src/components/line-shadow-text.tsx)
+
+Are they installed?
+    at file:///app/webapp/node_modules/vite/dist/node/chunks/dep-CqBYPNx_.js:9912:33
+    at async file:///app/webapp/node_modules/vite/dist/node/chunks/dep-CqBYPNx_.js:33786:15
+7:16:51 PM [vite] (client) page reload index.html
+7:16:52 PM [vite] vite.config.ts changed, restarting server...
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react-oxc` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+7:16:52 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+7:16:53 PM [vite] server restarted.
