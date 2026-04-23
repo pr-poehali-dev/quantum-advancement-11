@@ -144,6 +144,7 @@ export const api = {
     adminInbox: () => get(`${MESSAGES_URL}/?action=admin_inbox`),
     thread: (user_id: number) => get(`${MESSAGES_URL}/?action=thread&user_id=${user_id}`),
     reply: (to_user_id: number, body: string) => post(`${MESSAGES_URL}/`, { action: 'reply', to_user_id, body }),
+    markRead: (user_id: number) => post(`${MESSAGES_URL}/`, { action: 'mark_read', user_id }),
     broadcast: (user_ids: number[], body: string) => post(`${MESSAGES_URL}/`, { action: 'broadcast', user_ids, body }),
   },
 }

@@ -122,7 +122,10 @@ export default function Cabinet() {
 
   useEffect(() => {
     if (!user) return
-    api.messages.unreadCount().then(r => { if (!r.error) setUnreadCount(r.count || 0) })
+    const check = () => api.messages.unreadCount().then(r => { if (!r.error) setUnreadCount(r.count || 0) })
+    check()
+    const iv = setInterval(check, 15000)
+    return () => clearInterval(iv)
   }, [user])
 
   const handleLogout = async () => { await logout(); navigate('/') }
@@ -256,9 +259,9 @@ export default function Cabinet() {
           {([
             { id: 'orders' as MainTab, label: 'Заказы', badge: orders.filter(o => o.status !== 'declined').length },
             { id: 'debts' as MainTab, label: 'Долги', badge: activeDebts.length || undefined },
-            { id: 'messages' as MainTab, label: 'Сообщения', badge: unreadCount || undefined },
+            { id: 'messages' as MainTab, label: 'Сообщения', badge: mainTab === 'messages' ? undefined : (unreadCount || undefined) },
           ]).map(t => (
-            <button key={t.id} onClick={() => setMainTab(t.id)}
+            <button key={t.id} onClick={() => { setMainTab(t.id); if (t.id === 'messages') setUnreadCount(0) }}
               className={`relative px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 mainTab === t.id ? 'border-orange-500 text-white' : 'border-transparent text-white/40 hover:text-white'
               }`}>

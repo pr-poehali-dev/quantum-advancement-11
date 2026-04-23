@@ -19,23 +19,40 @@ function fmt(dt: string) {
   return new Date(dt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function MessagesChat() {
+export default function MessagesChat({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [prevUnread, setPrevUnread] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const isFirstLoad = useRef(true)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     const res = await api.messages.inbox()
-    if (!res.error) setMessages(Array.isArray(res) ? res : [])
+    if (!res.error) {
+      const msgs: Message[] = Array.isArray(res) ? res : []
+      setMessages(msgs)
+      const unread = msgs.filter(m => !m.is_mine && !m.is_read).length
+      if (onUnreadChange) onUnreadChange(unread)
+      if (!silent) setPrevUnread(unread)
+    }
     setLoading(false)
-  }, [])
-
-  useEffect(() => { load() }, [load])
+  }, [onUnreadChange])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    load()
+    const iv = setInterval(() => load(true), 10000)
+    return () => clearInterval(iv)
+  }, [load])
+
+  useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   const handleSend = async () => {
@@ -54,12 +71,20 @@ export default function MessagesChat() {
     </div>
   )
 
+  const unreadIds = new Set(messages.filter(m => !m.is_mine && !m.is_read).map(m => m.id))
+  const hasNew = unreadIds.size > 0
+
   return (
     <div className="flex flex-col h-[500px] bg-white/3 border border-white/10 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
         <Icon name="MessageCircle" size={16} className="text-orange-400" />
         <span className="text-white font-medium text-sm">Поддержка</span>
+        {hasNew && (
+          <span className="bg-orange-500 text-white text-[10px] rounded-full px-2 py-0.5 font-bold animate-pulse">
+            {unreadIds.size} новых
+          </span>
+        )}
         <span className="text-white/30 text-xs ml-auto">Ответим в ближайшее время</span>
       </div>
 
@@ -70,22 +95,41 @@ export default function MessagesChat() {
             Напишите нам — мы ответим как можно быстрее
           </div>
         )}
-        {messages.map(m => (
-          <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${m.is_mine ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-white/8 border border-white/10'}`}>
-              {!m.is_mine && (
-                <div className="text-orange-400 text-xs font-medium mb-1">{m.from_nick}</div>
+        {messages.map((m, i) => {
+          const isNew = unreadIds.has(m.id)
+          const prevMsg = messages[i - 1]
+          const isFirstNew = isNew && (!prevMsg || !unreadIds.has(prevMsg.id))
+          return (
+            <div key={m.id}>
+              {isFirstNew && (
+                <div className="flex items-center gap-2 my-2">
+                  <div className="flex-1 h-px bg-orange-500/30" />
+                  <span className="text-orange-400 text-xs font-medium">Новые сообщения</span>
+                  <div className="flex-1 h-px bg-orange-500/30" />
+                </div>
               )}
-              <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{m.body}</div>
-              <div className={`text-xs mt-1 ${m.is_mine ? 'text-white/30 text-right' : 'text-white/25'}`}>
-                {fmt(m.created_at)}
-                {m.is_mine && (
-                  <span className="ml-1">{m.is_read ? '✓✓' : '✓'}</span>
-                )}
+              <div className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
+                  m.is_mine
+                    ? 'bg-orange-500/20 border border-orange-500/30'
+                    : isNew
+                    ? 'bg-orange-500/10 border border-orange-500/25 shadow-[0_0_10px_rgba(249,115,22,0.15)]'
+                    : 'bg-white/8 border border-white/10'
+                }`}>
+                  {!m.is_mine && (
+                    <div className="text-orange-400 text-xs font-medium mb-1">{m.from_nick}</div>
+                  )}
+                  <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{m.body}</div>
+                  <div className={`text-xs mt-1 flex items-center gap-1 ${m.is_mine ? 'justify-end text-white/30' : 'text-white/25'}`}>
+                    {fmt(m.created_at)}
+                    {m.is_mine && <span>{m.is_read ? '✓✓' : '✓'}</span>}
+                    {isNew && <span className="text-orange-400">●</span>}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         <div ref={bottomRef} />
       </div>
 

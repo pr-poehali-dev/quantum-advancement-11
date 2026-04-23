@@ -517,12 +517,27 @@ def handler(event: dict, context) -> dict:
             conn = get_conn()
             cur = conn.cursor()
             cur.execute(
-                "UPDATE debts SET resolved = TRUE, resolved_at = NOW(), resolve_note = %s WHERE id = %s AND client_request IS NOT NULL",
+                """UPDATE debts SET resolved = TRUE, resolved_at = NOW(), resolve_note = %s
+                   WHERE id = %s AND client_request IS NOT NULL
+                   RETURNING user_id, amount, client_request""",
                 (resolve_note or 'Выполнено по запросу клиента', int(debt_id))
             )
-            if cur.rowcount == 0:
+            row = cur.fetchone()
+            if not row:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Долг не найден или нет запроса'})}
+            client_user_id, debt_amount, req_type = row[0], float(row[1]), row[2]
+            cur.execute("SELECT id FROM users WHERE is_admin = TRUE LIMIT 1")
+            admin_row = cur.fetchone()
+            if admin_row:
+                admin_id = admin_row[0]
+                req_label = 'возврат на карту' if req_type == 'refund' else 'зачёт в счёт заказов'
+                note_part = f' ({resolve_note})' if resolve_note and resolve_note != 'Выполнено по запросу клиента' else ''
+                msg = f'✅ Ваш запрос на {req_label} на сумму {debt_amount:.2f} ₽ выполнен{note_part}. Долг списан.'
+                cur.execute(
+                    "INSERT INTO messages (from_user_id, to_user_id, body) VALUES (%s, %s, %s)",
+                    (admin_id, client_user_id, msg)
+                )
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

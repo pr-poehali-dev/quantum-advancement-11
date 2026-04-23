@@ -148,12 +148,18 @@ export default function Admin() {
     if (user.role !== 'admin' && user.role !== 'moderator') { navigate('/'); return }
   }, [user, navigate])
 
-  useEffect(() => {
+  const refreshUnread = useCallback(() => {
     if (!user) return
     api.messages.adminInbox().then(res => {
       if (Array.isArray(res)) setAdminUnread(res.filter((d: { has_unread: boolean }) => d.has_unread).length)
     })
   }, [user])
+
+  useEffect(() => {
+    refreshUnread()
+    const iv = setInterval(refreshUnread, 15000)
+    return () => clearInterval(iv)
+  }, [refreshUnread])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -413,7 +419,9 @@ export default function Admin() {
           <DebtsTab debts={debts} loading={debtsLoading} onChanged={loadDebts} />
         )}
 
-
+        {tab === 'messages' && (
+          <AdminMessagesTab onUnreadChange={setAdminUnread} />
+        )}
 
         {tab === 'products' && <>
           {/* Фильтры + импорт */}
@@ -1514,6 +1522,159 @@ function DebtRow({ debt: d, onResolved }: { debt: Debt; onResolved: () => void }
           </Button>
         </div>
       )}
+    </div>
+  )
+}
+
+interface AdminThread {
+  user_id: number
+  nickname: string
+  last_message: string
+  last_at: string
+  has_unread: boolean
+  unread_count: number
+}
+
+interface ThreadMessage {
+  id: number
+  from_user_id: number
+  body: string
+  is_read: boolean
+  created_at: string
+  from_nick: string
+  is_mine: boolean
+}
+
+function fmt(dt: string) {
+  return new Date(dt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: number) => void }) {
+  const [threads, setThreads] = useState<AdminThread[]>([])
+  const [activeUser, setActiveUser] = useState<AdminThread | null>(null)
+  const [messages, setMessages] = useState<ThreadMessage[]>([])
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const loadThreads = useCallback(async () => {
+    const res = await api.messages.adminInbox()
+    if (Array.isArray(res)) {
+      setThreads(res)
+      onUnreadChange(res.filter((d: AdminThread) => d.has_unread).length)
+    }
+  }, [onUnreadChange])
+
+  const loadThread = useCallback(async (userId: number) => {
+    const res = await api.messages.thread(userId)
+    if (Array.isArray(res)) setMessages(res)
+    await api.messages.markRead(userId)
+    loadThreads()
+  }, [loadThreads])
+
+  useEffect(() => {
+    loadThreads()
+    const iv = setInterval(loadThreads, 10000)
+    return () => clearInterval(iv)
+  }, [loadThreads])
+
+  useEffect(() => {
+    if (!activeUser) return
+    const iv = setInterval(() => loadThread(activeUser.user_id), 10000)
+    return () => clearInterval(iv)
+  }, [activeUser, loadThread])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const openThread = async (t: AdminThread) => {
+    setActiveUser(t)
+    setMessages([])
+    await loadThread(t.user_id)
+  }
+
+  const handleSend = async () => {
+    if (!text.trim() || !activeUser) return
+    setSending(true)
+    const res = await api.messages.reply(activeUser.user_id, text.trim())
+    setSending(false)
+    if (res.error) { toast.error(res.error); return }
+    setText('')
+    loadThread(activeUser.user_id)
+  }
+
+  if (activeUser) return (
+    <div className="flex flex-col h-[600px]">
+      <div className="flex items-center gap-3 mb-3">
+        <button onClick={() => setActiveUser(null)} className="text-white/40 hover:text-white/70 transition-colors">
+          <Icon name="ChevronLeft" size={18} />
+        </button>
+        <span className="text-white font-medium">@{activeUser.nickname}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto space-y-2 pb-2 pr-1">
+        {messages.length === 0 && <div className="text-center py-8 text-white/25 text-sm">Нет сообщений</div>}
+        {messages.map(m => (
+          <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
+              m.is_mine ? 'bg-orange-500/20 border border-orange-500/30'
+              : !m.is_read ? 'bg-blue-500/15 border border-blue-500/30 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
+              : 'bg-white/8 border border-white/10'
+            }`}>
+              {!m.is_mine && <div className="text-orange-400 text-xs font-medium mb-1">{m.from_nick}</div>}
+              <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{m.body}</div>
+              <div className={`text-xs mt-1 flex items-center gap-1 ${m.is_mine ? 'justify-end text-white/30' : 'text-white/25'}`}>
+                {fmt(m.created_at)}
+                {m.is_mine && <span>{m.is_read ? '✓✓' : '✓'}</span>}
+                {!m.is_mine && !m.is_read && <span className="text-blue-400 font-bold">●</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      <div className="pt-3 border-t border-white/10 flex gap-2">
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+          placeholder="Ответить... (Enter — отправить)"
+          rows={1}
+          className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
+        />
+        <Button onClick={handleSend} disabled={sending || !text.trim()}
+          className="bg-orange-500 hover:bg-orange-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
+          <Icon name="Send" size={15} />
+        </Button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-2">
+      {threads.length === 0 && <div className="text-center py-10 text-white/25 text-sm">Сообщений пока нет</div>}
+      {threads.map(t => (
+        <button key={t.user_id} onClick={() => openThread(t)}
+          className={`w-full text-left border rounded-xl p-3 transition-all ${
+            t.has_unread
+              ? 'border-orange-500/40 bg-orange-500/8 hover:bg-orange-500/12'
+              : 'border-white/8 bg-white/3 hover:bg-white/6'
+          }`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {t.has_unread && <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0 animate-pulse" />}
+              <span className={`font-medium text-sm ${t.has_unread ? 'text-white' : 'text-white/70'}`}>@{t.nickname}</span>
+              {t.unread_count > 0 && (
+                <span className="bg-orange-500 text-white text-[10px] rounded-full px-1.5 py-0.5 font-bold shrink-0">
+                  {t.unread_count}
+                </span>
+              )}
+            </div>
+            <span className="text-white/30 text-xs shrink-0">{fmt(t.last_at)}</span>
+          </div>
+          <div className="text-white/40 text-xs mt-1 truncate">{t.last_message}</div>
+        </button>
+      ))}
     </div>
   )
 }
