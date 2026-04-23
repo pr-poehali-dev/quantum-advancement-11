@@ -118,7 +118,7 @@ export const api = {
     blockUser: (user_id: number, is_blocked: boolean, reason?: string) =>
       post(`${ADMIN_URL}/`, { action: 'block_user', user_id, is_blocked, reason }),
     getDeliveryOptions: () =>
-      post(`${ADMIN_URL}/`, { action: 'get_delivery_options' }),
+      get(`${ADMIN_URL}/?action=get_delivery_options`),
     createDeliveryOption: (data: { name: string; description?: string | null; address?: string | null; schedule?: string | null; sort_order?: number }) =>
       post(`${ADMIN_URL}/`, { action: 'create_delivery_option', ...data }),
     updateDeliveryOption: (id: number, data: Record<string, unknown>) =>

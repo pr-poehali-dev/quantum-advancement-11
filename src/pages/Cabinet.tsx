@@ -85,9 +85,11 @@ export default function Cabinet() {
   const [payNote, setPayNote] = useState('')
   const [paying, setPaying] = useState(false)
 
-  // доставка — per-order state
-  const [orderDelivery, setOrderDelivery] = useState<Record<number, { optionId: number | null; comment: string; saving: boolean }>>({})
-  const [expandedDelivery, setExpandedDelivery] = useState<Record<number, boolean>>({})
+  // доставка
+  const [deliverySelected, setDeliverySelected] = useState<Set<number>>(new Set())
+  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<number | null>(null)
+  const [deliveryComment, setDeliveryComment] = useState('')
+  const [deliverySaving, setDeliverySaving] = useState(false)
 
   // долги
   const [debtRequestId, setDebtRequestId] = useState<number | null>(null)
@@ -151,20 +153,20 @@ export default function Cabinet() {
     setPaySelected(new Set()); setPayNote(''); load()
   }
 
-  const getOrderDelivery = (o: Order) => orderDelivery[o.id] ?? { optionId: o.delivery_option_id, comment: o.delivery_comment || '', saving: false }
-
-  const setOrderDeliveryField = (orderId: number, patch: Partial<{ optionId: number | null; comment: string; saving: boolean }>) => {
-    setOrderDelivery(prev => ({ ...prev, [orderId]: { ...getOrderDelivery({ id: orderId } as Order), ...patch } }))
+  const toggleDeliveryOrder = (id: number) => {
+    setDeliverySelected(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
   }
-
-  const handleSaveOrderDelivery = async (o: Order) => {
-    const d = getOrderDelivery(o)
-    if (!d.optionId) { toast.error('Выберите вариант доставки'); return }
-    setOrderDeliveryField(o.id, { saving: true })
-    const r = await api.orders.setDelivery({ order_ids: [o.id], delivery_option_id: d.optionId, delivery_comment: d.comment })
-    setOrderDeliveryField(o.id, { saving: false })
+  const toggleDeliveryAll = () => {
+    setDeliverySelected(s => s.size === waitingOrders.length ? new Set() : new Set(waitingOrders.map(o => o.id)))
+  }
+  const handleSaveDelivery = async () => {
+    if (!selectedDeliveryOption) { toast.error('Выберите вариант доставки'); return }
+    setDeliverySaving(true)
+    const r = await api.orders.setDelivery({ order_ids: Array.from(deliverySelected), delivery_option_id: selectedDeliveryOption, delivery_comment: deliveryComment })
+    setDeliverySaving(false)
     if (r.error) { toast.error(r.error); return }
-    toast.success('Способ получения сохранён'); load()
+    toast.success('Способ получения сохранён')
+    setDeliverySelected(new Set()); setDeliveryComment(''); load()
   }
 
   const handleDebtRequest = async () => {
@@ -367,104 +369,113 @@ export default function Cabinet() {
                   <div>
                     {waitingOrders.length === 0 && deliveryOrders.length === 0 ? <Empty text="Нет заказов в пути" /> : (
                       <div className="space-y-4">
+
+                        {/* ── Ожидаются ── */}
                         {waitingOrders.length > 0 && (
                           <>
-                            <div className="text-xs text-white/40 uppercase tracking-wider">Ожидаются</div>
-                            {waitingOrders.map(o => {
-                              const d = getOrderDelivery(o)
-                              const selectedOpt = deliveryOptions.find(x => x.id === d.optionId)
-                              const isExpanded = expandedDelivery[o.id] ?? false
-                              return (
-                                <div key={o.id} className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
-                                  {/* Шапка заказа */}
+                            <div className="text-xs text-white/40 uppercase tracking-wider mb-1">Ожидаются</div>
+
+                            {/* Список заказов с галочками */}
+                            <div className="flex items-center justify-between mb-2">
+                              <button onClick={toggleDeliveryAll} className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                  deliverySelected.size === waitingOrders.length && waitingOrders.length > 0 ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                                }`}>
+                                  {deliverySelected.size === waitingOrders.length && waitingOrders.length > 0 && <Icon name="Check" size={10} className="text-white" />}
+                                </div>
+                                Выбрать все
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              {waitingOrders.map(o => (
+                                <div key={o.id} onClick={() => toggleDeliveryOrder(o.id)}
+                                  className={`cursor-pointer rounded-xl border transition-all ${
+                                    deliverySelected.has(o.id) ? 'border-purple-500/50 bg-purple-500/5' : 'border-white/8 hover:border-white/15'
+                                  }`}>
                                   <div className="p-4 flex items-start gap-3">
-                                    {o.image_url
-                                      ? <img src={o.image_url} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
-                                      : <div className="w-11 h-11 rounded-lg bg-white/5 flex items-center justify-center text-lg shrink-0">🌸</div>
-                                    }
+                                    <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                      deliverySelected.has(o.id) ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                                    }`}>
+                                      {deliverySelected.has(o.id) && <Icon name="Check" size={12} className="text-white" />}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="font-medium text-sm truncate">{o.brand} — {o.product_name}</div>
                                       <div className="text-white/50 text-xs mt-0.5">{o.volume_ml} мл · {o.atomizer_name}</div>
+                                      {o.delivery_option_name && (
+                                        <div className="text-purple-300/70 text-xs mt-1 flex items-center gap-1">
+                                          <Icon name="MapPin" size={11} /> {o.delivery_option_name}
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="text-white font-semibold text-sm shrink-0">{o.total_price.toFixed(0)} ₽</div>
                                   </div>
-
-                                  {/* Dropdown доставки — всегда виден */}
-                                  <div className="px-4 pb-4 border-t border-white/6 pt-3">
-                                    <div className="text-xs text-white/40 mb-2">Способ получения</div>
-                                    <button
-                                      onClick={() => setExpandedDelivery(prev => ({ ...prev, [o.id]: !isExpanded }))}
-                                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
-                                        d.optionId
-                                          ? 'border-purple-500/40 bg-purple-500/8 text-white'
-                                          : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25'
-                                      }`}>
-                                      <span className="flex items-center gap-2">
-                                        <Icon name="MapPin" size={14} className={d.optionId ? 'text-purple-400' : 'text-white/30'} />
-                                        {d.optionId ? selectedOpt?.name ?? 'Выбрано' : 'Выберите способ получения'}
-                                      </span>
-                                      <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={14} className="text-white/30 shrink-0" />
-                                    </button>
-
-                                    {/* Раскрытый список */}
-                                    {isExpanded && (
-                                      <div className="mt-2 space-y-2">
-                                        {deliveryOptions.map(opt => (
-                                          <button key={opt.id}
-                                            onClick={() => {
-                                              setOrderDeliveryField(o.id, { optionId: opt.id })
-                                              setExpandedDelivery(prev => ({ ...prev, [o.id]: false }))
-                                            }}
-                                            className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
-                                              d.optionId === opt.id
-                                                ? 'border-purple-500/50 bg-purple-500/10'
-                                                : 'border-white/8 hover:border-white/20 bg-white/3'
-                                            }`}>
-                                            <div className="text-sm font-medium text-white">{opt.name}</div>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {/* Карточка выбранного варианта */}
-                                    {selectedOpt && !isExpanded && (selectedOpt.address || selectedOpt.schedule) && (
-                                      <div className="mt-2 px-3 py-2.5 bg-purple-500/6 border border-purple-500/20 rounded-lg space-y-1">
-                                        {selectedOpt.address && (
-                                          <div className="text-xs text-white/60 flex items-start gap-1.5">
-                                            <Icon name="MapPin" size={12} className="shrink-0 mt-0.5 text-purple-400/70" />
-                                            {selectedOpt.address}
-                                          </div>
-                                        )}
-                                        {selectedOpt.schedule && (
-                                          <div className="text-xs text-white/40 flex items-center gap-1.5">
-                                            <Icon name="Clock" size={12} className="shrink-0 text-purple-400/50" />
-                                            {selectedOpt.schedule}
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Комментарий и кнопка сохранения */}
-                                    {d.optionId && (
-                                      <div className="mt-3 space-y-2">
-                                        <Input value={d.comment} onChange={e => setOrderDeliveryField(o.id, { comment: e.target.value })}
-                                          placeholder="Комментарий (необязательно)"
-                                          className="bg-white/5 border-white/10 text-white placeholder-white/30 text-xs h-8" />
-                                        {(d.optionId !== o.delivery_option_id || d.comment !== (o.delivery_comment || '')) && (
-                                          <Button onClick={() => handleSaveOrderDelivery(o)} disabled={d.saving}
-                                            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs h-8">
-                                            {d.saving ? 'Сохранение...' : 'Сохранить'}
-                                          </Button>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
                                 </div>
-                              )
-                            })}
+                              ))}
+                            </div>
+
+                            {/* Блок выбора доставки — виден всегда */}
+                            <div className={`rounded-xl border p-4 space-y-3 transition-all ${
+                              deliverySelected.size > 0 ? 'border-purple-500/30 bg-purple-500/5' : 'border-white/8 bg-white/3'
+                            }`}>
+                              <div className="text-sm font-medium text-white/80">Способ получения</div>
+
+                              {/* Варианты */}
+                              <div className="space-y-2">
+                                {deliveryOptions.map(opt => {
+                                  const isSelected = selectedDeliveryOption === opt.id
+                                  return (
+                                    <div key={opt.id}>
+                                      <button onClick={() => setSelectedDeliveryOption(isSelected ? null : opt.id)}
+                                        className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
+                                          isSelected ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/8 hover:border-white/20 bg-white/3'
+                                        }`}>
+                                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                                          isSelected ? 'border-purple-400' : 'border-white/30'
+                                        }`}>
+                                          {isSelected && <div className="w-2 h-2 rounded-full bg-purple-400" />}
+                                        </div>
+                                        <span className="text-sm text-white">{opt.name}</span>
+                                      </button>
+                                      {/* Карточка с деталями — появляется при выборе */}
+                                      {isSelected && (opt.address || opt.schedule) && (
+                                        <div className="mt-1.5 mx-1 px-3 py-2 bg-purple-500/6 border border-purple-500/15 rounded-lg space-y-1">
+                                          {opt.address && (
+                                            <div className="text-xs text-white/55 flex items-start gap-1.5">
+                                              <Icon name="MapPin" size={11} className="shrink-0 mt-0.5 text-purple-400/60" />
+                                              {opt.address}
+                                            </div>
+                                          )}
+                                          {opt.schedule && (
+                                            <div className="text-xs text-white/40 flex items-center gap-1.5">
+                                              <Icon name="Clock" size={11} className="shrink-0 text-purple-400/50" />
+                                              {opt.schedule}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+
+                              <Input value={deliveryComment} onChange={e => setDeliveryComment(e.target.value)}
+                                placeholder="Комментарий (необязательно)"
+                                className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm" />
+
+                              <Button
+                                onClick={handleSaveDelivery}
+                                disabled={deliverySaving || !selectedDeliveryOption || deliverySelected.size === 0}
+                                className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm disabled:opacity-40">
+                                {deliverySaving ? 'Сохранение...' : deliverySelected.size === 0
+                                  ? 'Выберите заказы выше'
+                                  : `Сохранить для ${deliverySelected.size} заказ${deliverySelected.size > 1 ? 'ов' : 'а'}`}
+                              </Button>
+                            </div>
                           </>
                         )}
 
+                        {/* ── Раздача ── */}
                         {deliveryOrders.length > 0 && (
                           <>
                             <div className="text-xs text-white/40 uppercase tracking-wider">Раздача</div>

@@ -102,6 +102,7 @@ export default function Admin() {
   const [filterProduct, setFilterProduct] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDelivery, setFilterDelivery] = useState('')
+  const [deliveryOptionsList, setDeliveryOptionsList] = useState<{id: number; name: string}[]>([])
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
@@ -170,6 +171,10 @@ export default function Admin() {
     if (user?.role === 'admin' || user?.role === 'moderator') {
       load()
       loadPayments()
+      api.admin.getDeliveryOptions().then(res => {
+        const data = Array.isArray(res) ? res : (typeof res === 'string' ? JSON.parse(res) : null)
+        if (Array.isArray(data)) setDeliveryOptionsList(data)
+      })
     }
   }, [user, load, loadPayments])
 
@@ -805,12 +810,16 @@ export default function Admin() {
           </div>
           <div className="min-w-[160px]">
             <label className="text-white/40 text-xs mb-1 block">Доставка</label>
-            <Input
+            <select
               value={filterDelivery}
               onChange={e => setFilterDelivery(e.target.value)}
-              placeholder="название доставки"
-              className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm"
-            />
+              className="w-full h-9 bg-white/5 border border-white/15 text-white text-sm rounded-md px-3 appearance-none"
+            >
+              <option value="">Все варианты</option>
+              {deliveryOptionsList.map(d => (
+                <option key={d.id} value={d.name} className="bg-zinc-900">{d.name}</option>
+              ))}
+            </select>
           </div>
           <Button onClick={load} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
             {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
@@ -1353,7 +1362,10 @@ function DeliveryTab() {
     setLoading(true)
     const res = await api.admin.getDeliveryOptions()
     setLoading(false)
-    if (Array.isArray(res)) setOptions(res)
+    if (res?.error) { toast.error('Ошибка загрузки: ' + res.error); return }
+    const data = Array.isArray(res) ? res : (typeof res === 'string' ? JSON.parse(res) : null)
+    if (Array.isArray(data)) setOptions(data)
+    else toast.error('Не удалось загрузить варианты доставки')
   }
 
   useEffect(() => { loadOptions() }, [])

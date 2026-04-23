@@ -300,6 +300,17 @@ def handler(event: dict, context) -> dict:
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'users': users, 'count': len(users)})}
 
+        if action == 'get_delivery_options':
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT id, name, description, address, schedule, is_active, sort_order FROM delivery_options ORDER BY sort_order ASC")
+            rows = cur.fetchall()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+                'id': r[0], 'name': r[1], 'description': r[2], 'address': r[3],
+                'schedule': r[4], 'is_active': r[5], 'sort_order': r[6],
+            } for r in rows])}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':
