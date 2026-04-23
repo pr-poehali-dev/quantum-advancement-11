@@ -83,5 +83,13 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'archive_order', order_id }),
     archiveOrders: (order_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'archive_orders', order_ids }),
+    archivedOrders: (filters: { nick?: string; product?: string }) => {
+      const p = new URLSearchParams({ action: 'archived_orders' })
+      if (filters.nick) p.set('nick', filters.nick)
+      if (filters.product) p.set('product', filters.product)
+      return get(`${ADMIN_URL}/?${p.toString()}`)
+    },
+    unarchiveOrders: (order_ids: number[]) =>
+      post(`${ADMIN_URL}/`, { action: 'unarchive_orders', order_ids }),
   },
 }

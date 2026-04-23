@@ -159,6 +159,59 @@ def handler(event: dict, context) -> dict:
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(debts)}
 
+        if action == 'archived_orders':
+            nick_filter = (params.get('nick') or '').strip().lower()
+            product_filter = (params.get('product') or '').strip().lower()
+            conn = get_conn()
+            cur = conn.cursor()
+            query = """
+                SELECT o.id, o.created_at, o.archived_at, u.nickname, p.name, p.brand,
+                       o.volume_ml, o.total_price, o.atomizer_price, o.price_per_ml,
+                       o.status, o.pickup_point, o.payment_amount, o.payment_confirmed,
+                       o.payment_note, a.name, p.id,
+                       (SELECT COUNT(*) FROM debts d WHERE d.order_id = o.id AND d.resolved = FALSE) as open_debts
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                JOIN products p ON o.product_id = p.id
+                LEFT JOIN atomizers a ON o.atomizer_id = a.id
+                WHERE o.is_archived = TRUE
+            """
+            conditions, values = [], []
+            if nick_filter:
+                conditions.append("LOWER(u.nickname) LIKE %s")
+                values.append(f'%{nick_filter}%')
+            if product_filter:
+                conditions.append("(LOWER(p.name) LIKE %s OR LOWER(p.brand) LIKE %s)")
+                values.extend([f'%{product_filter}%', f'%{product_filter}%'])
+            if conditions:
+                query += " AND " + " AND ".join(conditions)
+            query += " ORDER BY o.archived_at DESC"
+            cur.execute(query, values)
+            rows = cur.fetchall()
+            conn.close()
+            import datetime
+            orders = []
+            for r in rows:
+                archived_at = r[2]
+                delete_at = (archived_at + datetime.timedelta(days=122)) if archived_at else None
+                orders.append({
+                    'id': r[0], 'created_at': str(r[1]),
+                    'archived_at': str(r[2]) if r[2] else None,
+                    'delete_at': str(delete_at) if delete_at else None,
+                    'nickname': r[3], 'product_name': r[4], 'brand': r[5],
+                    'volume_ml': r[6], 'total_price': float(r[7]),
+                    'atomizer_price': float(r[8]), 'price_per_ml': float(r[9]),
+                    'status': r[10], 'pickup_point': r[11],
+                    'payment_amount': float(r[12]) if r[12] else None,
+                    'payment_confirmed': r[13], 'payment_note': r[14],
+                    'atomizer_name': r[15], 'product_id': r[16],
+                    'open_debts': int(r[17]),
+                })
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
+                'orders': orders,
+                'count': len(orders),
+            })}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':
@@ -286,6 +339,22 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': archived})}
+
+        if action == 'unarchive_orders':
+            order_ids = body.get('order_ids', [])
+            if not order_ids or not isinstance(order_ids, list):
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_ids'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            placeholders = ','.join(['%s'] * len(order_ids))
+            cur.execute(
+                f"UPDATE orders SET is_archived = FALSE, archived_at = NULL, updated_at = NOW() WHERE id IN ({placeholders}) AND is_archived = TRUE",
+                list(order_ids)
+            )
+            restored = cur.rowcount
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'restored': restored})}
 
         if action == 'set_status':
             order_ids = body.get('order_ids', [])

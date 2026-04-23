@@ -82,7 +82,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive'>('orders')
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [totalSum, setTotalSum] = useState(0)
@@ -103,6 +103,13 @@ export default function Admin() {
 
   const [debts, setDebts] = useState<Debt[]>([])
   const [debtsLoading, setDebtsLoading] = useState(false)
+
+  const [archivedOrders, setArchivedOrders] = useState<(AdminOrder & { archived_at: string | null; delete_at: string | null; open_debts: number })[]>([])
+  const [archiveLoading, setArchiveLoading] = useState(false)
+  const [archiveFilterNick, setArchiveFilterNick] = useState('')
+  const [archiveFilterProduct, setArchiveFilterProduct] = useState('')
+  const [archiveSelected, setArchiveSelected] = useState<Set<number>>(new Set())
+  const [unarchiving, setUnarchiving] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -143,10 +150,33 @@ export default function Admin() {
     setDebts(Array.isArray(res) ? res : [])
   }, [])
 
+  const loadArchive = useCallback(async () => {
+    setArchiveLoading(true)
+    const res = await api.admin.archivedOrders({ nick: archiveFilterNick, product: archiveFilterProduct })
+    setArchiveLoading(false)
+    if (res.error) { toast.error(res.error); return }
+    setArchivedOrders(res.orders || [])
+    setArchiveSelected(new Set())
+  }, [archiveFilterNick, archiveFilterProduct])
+
   useEffect(() => {
     if (tab === 'payments') loadPayments()
     if (tab === 'debts') loadDebts()
-  }, [tab, loadPayments, loadDebts])
+    if (tab === 'archive') loadArchive()
+  }, [tab, loadPayments, loadDebts, loadArchive])
+
+  const handleUnarchive = async () => {
+    const ids = archiveSelected.size > 0 ? Array.from(archiveSelected) : archivedOrders.map(o => o.id)
+    if (ids.length === 0) return
+    const label = archiveSelected.size > 0 ? `${ids.length} выбранных` : `всех ${ids.length}`
+    if (!window.confirm(`Вернуть ${label} заказов из архива?`)) return
+    setUnarchiving(true)
+    const res = await api.admin.unarchiveOrders(ids)
+    setUnarchiving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Восстановлено заказов: ${res.restored}`)
+    loadArchive()
+  }
 
   const toggleSelect = (id: number) => {
     setSelected(prev => {
@@ -234,6 +264,15 @@ export default function Admin() {
               <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-400" />
             )}
           </button>
+          <button
+            onClick={() => setTab('archive')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors relative ${tab === 'archive' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Архив
+            {archivedOrders.length > 0 && tab !== 'archive' && (
+              <span className="absolute -top-0.5 -right-0.5 bg-zinc-600 text-white/60 text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{archivedOrders.length > 99 ? '99+' : archivedOrders.length}</span>
+            )}
+          </button>
         </div>
 
         {tab === 'payments' && (
@@ -243,6 +282,143 @@ export default function Admin() {
         {tab === 'debts' && (
           <DebtsTab debts={debts} loading={debtsLoading} onChanged={loadDebts} />
         )}
+
+        {tab === 'archive' && <>
+          {/* Фильтры архива */}
+          <div className="flex flex-wrap gap-3 mb-4 items-end">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-white/40 text-xs mb-1 block">Ник</label>
+              <Input value={archiveFilterNick} onChange={e => setArchiveFilterNick(e.target.value)}
+                placeholder="поиск по нику"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-white/40 text-xs mb-1 block">Товар</label>
+              <Input value={archiveFilterProduct} onChange={e => setArchiveFilterProduct(e.target.value)}
+                placeholder="название / бренд"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <Button onClick={loadArchive} disabled={archiveLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
+              {archiveLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setArchiveFilterNick(''); setArchiveFilterProduct('') }}
+              className="text-white/30 hover:text-white h-9 text-sm">
+              Сбросить
+            </Button>
+          </div>
+
+          {/* Панель действий архива */}
+          <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${archiveSelected.size > 0 ? 'bg-zinc-700/30 border-zinc-500/40' : 'bg-white/3 border-white/10'}`}>
+            <button
+              onClick={() => {
+                if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set())
+                else setArchiveSelected(new Set(archivedOrders.map(o => o.id)))
+              }}
+              className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors"
+            >
+              <input type="checkbox" readOnly
+                checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length}
+                className="accent-orange-500 w-4 h-4 pointer-events-none" />
+              {archiveSelected.size > 0
+                ? <span className="text-zinc-300 font-medium">Выбрано: {archiveSelected.size} из {archivedOrders.length}</span>
+                : <span>Выбрать все</span>}
+            </button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button onClick={handleUnarchive} disabled={unarchiving || archivedOrders.length === 0}
+                className="bg-zinc-600 hover:bg-zinc-500 text-white h-8 text-xs px-4 disabled:opacity-40 border border-white/10"
+                title={archiveSelected.size > 0 ? 'Вернуть выбранные из архива' : 'Вернуть все из архива'}>
+                <Icon name="ArchiveRestore" size={13} className="mr-1.5" />
+                {unarchiving ? 'Восстанавливаю...' : archiveSelected.size > 0 ? `Вернуть (${archiveSelected.size})` : `Вернуть (все ${archivedOrders.length})`}
+              </Button>
+              {archiveSelected.size > 0 && (
+                <button onClick={() => setArchiveSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">Снять</button>
+              )}
+            </div>
+          </div>
+
+          {/* Таблица архива */}
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm min-w-[900px]">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/3">
+                  <th className="px-3 py-3 text-left w-10">
+                    <input type="checkbox"
+                      checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length}
+                      onChange={() => {
+                        if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set())
+                        else setArchiveSelected(new Set(archivedOrders.map(o => o.id)))
+                      }}
+                      className="accent-orange-500 w-4 h-4 cursor-pointer" />
+                  </th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Ник</th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Товар</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">мл</th>
+                  <th className="px-3 py-3 text-right text-white/40 font-medium">Сумма</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Статус</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Архивирован</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Удалится</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Долги</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archiveLoading && (
+                  <tr><td colSpan={9} className="py-12 text-center text-white/30">
+                    <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
+                  </td></tr>
+                )}
+                {!archiveLoading && archivedOrders.length === 0 && (
+                  <tr><td colSpan={9} className="py-12 text-center text-white/20 text-sm">Архив пуст</td></tr>
+                )}
+                {!archiveLoading && archivedOrders.map(o => {
+                  const daysLeft = o.delete_at ? Math.ceil((new Date(o.delete_at).getTime() - Date.now()) / 86400000) : null
+                  const soonDelete = daysLeft !== null && daysLeft <= 30
+                  return (
+                    <tr key={o.id}
+                      className={`border-b border-white/5 hover:bg-white/3 transition-colors ${archiveSelected.has(o.id) ? 'bg-white/5' : ''}`}>
+                      <td className="px-3 py-3">
+                        <input type="checkbox" checked={archiveSelected.has(o.id)}
+                          onChange={() => setArchiveSelected(prev => { const n = new Set(prev); if (n.has(o.id)) { n.delete(o.id) } else { n.add(o.id) } return n })}
+                          className="accent-orange-500 w-4 h-4 cursor-pointer" />
+                      </td>
+                      <td className="px-3 py-3 text-white/80 font-medium">{o.nickname}</td>
+                      <td className="px-3 py-3">
+                        <div className="text-white/80">{o.product_name}</div>
+                        <div className="text-white/30 text-xs">{o.brand}</div>
+                      </td>
+                      <td className="px-3 py-3 text-center text-white/60">{o.volume_ml}</td>
+                      <td className="px-3 py-3 text-right text-white/80 font-medium">{o.total_price.toFixed(2)} ₽</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[o.status] || 'bg-white/10 text-white/40'}`}>
+                          {STATUS_LABEL[o.status] || o.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center text-white/40 text-xs">{o.archived_at ? fmt(o.archived_at) : '—'}</td>
+                      <td className="px-3 py-3 text-center text-xs">
+                        {daysLeft !== null
+                          ? <span className={soonDelete ? 'text-red-400 font-medium' : 'text-white/30'}>
+                              {daysLeft > 0 ? `${daysLeft} д.` : 'скоро'}
+                            </span>
+                          : <span className="text-white/20">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {o.open_debts > 0
+                          ? <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded-full">{o.open_debts} открыт.</span>
+                          : <span className="text-white/20 text-xs">нет</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {archivedOrders.length > 0 && (
+            <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
+              <span>Всего: <span className="text-white/60">{archivedOrders.length}</span></span>
+              <span>С открытыми долгами: <span className="text-red-400">{archivedOrders.filter(o => o.open_debts > 0).length}</span></span>
+            </div>
+          )}
+        </>}
 
         {tab === 'orders' && <>
         {/* Фильтры */}
