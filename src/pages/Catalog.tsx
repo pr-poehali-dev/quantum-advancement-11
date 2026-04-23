@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
@@ -35,6 +35,9 @@ export default function Catalog() {
   const [sort, setSort] = useState('')
   const [category, setCategory] = useState('')
   const [brandFilter, setBrandFilter] = useState('')
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false)
+  const [brandSearch, setBrandSearch] = useState('')
+  const brandDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -56,6 +59,23 @@ export default function Catalog() {
     if (!brandFilter) return allProducts
     return allProducts.filter(p => p.brand === brandFilter)
   }, [allProducts, brandFilter])
+
+  // Закрываем dropdown по клику вне
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(e.target as Node)) {
+        setBrandDropdownOpen(false)
+        setBrandSearch('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filteredBrands = useMemo(() =>
+    brands.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase())),
+    [brands, brandSearch]
+  )
 
   const handleLogout = async () => {
     await logout()
@@ -161,30 +181,70 @@ export default function Catalog() {
               </div>
             </div>
 
-            {/* Фильтр по бренду */}
+            {/* Фильтр по бренду — dropdown */}
             {brands.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-white/30 text-xs uppercase tracking-wider w-20 shrink-0">Бренд</span>
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="relative" ref={brandDropdownRef}>
                   <button
-                    onClick={() => setBrandFilter('')}
-                    className={`text-sm px-3 py-1.5 rounded-lg transition-all border ${
-                      brandFilter === ''
-                        ? 'border-white/30 bg-white/10 text-white'
-                        : 'border-transparent text-white/40 hover:text-white hover:border-white/15'
-                    }`}>
-                    Все
+                    onClick={() => { setBrandDropdownOpen(v => !v); setBrandSearch('') }}
+                    className={`flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-all ${
+                      brandFilter
+                        ? 'border-orange-500/60 bg-orange-500/10 text-orange-300'
+                        : 'border-white/15 bg-white/5 text-white/60 hover:text-white hover:border-white/30'
+                    }`}
+                  >
+                    <Icon name="Tag" size={14} />
+                    <span>{brandFilter || 'Все бренды'}</span>
+                    {brandFilter && (
+                      <span
+                        onClick={e => { e.stopPropagation(); setBrandFilter(''); setBrandDropdownOpen(false) }}
+                        className="ml-1 text-orange-400/60 hover:text-orange-300 cursor-pointer"
+                      >
+                        <Icon name="X" size={12} />
+                      </span>
+                    )}
+                    <Icon name={brandDropdownOpen ? 'ChevronUp' : 'ChevronDown'} size={14} />
                   </button>
-                  {brands.map(brand => (
-                    <button key={brand} onClick={() => setBrandFilter(brand)}
-                      className={`text-sm px-3 py-1.5 rounded-lg transition-all border ${
-                        brandFilter === brand
-                          ? 'border-orange-500/60 bg-orange-500/10 text-orange-300'
-                          : 'border-transparent text-white/40 hover:text-white hover:border-white/15'
-                      }`}>
-                      {brand}
-                    </button>
-                  ))}
+
+                  {brandDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden">
+                      <div className="p-2 border-b border-white/10">
+                        <input
+                          autoFocus
+                          value={brandSearch}
+                          onChange={e => setBrandSearch(e.target.value)}
+                          placeholder="Поиск бренда..."
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/30"
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        <button
+                          onClick={() => { setBrandFilter(''); setBrandDropdownOpen(false) }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                            !brandFilter ? 'text-white bg-white/8' : 'text-white/50 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          Все бренды
+                        </button>
+                        {filteredBrands.length === 0 ? (
+                          <div className="px-4 py-3 text-white/30 text-sm">Ничего не найдено</div>
+                        ) : filteredBrands.map(brand => (
+                          <button
+                            key={brand}
+                            onClick={() => { setBrandFilter(brand); setBrandDropdownOpen(false); setBrandSearch('') }}
+                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                              brandFilter === brand
+                                ? 'text-orange-300 bg-orange-500/10'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            {brand}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
