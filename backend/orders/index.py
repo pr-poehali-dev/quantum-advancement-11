@@ -1,5 +1,5 @@
 """
-Заказы Распивошной.
+Заказы Распивошной. v2
 GET  /?action=my                   — мои заказы
 GET  /?action=my_debts             — мои долги
 GET  /?action=delivery_options     — список вариантов доставки

@@ -1,5 +1,5 @@
 """
-Кабинет модератора Распивошной.
+Кабинет модератора Распивошной. v2
 GET  /?action=orders             — все заказы с фильтром (nick, product, status, delivery)
 GET  /?action=payments           — неподтверждённые платежи
 GET  /?action=debts              — все активные долги
