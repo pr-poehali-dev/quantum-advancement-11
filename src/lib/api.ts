@@ -153,8 +153,8 @@ export const api = {
       post(`${CATALOG_URL}/`, { action: 'pin_topic', topic_id, pinned }),
     closeTopic: (topic_id: number, closed: boolean) =>
       post(`${CATALOG_URL}/`, { action: 'close_topic', topic_id, closed }),
-    addComment: (topic_id: number, body: string) =>
-      post(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body }),
+    addComment: (topic_id: number, body: string, parent_id?: number) =>
+      post(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body, ...(parent_id ? { parent_id } : {}) }),
     deleteComment: (comment_id: number) =>
       post(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
   },

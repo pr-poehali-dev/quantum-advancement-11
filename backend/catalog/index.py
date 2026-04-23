@@ -155,13 +155,14 @@ def handler(event: dict, context) -> dict:
                 'author_nickname': row[8], 'author_id': row[9], 'image_url': row[10],
             }
             cur.execute("""
-                SELECT c.id, c.body, c.created_at, u.nickname, u.id, u.role
+                SELECT c.id, c.body, c.created_at, u.nickname, u.id, u.role, c.parent_id
                 FROM forum_comments c JOIN users u ON c.author_id = u.id
                 WHERE c.topic_id = %s ORDER BY c.created_at ASC
             """, (int(topic_id),))
             comments = [{
                 'id': r[0], 'body': r[1], 'created_at': str(r[2]),
                 'author_nickname': r[3], 'author_id': r[4], 'author_role': r[5],
+                'parent_id': r[6],
             } for r in cur.fetchall()]
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'topic': topic, 'comments': comments})}
@@ -241,10 +242,11 @@ def handler(event: dict, context) -> dict:
                     return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Войдите, чтобы комментировать'})}
                 topic_id = body.get('topic_id')
                 text = (body.get('body') or '').strip()
+                parent_id = body.get('parent_id')
                 if not topic_id or not text:
                     conn.close()
                     return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id и текст'})}
-                cur.execute("SELECT is_closed FROM forum_topics WHERE id = %s", (int(topic_id),))
+                cur.execute("SELECT is_closed, title FROM forum_topics WHERE id = %s", (int(topic_id),))
                 row = cur.fetchone()
                 if not row:
                     conn.close()
@@ -252,14 +254,38 @@ def handler(event: dict, context) -> dict:
                 if row[0] and not is_admin(forum_user):
                     conn.close()
                     return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Тема закрыта для комментариев'})}
+                topic_title = row[1]
+                # Проверяем parent_id
+                parent_author_id = None
+                parent_nickname = None
+                if parent_id:
+                    cur.execute("SELECT author_id, (SELECT nickname FROM users WHERE id = author_id) FROM forum_comments WHERE id = %s AND topic_id = %s",
+                                (int(parent_id), int(topic_id)))
+                    prow = cur.fetchone()
+                    if prow:
+                        parent_author_id = prow[0]
+                        parent_nickname = prow[1]
                 cur.execute(
-                    "INSERT INTO forum_comments (topic_id, author_id, body) VALUES (%s, %s, %s)",
-                    (int(topic_id), forum_user['id'], text)
+                    "INSERT INTO forum_comments (topic_id, author_id, body, parent_id) VALUES (%s, %s, %s, %s)",
+                    (int(topic_id), forum_user['id'], text, int(parent_id) if parent_id else None)
                 )
                 cur.execute(
                     "UPDATE forum_topics SET comments_count = comments_count + 1, updated_at = NOW() WHERE id = %s",
                     (int(topic_id),)
                 )
+                # Уведомление автору родительского комментария (если это не сам же пользователь)
+                if parent_author_id and parent_author_id != forum_user['id']:
+                    cur.execute("SELECT id FROM users WHERE is_admin = TRUE LIMIT 1")
+                    admin_row = cur.fetchone()
+                    sender_id = admin_row[0] if admin_row else forum_user['id']
+                    notif_msg = (
+                        f'💬 @{forum_user["nickname"]} ответил(а) на ваш комментарий '
+                        f'в теме «{topic_title}»: «{text[:80]}{"…" if len(text) > 80 else ""}»'
+                    )
+                    cur.execute(
+                        "INSERT INTO messages (from_user_id, to_user_id, body) VALUES (%s, %s, %s)",
+                        (sender_id, parent_author_id, notif_msg)
+                    )
                 conn.commit()
                 conn.close()
                 return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

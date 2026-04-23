@@ -1935,12 +1935,26 @@ function AdminForumTab() {
 
   useEffect(() => { load() }, [load])
 
-  const readFileAsBase64 = (file: File): Promise<string> =>
+  const resizeImageForUpload = (file: File, maxW = 1200, maxH = 900): Promise<string> =>
     new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        resolve(canvas.toDataURL('image/jpeg', 0.88))
+      }
+      img.onerror = reject
+      img.src = url
     })
 
   const handleCreate = async () => {
@@ -1948,7 +1962,7 @@ function AdminForumTab() {
     setSaving(true)
     let image_b64: string | undefined
     if (form.imageFile) {
-      try { image_b64 = await readFileAsBase64(form.imageFile) } catch { /* ignore */ }
+      try { image_b64 = await resizeImageForUpload(form.imageFile) } catch { /* ignore */ }
     }
     const res = await api.forum.createTopic({ title: form.title.trim(), body: form.body.trim(), image_b64 })
     setSaving(false)

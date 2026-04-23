@@ -81,8 +81,10 @@ export default function Forum() {
                 className="w-full text-left border border-white/8 bg-white/2 hover:bg-white/5 hover:border-white/15 rounded-2xl p-4 transition-all group"
               >
                 {t.image_url && (
-                  <div className="w-full h-40 rounded-xl overflow-hidden mb-3">
-                    <img src={t.image_url} alt={t.title} className="w-full h-full object-cover" />
+                  <div className="w-full rounded-xl overflow-hidden mb-3 flex justify-center bg-white/3">
+                    <img src={t.image_url} alt={t.title}
+                      className="rounded-xl"
+                      style={{ maxWidth: '100%', maxHeight: '300px', width: 'auto', height: 'auto' }} />
                   </div>
                 )}
                 <div className="flex items-start gap-3">
