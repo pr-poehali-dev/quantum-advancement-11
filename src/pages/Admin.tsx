@@ -32,6 +32,7 @@ interface AdminOrder {
   delivery_address: string | null
   delivery_schedule: string | null
   delivery_comment: string | null
+  phone: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -90,7 +91,8 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products' | 'users' | 'messages' | 'delivery'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery'>('orders')
+  const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'archive'>('active')
   const [adminUnread, setAdminUnread] = useState(0)
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
@@ -103,6 +105,8 @@ export default function Admin() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDelivery, setFilterDelivery] = useState('')
   const [deliveryOptionsList, setDeliveryOptionsList] = useState<{id: number; name: string}[]>([])
+  const [sortField, setSortField] = useState<string>('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
@@ -363,15 +367,7 @@ export default function Admin() {
               <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-400" />
             )}
           </button>
-          <button
-            onClick={() => setTab('archive')}
-            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors relative ${tab === 'archive' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
-          >
-            Архив
-            {archivedOrders.length > 0 && tab !== 'archive' && (
-              <span className="absolute -top-0.5 -right-0.5 bg-zinc-600 text-white/60 text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{archivedOrders.length > 99 ? '99+' : archivedOrders.length}</span>
-            )}
-          </button>
+
           <button
             onClick={() => setTab('products')}
             className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'products' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
@@ -409,142 +405,7 @@ export default function Admin() {
           <DebtsTab debts={debts} loading={debtsLoading} onChanged={loadDebts} />
         )}
 
-        {tab === 'archive' && <>
-          {/* Фильтры архива */}
-          <div className="flex flex-wrap gap-3 mb-4 items-end">
-            <div className="flex-1 min-w-[140px]">
-              <label className="text-white/40 text-xs mb-1 block">Ник</label>
-              <Input value={archiveFilterNick} onChange={e => setArchiveFilterNick(e.target.value)}
-                placeholder="поиск по нику"
-                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
-            </div>
-            <div className="flex-1 min-w-[140px]">
-              <label className="text-white/40 text-xs mb-1 block">Товар</label>
-              <Input value={archiveFilterProduct} onChange={e => setArchiveFilterProduct(e.target.value)}
-                placeholder="название / бренд"
-                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
-            </div>
-            <Button onClick={loadArchive} disabled={archiveLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
-              {archiveLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
-            </Button>
-            <Button variant="ghost" onClick={() => { setArchiveFilterNick(''); setArchiveFilterProduct('') }}
-              className="text-white/30 hover:text-white h-9 text-sm">
-              Сбросить
-            </Button>
-          </div>
 
-          {/* Панель действий архива */}
-          <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${archiveSelected.size > 0 ? 'bg-zinc-700/30 border-zinc-500/40' : 'bg-white/3 border-white/10'}`}>
-            <button
-              onClick={() => {
-                if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set())
-                else setArchiveSelected(new Set(archivedOrders.map(o => o.id)))
-              }}
-              className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors"
-            >
-              <input type="checkbox" readOnly
-                checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length}
-                className="accent-orange-500 w-4 h-4 pointer-events-none" />
-              {archiveSelected.size > 0
-                ? <span className="text-zinc-300 font-medium">Выбрано: {archiveSelected.size} из {archivedOrders.length}</span>
-                : <span>Выбрать все</span>}
-            </button>
-            <div className="flex items-center gap-2 ml-auto">
-              <Button onClick={handleUnarchive} disabled={unarchiving || archivedOrders.length === 0}
-                className="bg-zinc-600 hover:bg-zinc-500 text-white h-8 text-xs px-4 disabled:opacity-40 border border-white/10"
-                title={archiveSelected.size > 0 ? 'Вернуть выбранные из архива' : 'Вернуть все из архива'}>
-                <Icon name="ArchiveRestore" size={13} className="mr-1.5" />
-                {unarchiving ? 'Восстанавливаю...' : archiveSelected.size > 0 ? `Вернуть (${archiveSelected.size})` : `Вернуть (все ${archivedOrders.length})`}
-              </Button>
-              {archiveSelected.size > 0 && (
-                <button onClick={() => setArchiveSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">Снять</button>
-              )}
-            </div>
-          </div>
-
-          {/* Таблица архива */}
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm min-w-[900px]">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/3">
-                  <th className="px-3 py-3 text-left w-10">
-                    <input type="checkbox"
-                      checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length}
-                      onChange={() => {
-                        if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set())
-                        else setArchiveSelected(new Set(archivedOrders.map(o => o.id)))
-                      }}
-                      className="accent-orange-500 w-4 h-4 cursor-pointer" />
-                  </th>
-                  <th className="px-3 py-3 text-left text-white/40 font-medium">Ник</th>
-                  <th className="px-3 py-3 text-left text-white/40 font-medium">Товар</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium">мл</th>
-                  <th className="px-3 py-3 text-right text-white/40 font-medium">Сумма</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium">Статус</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium">Архивирован</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium">Удалится</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium">Долги</th>
-                </tr>
-              </thead>
-              <tbody>
-                {archiveLoading && (
-                  <tr><td colSpan={9} className="py-12 text-center text-white/30">
-                    <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
-                  </td></tr>
-                )}
-                {!archiveLoading && archivedOrders.length === 0 && (
-                  <tr><td colSpan={9} className="py-12 text-center text-white/20 text-sm">Архив пуст</td></tr>
-                )}
-                {!archiveLoading && archivedOrders.map(o => {
-                  const daysLeft = o.delete_at ? Math.ceil((new Date(o.delete_at).getTime() - Date.now()) / 86400000) : null
-                  const soonDelete = daysLeft !== null && daysLeft <= 30
-                  return (
-                    <tr key={o.id}
-                      className={`border-b border-white/5 hover:bg-white/3 transition-colors ${archiveSelected.has(o.id) ? 'bg-white/5' : ''}`}>
-                      <td className="px-3 py-3">
-                        <input type="checkbox" checked={archiveSelected.has(o.id)}
-                          onChange={() => setArchiveSelected(prev => { const n = new Set(prev); if (n.has(o.id)) { n.delete(o.id) } else { n.add(o.id) } return n })}
-                          className="accent-orange-500 w-4 h-4 cursor-pointer" />
-                      </td>
-                      <td className="px-3 py-3 text-white/80 font-medium">{o.nickname}</td>
-                      <td className="px-3 py-3">
-                        <div className="text-white/80">{o.product_name}</div>
-                        <div className="text-white/30 text-xs">{o.brand}</div>
-                      </td>
-                      <td className="px-3 py-3 text-center text-white/60">{o.volume_ml}</td>
-                      <td className="px-3 py-3 text-right text-white/80 font-medium">{o.total_price.toFixed(2)} ₽</td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[o.status] || 'bg-white/10 text-white/40'}`}>
-                          {STATUS_LABEL[o.status] || o.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center text-white/40 text-xs">{o.archived_at ? fmt(o.archived_at) : '—'}</td>
-                      <td className="px-3 py-3 text-center text-xs">
-                        {daysLeft !== null
-                          ? <span className={soonDelete ? 'text-red-400 font-medium' : 'text-white/30'}>
-                              {daysLeft > 0 ? `${daysLeft} д.` : 'скоро'}
-                            </span>
-                          : <span className="text-white/20">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        {o.open_debts > 0
-                          ? <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded-full">{o.open_debts} открыт.</span>
-                          : <span className="text-white/20 text-xs">нет</span>}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {archivedOrders.length > 0 && (
-            <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
-              <span>Всего: <span className="text-white/60">{archivedOrders.length}</span></span>
-              <span>С открытыми долгами: <span className="text-red-400">{archivedOrders.filter(o => o.open_debts > 0).length}</span></span>
-            </div>
-          )}
-        </>}
 
         {tab === 'products' && <>
           {/* Фильтры + импорт */}
@@ -775,6 +636,107 @@ export default function Admin() {
         {tab === 'messages' && <MessagesTab />}
 
         {tab === 'orders' && <>
+        {/* Подвкладки: Активные / Архив */}
+        <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit mb-5">
+          <button onClick={() => setOrdersSubTab('active')}
+            className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${ordersSubTab === 'active' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60'}`}>
+            Активные
+          </button>
+          <button onClick={() => { setOrdersSubTab('archive'); loadArchive() }}
+            className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors relative ${ordersSubTab === 'archive' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60'}`}>
+            Архив
+            {archivedOrders.length > 0 && ordersSubTab !== 'archive' && (
+              <span className="absolute -top-0.5 -right-0.5 bg-zinc-600 text-white/60 text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{archivedOrders.length > 99 ? '99+' : archivedOrders.length}</span>
+            )}
+          </button>
+        </div>
+
+        {/* ── АРХИВ ── */}
+        {ordersSubTab === 'archive' && <>
+          <div className="flex flex-wrap gap-3 mb-4 items-end">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-white/40 text-xs mb-1 block">Ник</label>
+              <Input value={archiveFilterNick} onChange={e => setArchiveFilterNick(e.target.value)}
+                placeholder="поиск по нику"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-white/40 text-xs mb-1 block">Товар</label>
+              <Input value={archiveFilterProduct} onChange={e => setArchiveFilterProduct(e.target.value)}
+                placeholder="название / бренд"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <Button onClick={loadArchive} disabled={archiveLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
+              {archiveLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setArchiveFilterNick(''); setArchiveFilterProduct('') }}
+              className="text-white/30 hover:text-white h-9 text-sm">
+              Сбросить
+            </Button>
+          </div>
+          <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${archiveSelected.size > 0 ? 'bg-zinc-700/30 border-zinc-500/40' : 'bg-white/3 border-white/10'}`}>
+            <button onClick={() => { if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set()); else setArchiveSelected(new Set(archivedOrders.map(o => o.id))) }}
+              className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
+              <input type="checkbox" readOnly checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} className="accent-orange-500 w-4 h-4 pointer-events-none" />
+              {archiveSelected.size > 0 ? <span className="text-zinc-300 font-medium">Выбрано: {archiveSelected.size} из {archivedOrders.length}</span> : <span>Выбрать все</span>}
+            </button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button onClick={handleUnarchive} disabled={unarchiving || archivedOrders.length === 0}
+                className="bg-zinc-600 hover:bg-zinc-500 text-white h-8 text-xs px-4 disabled:opacity-40 border border-white/10">
+                <Icon name="ArchiveRestore" size={13} className="mr-1.5" />
+                {unarchiving ? 'Восстанавливаю...' : archiveSelected.size > 0 ? `Вернуть (${archiveSelected.size})` : `Вернуть (все ${archivedOrders.length})`}
+              </Button>
+              {archiveSelected.size > 0 && <button onClick={() => setArchiveSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">Снять</button>}
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm min-w-[900px]">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/3">
+                  <th className="px-3 py-3 text-left w-10"><input type="checkbox" checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} onChange={() => { if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set()); else setArchiveSelected(new Set(archivedOrders.map(o => o.id))) }} className="accent-orange-500 w-4 h-4 cursor-pointer" /></th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Ник</th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Товар</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">мл</th>
+                  <th className="px-3 py-3 text-right text-white/40 font-medium">Сумма</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Статус</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Архивирован</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Удалится</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium">Долги</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archiveLoading && <tr><td colSpan={9} className="py-12 text-center text-white/30"><Icon name="Loader2" size={20} className="animate-spin mx-auto" /></td></tr>}
+                {!archiveLoading && archivedOrders.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-white/20 text-sm">Архив пуст</td></tr>}
+                {!archiveLoading && archivedOrders.map(o => {
+                  const daysLeft = o.delete_at ? Math.ceil((new Date(o.delete_at).getTime() - Date.now()) / 86400000) : null
+                  const soonDelete = daysLeft !== null && daysLeft <= 30
+                  return (
+                    <tr key={o.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${archiveSelected.has(o.id) ? 'bg-white/5' : ''}`}>
+                      <td className="px-3 py-3"><input type="checkbox" checked={archiveSelected.has(o.id)} onChange={() => setArchiveSelected(prev => { const n = new Set(prev); if (n.has(o.id)) { n.delete(o.id) } else { n.add(o.id) } return n })} className="accent-orange-500 w-4 h-4 cursor-pointer" /></td>
+                      <td className="px-3 py-3 text-white/80 font-medium">{o.nickname}</td>
+                      <td className="px-3 py-3"><div className="text-white/80">{o.product_name}</div><div className="text-white/30 text-xs">{o.brand}</div></td>
+                      <td className="px-3 py-3 text-center text-white/60">{o.volume_ml}</td>
+                      <td className="px-3 py-3 text-right text-white/80 font-medium">{o.total_price.toFixed(2)} ₽</td>
+                      <td className="px-3 py-3 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[o.status] || 'bg-white/10 text-white/40'}`}>{STATUS_LABEL[o.status] || o.status}</span></td>
+                      <td className="px-3 py-3 text-center text-white/40 text-xs">{o.archived_at ? fmt(o.archived_at) : '—'}</td>
+                      <td className="px-3 py-3 text-center text-xs">{daysLeft !== null ? <span className={soonDelete ? 'text-red-400 font-medium' : 'text-white/30'}>{daysLeft > 0 ? `${daysLeft} д.` : 'скоро'}</span> : <span className="text-white/20">—</span>}</td>
+                      <td className="px-3 py-3 text-center">{o.open_debts > 0 ? <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded-full">{o.open_debts} открыт.</span> : <span className="text-white/20 text-xs">нет</span>}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {archivedOrders.length > 0 && (
+            <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
+              <span>Всего: <span className="text-white/60">{archivedOrders.length}</span></span>
+              <span>С открытыми долгами: <span className="text-red-400">{archivedOrders.filter(o => o.open_debts > 0).length}</span></span>
+            </div>
+          )}
+        </>}
+
+        {/* ── АКТИВНЫЕ ЗАКАЗЫ ── */}
+        {ordersSubTab === 'active' && <>
         {/* Фильтры */}
         <div className="flex flex-wrap gap-3 mb-4 items-end">
           <div className="flex-1 min-w-[140px]">
@@ -881,10 +843,62 @@ export default function Admin() {
                 Снять
               </button>
             )}
+            <Button
+              onClick={() => {
+                const buyers = Object.values(
+                  orders.reduce<Record<string, { nickname: string; phone: string; count: number }>>((acc, o) => {
+                    if (!acc[o.nickname]) acc[o.nickname] = { nickname: o.nickname, phone: o.phone || '—', count: 0 }
+                    acc[o.nickname].count++
+                    return acc
+                  }, {})
+                ).sort((a, b) => a.nickname.localeCompare(b.nickname, 'ru'))
+                const win = window.open('', '_blank')
+                if (!win) return
+                win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Список покупателей</title><style>
+                  body{font-family:Arial,sans-serif;padding:20px;color:#000}
+                  h2{margin-bottom:4px}p{margin-bottom:12px;color:#666;font-size:13px}
+                  table{border-collapse:collapse;width:100%}
+                  th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}
+                  td{padding:8px 12px;border:1px solid #ccc;font-size:13px}
+                  tr:nth-child(even){background:#fafafa}
+                  @media print{button{display:none}}
+                </style></head><body>
+                <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>
+                <h2>Список покупателей</h2>
+                <p>Фильтры: ${[filterNick && 'ник: '+filterNick, filterProduct && 'товар: '+filterProduct, filterStatus && 'статус: '+STATUS_LABEL[filterStatus], filterDelivery && 'доставка: '+filterDelivery].filter(Boolean).join(' · ') || 'все'} · всего покупателей: ${buyers.length}</p>
+                <table><thead><tr><th>№</th><th>Ник</th><th>Телефон</th><th>Заказов</th></tr></thead><tbody>
+                ${buyers.map((b, i) => `<tr><td>${i+1}</td><td>${b.nickname}</td><td>${b.phone}</td><td>${b.count}</td></tr>`).join('')}
+                </tbody></table></body></html>`)
+                win.document.close()
+              }}
+              className="bg-white/10 hover:bg-white/20 text-white h-8 text-xs px-4 border border-white/15"
+              title="Список покупателей для печати"
+            >
+              <Icon name="Printer" size={13} className="mr-1.5" /> Список
+            </Button>
           </div>
         </div>
 
         {/* Таблица */}
+        {(() => {
+          const sorted = [...orders].sort((a, b) => {
+            const av = (a as Record<string, unknown>)[sortField]
+            const bv = (b as Record<string, unknown>)[sortField]
+            const cmp = typeof av === 'number' && typeof bv === 'number'
+              ? av - bv
+              : String(av ?? '').localeCompare(String(bv ?? ''), 'ru')
+            return sortDir === 'asc' ? cmp : -cmp
+          })
+          const SortTh = ({ field, children, className = '' }: { field: string; children: React.ReactNode; className?: string }) => (
+            <th className={`px-3 py-3 font-medium cursor-pointer select-none hover:text-white/70 transition-colors ${className}`}
+              onClick={() => { if (sortField === field) { setSortDir(d => d === 'asc' ? 'desc' : 'asc') } else { setSortField(field); setSortDir('asc') } }}>
+              <span className="flex items-center gap-1 text-white/40">
+                {children}
+                {sortField === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="text-white/15"> ↕</span>}
+              </span>
+            </th>
+          )
+          return (
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
@@ -897,13 +911,13 @@ export default function Admin() {
                     className="accent-orange-500 w-4 h-4 cursor-pointer"
                   />
                 </th>
-                <th className="px-3 py-3 text-left text-white/40 font-medium">№</th>
-                <th className="px-3 py-3 text-left text-white/40 font-medium">Время</th>
-                <th className="px-3 py-3 text-left text-white/40 font-medium">Ник</th>
-                <th className="px-3 py-3 text-left text-white/40 font-medium">Товар</th>
-                <th className="px-3 py-3 text-right text-white/40 font-medium">Мл</th>
-                <th className="px-3 py-3 text-left text-white/40 font-medium">Адрес</th>
-                <th className="px-3 py-3 text-right text-white/40 font-medium">Сумма</th>
+                <SortTh field="id" className="text-left">№</SortTh>
+                <SortTh field="created_at" className="text-left">Время</SortTh>
+                <SortTh field="nickname" className="text-left">Ник</SortTh>
+                <SortTh field="product_name" className="text-left">Товар</SortTh>
+                <SortTh field="volume_ml" className="text-right">Мл</SortTh>
+                <SortTh field="delivery_option_name" className="text-left">Адрес</SortTh>
+                <SortTh field="total_price" className="text-right">Сумма</SortTh>
                 <th className="px-3 py-3 text-left text-white/40 font-medium">Статус</th>
               </tr>
             </thead>
@@ -921,7 +935,7 @@ export default function Admin() {
                   </td>
                 </tr>
               ) : (
-                orders.map(order => (
+                sorted.map(order => (
                   <tr
                     key={order.id}
                     className={`border-b border-white/5 hover:bg-white/3 transition-colors ${selected.has(order.id) ? 'bg-orange-500/5' : ''}`}
@@ -982,6 +996,8 @@ export default function Admin() {
             </tbody>
           </table>
         </div>
+          )
+        })()}
 
         {/* Итого */}
         {orders.length > 0 && (
@@ -1000,8 +1016,10 @@ export default function Admin() {
             </div>
           </div>
         )}
+        </>}{/* конец ordersSubTab === 'active' */}
+        </>}{/* конец tab === 'orders' */}
+
         {tab === 'delivery' && <DeliveryTab />}
-        </>}
       </div>
     </div>
   )
