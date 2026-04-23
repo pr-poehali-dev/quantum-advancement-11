@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Menu } from "lucide-react"
 import { LineShadowText } from "@/components/line-shadow-text"
-import { ShimmerButton } from "@/components/shimmer-button"
+import { ShimmerButton, ShimmerLink } from "@/components/shimmer-button"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/lib/auth-context"
@@ -718,17 +718,13 @@ export default function Index() {
         </button>
 
         {user ? (
-          <Link to="/cabinet">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Личный кабинет
-            </ShimmerButton>
-          </Link>
+          <ShimmerLink to="/cabinet" className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+            Личный кабинет
+          </ShimmerLink>
         ) : (
-          <Link to="/login">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Войти
-            </ShimmerButton>
-          </Link>
+          <ShimmerLink to="/login" className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+            Войти
+          </ShimmerLink>
         )}
       </header>
 
@@ -748,17 +744,13 @@ export default function Index() {
               Контакты
             </a>
             {user ? (
-              <Link to="/cabinet">
-                <ShimmerButton className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
-                  Личный кабинет
-                </ShimmerButton>
-              </Link>
+              <ShimmerLink to="/cabinet" className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+                Личный кабинет
+              </ShimmerLink>
             ) : (
-              <Link to="/login">
-                <ShimmerButton className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
-                  Войти
-                </ShimmerButton>
-              </Link>
+              <ShimmerLink to="/login" className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+                Войти
+              </ShimmerLink>
             )}
           </nav>
         </div>

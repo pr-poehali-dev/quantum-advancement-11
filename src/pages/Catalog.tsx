@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
-import { ShimmerButton } from '@/components/shimmer-button'
+import { ShimmerLink } from '@/components/shimmer-button'
 import Icon from '@/components/ui/icon'
 
 interface Product {
@@ -86,35 +86,27 @@ export default function Catalog() {
           {user ? (
             <>
               {(user.role === 'admin' || user.role === 'moderator') && (
-                <Link to="/admin">
-                  <ShimmerButton shimmerColor="#f97316" shimmerDuration="2.5s" borderRadius="8px"
-                    className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
-                    Админ
-                  </ShimmerButton>
-                </Link>
+                <ShimmerLink to="/admin" shimmerColor="#f97316" shimmerDuration="2.5s" borderRadius="8px"
+                  className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
+                  Админ
+                </ShimmerLink>
               )}
-              <Link to="/cabinet">
-                <ShimmerButton borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
-                  Личный кабинет
-                </ShimmerButton>
-              </Link>
+              <ShimmerLink to="/cabinet" borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
+                Личный кабинет
+              </ShimmerLink>
               <button onClick={handleLogout} className="text-white/30 hover:text-white/60 text-xs px-2 py-2 transition-colors">
                 Выйти
               </button>
             </>
           ) : (
             <>
-              <Link to="/login">
-                <ShimmerButton borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
-                  Войти
-                </ShimmerButton>
-              </Link>
-              <Link to="/register">
-                <ShimmerButton shimmerColor="#f97316" shimmerDuration="2s" borderRadius="8px"
-                  className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
-                  Регистрация
-                </ShimmerButton>
-              </Link>
+              <ShimmerLink to="/login" borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
+                Войти
+              </ShimmerLink>
+              <ShimmerLink to="/register" shimmerColor="#f97316" shimmerDuration="2s" borderRadius="8px"
+                className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
+                Регистрация
+              </ShimmerLink>
             </>
           )}
         </div>
