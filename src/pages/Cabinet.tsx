@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
@@ -26,6 +26,19 @@ interface Order {
   payment_note: string | null
   pickup_point: string | null
   created_at: string
+  delivery_option_id: number | null
+  delivery_comment: string | null
+  delivery_option_name: string | null
+  delivery_address: string | null
+  delivery_schedule: string | null
+}
+
+interface DeliveryOption {
+  id: number
+  name: string
+  description: string | null
+  address: string | null
+  schedule: string | null
 }
 
 interface ClientDebt {
@@ -48,21 +61,23 @@ const STATUS_LABEL: Record<string, string> = {
 }
 const STATUS_COLOR: Record<string, string> = {
   accepted: 'bg-white/10 text-white/60', fixed: 'bg-blue-500/15 text-blue-300',
-  awaiting_payment: 'bg-orange-500/20 text-orange-300 animate-pulse',
+  awaiting_payment: 'bg-orange-500/20 text-orange-300',
   waiting: 'bg-purple-500/15 text-purple-300', delivery: 'bg-green-500/15 text-green-300',
   declined: 'bg-red-500/15 text-red-400',
 }
 
-type Tab = 'active' | 'payment' | 'delivery' | 'declined' | 'debts' | 'messages'
+type MainTab = 'orders' | 'debts' | 'messages'
+type OrderTab = 'new' | 'payment' | 'transit' | 'ready'
 
 export default function Cabinet() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [debts, setDebts] = useState<ClientDebt[]>([])
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<Tab>('active')
-
+  const [mainTab, setMainTab] = useState<MainTab>('orders')
+  const [orderTab, setOrderTab] = useState<OrderTab>('new')
   const [unreadCount, setUnreadCount] = useState(0)
 
   // оплата
@@ -70,17 +85,30 @@ export default function Cabinet() {
   const [payNote, setPayNote] = useState('')
   const [paying, setPaying] = useState(false)
 
-  // выдача
-  const [pickupForm, setPickupForm] = useState<{ order_id: number; point: string } | null>(null)
-  const [pickupSaving, setPickupSaving] = useState(false)
+  // доставка
+  const [deliverySelected, setDeliverySelected] = useState<Set<number>>(new Set())
+  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<number | null>(null)
+  const [deliveryComment, setDeliveryComment] = useState('')
+  const [deliverySaving, setDeliverySaving] = useState(false)
+
+  // долги
+  const [debtRequestId, setDebtRequestId] = useState<number | null>(null)
+  const [debtRequestType, setDebtRequestType] = useState<'refund' | 'credit'>('credit')
+  const [debtCard, setDebtCard] = useState('')
+  const [debtSaving, setDebtSaving] = useState(false)
 
   useEffect(() => { if (!user) navigate('/login') }, [user, navigate])
 
   const load = useCallback(() => {
     setLoading(true)
-    Promise.all([api.orders.my(), api.orders.myDebts()]).then(([ord, dbt]) => {
+    Promise.all([
+      api.orders.my(),
+      api.orders.myDebts(),
+      api.orders.deliveryOptions(),
+    ]).then(([ord, dbt, dlv]) => {
       setOrders(Array.isArray(ord) ? ord : [])
       setDebts(Array.isArray(dbt) ? dbt : [])
+      setDeliveryOptions(Array.isArray(dlv) ? dlv : [])
       setLoading(false)
     })
   }, [])
@@ -107,15 +135,6 @@ export default function Cabinet() {
     toast.success('Убрано в архив'); load()
   }
 
-  const handlePickup = async () => {
-    if (!pickupForm?.point.trim()) return
-    setPickupSaving(true)
-    const r = await api.orders.pickup(pickupForm.order_id, pickupForm.point)
-    setPickupSaving(false)
-    if (r.error) { toast.error(r.error); return }
-    toast.success('Пункт выдачи сохранён'); setPickupForm(null); load()
-  }
-
   const togglePayOrder = (id: number) => {
     setPaySelected(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
   }
@@ -134,26 +153,59 @@ export default function Cabinet() {
     setPaySelected(new Set()); setPayNote(''); load()
   }
 
-  // Группировка
-  const activeOrders    = orders.filter(o => ['accepted','fixed'].includes(o.status))
-  const awaitingPayment = orders.filter(o => o.status === 'awaiting_payment')
-  const deliveryOrders  = orders.filter(o => ['waiting','delivery'].includes(o.status))
-  const declinedOrders  = orders.filter(o => o.status === 'declined')
-  const paymentTotal    = awaitingPayment.reduce((s, o) => s + o.total_price, 0)
+  const toggleDeliveryOrder = (id: number) => {
+    setDeliverySelected(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
+  }
+  const toggleDeliveryAll = () => {
+    const waiting = waitingOrders
+    setDeliverySelected(deliverySelected.size === waiting.length ? new Set() : new Set(waiting.map(o => o.id)))
+  }
+
+  const handleSaveDelivery = async () => {
+    if (deliverySelected.size === 0) { toast.error('Выберите хотя бы один заказ'); return }
+    if (!selectedDeliveryOption) { toast.error('Выберите вариант доставки'); return }
+    setDeliverySaving(true)
+    const r = await api.orders.setDelivery({
+      order_ids: Array.from(deliverySelected),
+      delivery_option_id: selectedDeliveryOption,
+      delivery_comment: deliveryComment,
+    })
+    setDeliverySaving(false)
+    if (r.error) { toast.error(r.error); return }
+    toast.success('Вариант доставки сохранён')
+    setDeliverySelected(new Set()); setDeliveryComment(''); load()
+  }
+
+  const handleDebtRequest = async () => {
+    if (!debtRequestId) return
+    setDebtSaving(true)
+    const r = await api.orders.debtRequest({ debt_id: debtRequestId, request_type: debtRequestType, card: debtCard })
+    setDebtSaving(false)
+    if (r.error) { toast.error(r.error); return }
+    toast.success('Запрос отправлен')
+    setDebtRequestId(null); setDebtCard(''); load()
+  }
+
+  // Группировка заказов
+  const newOrders        = orders.filter(o => ['accepted', 'fixed'].includes(o.status))
+  const awaitingPayment  = orders.filter(o => o.status === 'awaiting_payment')
+  const waitingOrders    = orders.filter(o => o.status === 'waiting')
+  const deliveryOrders   = orders.filter(o => o.status === 'delivery')
+  const transitOrders    = [...waitingOrders, ...deliveryOrders]
+  const paymentTotal     = awaitingPayment.reduce((s, o) => s + o.total_price, 0)
   const selectedPayTotal = awaitingPayment.filter(o => paySelected.has(o.id)).reduce((s, o) => s + o.total_price, 0)
-  const activeDebts = debts.filter(d => !d.resolved)
-  const weOweTotal = activeDebts.filter(d => d.type === 'we_owe').reduce((s, d) => s + d.amount, 0)
-  const clientOwesTotal = activeDebts.filter(d => d.type === 'client_owes').reduce((s, d) => s + d.amount, 0)
+  const activeDebts      = debts.filter(d => !d.resolved)
+  const resolvedDebts    = debts.filter(d => d.resolved)
+  const weOweTotal       = activeDebts.filter(d => d.type === 'we_owe').reduce((s, d) => s + d.amount, 0)
+  const clientOwesTotal  = activeDebts.filter(d => d.type === 'client_owes').reduce((s, d) => s + d.amount, 0)
 
   if (!user) return null
 
-  const tabs: { id: Tab; label: string; badge?: number | string }[] = [
-    { id: 'active', label: 'Заказы', badge: activeOrders.length || undefined },
-    { id: 'payment', label: 'К оплате', badge: awaitingPayment.length || undefined },
-    { id: 'delivery', label: 'В пути', badge: deliveryOrders.length || undefined },
-    { id: 'declined', label: 'Отказано', badge: declinedOrders.length || undefined },
-    { id: 'debts', label: 'Долги', badge: activeDebts.length || undefined },
-    { id: 'messages', label: 'Сообщения', badge: unreadCount || undefined },
+  const orderTabs: { id: OrderTab; label: string; badge?: number }[] = [
+    { id: 'new',     label: 'Новые',             badge: newOrders.length || undefined },
+    { id: 'payment', label: 'К оплате',           badge: awaitingPayment.length || undefined },
+    { id: 'transit', label: 'В пути',             badge: transitOrders.length || undefined },
+    { id: 'ready',   label: 'Готов к получению',  badge: deliveryOrders.length || undefined },
   ]
 
   return (
@@ -181,393 +233,410 @@ export default function Cabinet() {
           </div>
         </div>
 
-        {/* Мигающий баннер оплаты */}
-        {awaitingPayment.length > 0 && tab !== 'payment' && (
+        {/* Баннеры */}
+        {awaitingPayment.length > 0 && mainTab !== 'orders' && (
           <div className="mb-4 bg-orange-500/10 border border-orange-500/40 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-orange-500/15 transition-colors"
-            onClick={() => setTab('payment')}>
+            onClick={() => { setMainTab('orders'); setOrderTab('payment') }}>
             <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
             <span className="text-orange-300 text-sm font-medium">Ожидает оплаты: {awaitingPayment.length} заказ(а) на {paymentTotal.toFixed(0)} ₽</span>
             <Icon name="ChevronRight" size={14} className="text-orange-400 ml-auto shrink-0" />
           </div>
         )}
-
-        {/* Мигающий баннер долгов */}
-        {weOweTotal > 0 && tab !== 'debts' && (
+        {weOweTotal > 0 && mainTab !== 'debts' && (
           <div className="mb-4 bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-blue-500/15 transition-colors"
-            onClick={() => setTab('debts')}>
+            onClick={() => setMainTab('debts')}>
             <Icon name="Info" size={14} className="text-blue-400 shrink-0" />
-            <span className="text-blue-300 text-sm">Организатор должен вам <span className="font-bold">{weOweTotal.toFixed(2)} ₽</span></span>
+            <span className="text-blue-300 text-sm font-medium">Вам должны: {weOweTotal.toFixed(0)} ₽</span>
             <Icon name="ChevronRight" size={14} className="text-blue-400 ml-auto shrink-0" />
           </div>
         )}
 
-        {/* Табы */}
-        <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 overflow-x-auto">
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-1 min-w-fit py-2 px-3 text-xs sm:text-sm rounded-lg font-medium transition-colors relative whitespace-nowrap ${tab === t.id ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}>
+        {/* ═══ ГЛАВНЫЕ ВКЛАДКИ ═══ */}
+        <div className="flex border-b border-white/10 mb-6 gap-1">
+          {([
+            { id: 'orders' as MainTab, label: 'Заказы', badge: orders.filter(o => o.status !== 'declined').length },
+            { id: 'debts' as MainTab, label: 'Долги', badge: activeDebts.length || undefined },
+            { id: 'messages' as MainTab, label: 'Сообщения', badge: unreadCount || undefined },
+          ]).map(t => (
+            <button key={t.id} onClick={() => setMainTab(t.id)}
+              className={`relative px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                mainTab === t.id ? 'border-orange-500 text-white' : 'border-transparent text-white/40 hover:text-white'
+              }`}>
               {t.label}
               {t.badge ? (
-                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50'}`}>{t.badge}</span>
+                <span className="ml-2 text-xs bg-orange-500/20 text-orange-300 rounded-full px-1.5 py-0.5">{t.badge}</span>
               ) : null}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />)}</div>
+          <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-white/5 rounded-xl animate-pulse" />)}</div>
         ) : (
           <>
-            {/* АКТИВНЫЕ ЗАКАЗЫ */}
-            {tab === 'active' && (
-              activeOrders.length === 0 ? (
-                <EmptyState icon="ShoppingBag" text="Нет активных заказов">
-                  <Link to="/catalog"><Button className="mt-3 bg-orange-500 hover:bg-orange-600 text-white text-sm">В каталог</Button></Link>
-                </EmptyState>
-              ) : (
-                <div className="space-y-3">
-                  {activeOrders.map(o => (
-                    <OrderCard key={o.id} order={o}
-                      onDelete={() => handleDelete(o.id)}
-                      onArchive={undefined}
-                      onPickup={undefined}
-                    />
-                  ))}
-                </div>
-              )
-            )}
-
-            {/* К ОПЛАТЕ */}
-            {tab === 'payment' && (
-              awaitingPayment.length === 0 ? (
-                <EmptyState icon="CheckCircle" text="Нет заказов к оплате" />
-              ) : (
-                <div className="space-y-3">
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                    <div className="text-white/40 text-xs uppercase tracking-wider mb-2">Реквизиты</div>
-                    <div className="text-white font-mono text-sm">Карта: <span className="text-orange-300">4276 •••• •••• 1234</span></div>
-                    <div className="text-white/40 text-xs">Получатель: Организатор распива</div>
-                  </div>
-                  {awaitingPayment.filter(o => !o.payment_amount).length > 0 && (
-                    <button onClick={togglePayAll} className="flex items-center gap-2 text-white/40 hover:text-white/70 text-xs transition-colors px-1">
-                      <input type="checkbox" readOnly checked={paySelected.size === awaitingPayment.filter(o => !o.payment_amount).length} className="accent-orange-500 w-3.5 h-3.5 pointer-events-none" />
-                      Выбрать все неоплаченные
+            {/* ══════════ ВКЛАДКА ЗАКАЗЫ ══════════ */}
+            {mainTab === 'orders' && (
+              <div>
+                {/* Подвкладки заказов */}
+                <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-6 flex-wrap">
+                  {orderTabs.map(t => (
+                    <button key={t.id} onClick={() => setOrderTab(t.id)}
+                      className={`flex-1 min-w-fit px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                        orderTab === t.id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'
+                      }`}>
+                      {t.label}
+                      {t.badge ? <span className={`text-xs rounded-full px-1.5 py-0.5 ${orderTab === t.id ? 'bg-orange-500/30 text-orange-200' : 'bg-white/10 text-white/60'}`}>{t.badge}</span> : null}
                     </button>
-                  )}
-                  {awaitingPayment.map(o => (
-                    <div key={o.id}
-                      onClick={() => !o.payment_amount && togglePayOrder(o.id)}
-                      className={`border rounded-xl p-4 transition-all ${o.payment_amount ? 'bg-white/3 border-white/8 opacity-60' : paySelected.has(o.id) ? 'bg-orange-500/8 border-orange-500/40 cursor-pointer' : 'bg-white/5 border-white/10 cursor-pointer hover:border-white/20'}`}>
-                      <div className="flex items-center gap-3">
-                        {!o.payment_amount && <input type="checkbox" readOnly checked={paySelected.has(o.id)} className="accent-orange-500 w-4 h-4 shrink-0 pointer-events-none" />}
-                        <ProductThumb order={o} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-white/40 text-xs">{o.brand}</div>
-                          <div className="text-white text-sm font-medium truncate">{o.product_name}</div>
-                          <div className="text-white/40 text-xs">{o.volume_ml} мл · {o.atomizer_name}</div>
+                  ))}
+                </div>
+
+                {/* — Новые — */}
+                {orderTab === 'new' && (
+                  <div className="space-y-3">
+                    {newOrders.length === 0 ? (
+                      <Empty text="Нет активных заказов" />
+                    ) : newOrders.map(o => (
+                      <OrderCard key={o.id} order={o}>
+                        <button onClick={() => handleDelete(o.id)}
+                          className="text-xs text-red-400/60 hover:text-red-400 transition-colors flex items-center gap-1">
+                          <Icon name="Trash2" size={12} /> Отменить
+                        </button>
+                      </OrderCard>
+                    ))}
+                  </div>
+                )}
+
+                {/* — К оплате — */}
+                {orderTab === 'payment' && (
+                  <div>
+                    {awaitingPayment.length === 0 ? <Empty text="Нет заказов к оплате" /> : (
+                      <>
+                        <div className="flex items-center justify-between mb-3">
+                          <button onClick={togglePayAll} className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                              paySelected.size > 0 ? 'bg-orange-500 border-orange-500' : 'border-white/20'
+                            }`}>
+                              {paySelected.size > 0 && <Icon name="Check" size={10} className="text-white" />}
+                            </div>
+                            Выбрать все
+                          </button>
+                          {paySelected.size > 0 && (
+                            <span className="text-sm text-orange-300 font-medium">{selectedPayTotal.toFixed(0)} ₽</span>
+                          )}
                         </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-orange-400 font-bold">{o.total_price} ₽</div>
-                          {o.payment_amount && <div className="text-green-400/70 text-xs flex items-center gap-1 justify-end mt-0.5"><Icon name="Clock" size={10} />ожидает проверки</div>}
+                        <div className="space-y-3 mb-4">
+                          {awaitingPayment.map(o => (
+                            <div key={o.id} onClick={() => togglePayOrder(o.id)}
+                              className={`cursor-pointer rounded-xl border transition-all ${
+                                paySelected.has(o.id) ? 'border-orange-500/50 bg-orange-500/5' : 'border-white/8 hover:border-white/15'
+                              }`}>
+                              <div className="p-4 flex items-start gap-3">
+                                <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                  paySelected.has(o.id) ? 'bg-orange-500 border-orange-500' : 'border-white/20'
+                                }`}>
+                                  {paySelected.has(o.id) && <Icon name="Check" size={12} className="text-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm truncate">{o.brand} — {o.product_name}</div>
+                                  <div className="text-white/50 text-xs mt-0.5">{o.volume_ml} мл · {o.atomizer_name}</div>
+                                  {o.payment_amount ? (
+                                    <div className="text-yellow-400/80 text-xs mt-1 flex items-center gap-1">
+                                      <Icon name="Clock" size={11} /> Ожидает подтверждения ({o.payment_amount.toFixed(0)} ₽)
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="text-white font-semibold text-sm shrink-0">{o.total_price.toFixed(0)} ₽</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                        {paySelected.size > 0 && (
+                          <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+                            <div className="text-sm font-medium">Отметить оплату</div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-white/50">Итого к оплате:</span>
+                              <span className="font-bold text-orange-300">{selectedPayTotal.toFixed(0)} ₽</span>
+                            </div>
+                            <Input value={payNote} onChange={e => setPayNote(e.target.value)}
+                              placeholder="Комментарий к платежу (необязательно)"
+                              className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm" />
+                            <Button onClick={handlePay} disabled={paying}
+                              className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm">
+                              {paying ? 'Отправка...' : `Отметить оплату ${selectedPayTotal.toFixed(0)} ₽`}
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* — В пути — */}
+                {orderTab === 'transit' && (
+                  <div>
+                    {waitingOrders.length === 0 && deliveryOrders.length === 0 ? <Empty text="Нет заказов в пути" /> : (
+                      <>
+                        {/* Ожидается — можно выбирать доставку */}
+                        {waitingOrders.length > 0 && (
+                          <div className="mb-6">
+                            <div className="text-xs text-white/40 uppercase tracking-wider mb-3">Ожидаются · выберите доставку</div>
+                            <div className="flex items-center justify-between mb-3">
+                              <button onClick={toggleDeliveryAll} className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                  deliverySelected.size > 0 ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                                }`}>
+                                  {deliverySelected.size > 0 && <Icon name="Check" size={10} className="text-white" />}
+                                </div>
+                                Выбрать все
+                              </button>
+                            </div>
+                            <div className="space-y-3 mb-4">
+                              {waitingOrders.map(o => (
+                                <div key={o.id} onClick={() => toggleDeliveryOrder(o.id)}
+                                  className={`cursor-pointer rounded-xl border transition-all ${
+                                    deliverySelected.has(o.id) ? 'border-purple-500/50 bg-purple-500/5' : 'border-white/8 hover:border-white/15'
+                                  }`}>
+                                  <div className="p-4 flex items-start gap-3">
+                                    <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                      deliverySelected.has(o.id) ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                                    }`}>
+                                      {deliverySelected.has(o.id) && <Icon name="Check" size={12} className="text-white" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium text-sm truncate">{o.brand} — {o.product_name}</div>
+                                      <div className="text-white/50 text-xs mt-0.5">{o.volume_ml} мл · {o.atomizer_name}</div>
+                                      {o.delivery_option_name && (
+                                        <div className="text-purple-300/80 text-xs mt-1 flex items-center gap-1">
+                                          <Icon name="MapPin" size={11} /> {o.delivery_option_name}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="text-white font-semibold text-sm shrink-0">{o.total_price.toFixed(0)} ₽</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Блок выбора варианта доставки */}
+                            {deliverySelected.size > 0 && (
+                              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+                                <div className="text-sm font-medium">Выберите способ получения</div>
+                                <div className="space-y-2">
+                                  {deliveryOptions.map(opt => (
+                                    <label key={opt.id}
+                                      className={`flex gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                                        selectedDeliveryOption === opt.id
+                                          ? 'border-purple-500/60 bg-purple-500/10'
+                                          : 'border-white/10 hover:border-white/20 bg-white/3'
+                                      }`}>
+                                      <input type="radio" name="delivery" className="sr-only"
+                                        checked={selectedDeliveryOption === opt.id}
+                                        onChange={() => setSelectedDeliveryOption(opt.id)} />
+                                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                        selectedDeliveryOption === opt.id ? 'border-purple-400' : 'border-white/30'
+                                      }`}>
+                                        {selectedDeliveryOption === opt.id && (
+                                          <div className="w-2 h-2 rounded-full bg-purple-400" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-white">{opt.name}</div>
+                                        {opt.address && (
+                                          <div className="text-xs text-white/50 mt-0.5 flex items-start gap-1">
+                                            <Icon name="MapPin" size={11} className="shrink-0 mt-0.5" />
+                                            {opt.address}
+                                          </div>
+                                        )}
+                                        {opt.schedule && (
+                                          <div className="text-xs text-white/40 mt-0.5 flex items-center gap-1">
+                                            <Icon name="Clock" size={11} className="shrink-0" />
+                                            {opt.schedule}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
+                                <Input value={deliveryComment} onChange={e => setDeliveryComment(e.target.value)}
+                                  placeholder="Комментарий (необязательно)"
+                                  className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm" />
+                                <Button onClick={handleSaveDelivery} disabled={deliverySaving || !selectedDeliveryOption}
+                                  className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">
+                                  {deliverySaving ? 'Сохранение...' : 'Сохранить способ получения'}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Раздача */}
+                        {deliveryOrders.length > 0 && (
+                          <div>
+                            <div className="text-xs text-white/40 uppercase tracking-wider mb-3">Раздача</div>
+                            <div className="space-y-3">
+                              {deliveryOrders.map(o => (
+                                <OrderCard key={o.id} order={o}>
+                                  <button onClick={() => handleArchive(o.id)}
+                                    className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
+                                    <Icon name="Archive" size={12} /> В архив
+                                  </button>
+                                </OrderCard>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* — Готов к получению — */}
+                {orderTab === 'ready' && (
+                  <div className="space-y-3">
+                    {deliveryOrders.length === 0 ? <Empty text="Нет заказов готовых к получению" /> : (
+                      deliveryOrders.map(o => (
+                        <OrderCard key={o.id} order={o}>
+                          <button onClick={() => handleArchive(o.id)}
+                            className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
+                            <Icon name="Archive" size={12} /> В архив
+                          </button>
+                        </OrderCard>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══════════ ВКЛАДКА ДОЛГИ ══════════ */}
+            {mainTab === 'debts' && (
+              <div className="space-y-4">
+                {activeDebts.length === 0 && resolvedDebts.length === 0 ? (
+                  <Empty text="Долгов нет" icon="CheckCircle" />
+                ) : (
+                  <>
+                    {clientOwesTotal > 0 && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm">
+                        <span className="text-red-300 font-medium">Ваш долг: {clientOwesTotal.toFixed(0)} ₽</span>
                       </div>
-                    </div>
-                  ))}
-                  {paySelected.size > 0 && (
-                    <div className="sticky bottom-4 bg-zinc-900 border border-orange-500/30 rounded-xl p-4 space-y-3 shadow-2xl shadow-black/60">
-                      <div className="flex justify-between items-center">
-                        <div className="text-white/50 text-sm">Выбрано: <span className="text-white font-medium">{paySelected.size}</span></div>
-                        <div className="text-orange-400 font-bold text-xl">{selectedPayTotal.toFixed(2)} ₽</div>
+                    )}
+                    {weOweTotal > 0 && (
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm">
+                        <span className="text-blue-300 font-medium">Вам должны: {weOweTotal.toFixed(0)} ₽</span>
                       </div>
-                      <div>
-                        <label className="text-white/40 text-xs mb-1 block">Комментарий (дата, время, способ)</label>
-                        <Input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="22 апр, 14:30, Тинькофф" className="bg-white/10 border-white/20 text-white text-sm h-9" />
+                    )}
+                    {activeDebts.map(d => (
+                      <div key={d.id} className="bg-white/3 border border-white/8 rounded-xl p-4">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.type === 'we_owe' ? 'bg-blue-500/15 text-blue-300' : 'bg-red-500/15 text-red-300'}`}>
+                              {d.type === 'we_owe' ? 'Вам должны' : 'Ваш долг'}
+                            </span>
+                          </div>
+                          <span className="text-white font-semibold text-sm">{d.amount.toFixed(0)} ₽</span>
+                        </div>
+                        <div className="text-white/60 text-xs mb-2">{d.reason}</div>
+                        {d.type === 'we_owe' && !d.client_request && (
+                          debtRequestId === d.id ? (
+                            <div className="space-y-2 pt-2 border-t border-white/8">
+                              <div className="flex gap-2">
+                                <button onClick={() => setDebtRequestType('credit')}
+                                  className={`flex-1 text-xs py-1.5 rounded-lg border transition-all ${debtRequestType === 'credit' ? 'border-blue-500/50 bg-blue-500/10 text-blue-300' : 'border-white/10 text-white/40'}`}>
+                                  Зачесть в счёт заказов
+                                </button>
+                                <button onClick={() => setDebtRequestType('refund')}
+                                  className={`flex-1 text-xs py-1.5 rounded-lg border transition-all ${debtRequestType === 'refund' ? 'border-green-500/50 bg-green-500/10 text-green-300' : 'border-white/10 text-white/40'}`}>
+                                  Вернуть на карту
+                                </button>
+                              </div>
+                              {debtRequestType === 'refund' && (
+                                <Input value={debtCard} onChange={e => setDebtCard(e.target.value)}
+                                  placeholder="Номер карты или реквизиты"
+                                  className="bg-white/5 border-white/10 text-white placeholder-white/30 text-xs" />
+                              )}
+                              <div className="flex gap-2">
+                                <Button onClick={handleDebtRequest} disabled={debtSaving} size="sm"
+                                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                                  {debtSaving ? '...' : 'Отправить'}
+                                </Button>
+                                <Button onClick={() => setDebtRequestId(null)} variant="ghost" size="sm"
+                                  className="text-white/40 text-xs">Отмена</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => setDebtRequestId(d.id)}
+                              className="text-xs text-blue-400 hover:text-blue-300 transition-colors mt-1">
+                              Запросить возврат / зачёт →
+                            </button>
+                          )
+                        )}
+                        {d.client_request && !d.resolved && (
+                          <div className="text-xs text-white/40 mt-1">
+                            Запрос отправлен: {d.client_request === 'refund' ? 'возврат на карту' : 'зачёт'}
+                          </div>
+                        )}
+                        {d.resolved && d.resolve_note && (
+                          <div className="text-xs text-green-400/70 mt-1">✓ {d.resolve_note}</div>
+                        )}
                       </div>
-                      <Button onClick={handlePay} disabled={paying} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-10">
-                        {paying ? 'Отправляем...' : `Я оплатил(а) ${selectedPayTotal.toFixed(2)} ₽ — отправить`}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )
+                    ))}
+                  </>
+                )}
+              </div>
             )}
 
-            {/* В ПУТИ / РАЗДАЧА */}
-            {tab === 'delivery' && (
-              deliveryOrders.length === 0 ? (
-                <EmptyState icon="Package" text="Нет заказов в пути" />
-              ) : (
-                <div className="space-y-3">
-                  {deliveryOrders.map(o => (
-                    <OrderCard key={o.id} order={o}
-                      onDelete={undefined}
-                      onArchive={o.status === 'delivery' ? () => handleArchive(o.id) : undefined}
-                      onPickup={o.status === 'waiting' ? () => setPickupForm({ order_id: o.id, point: o.pickup_point || '' }) : undefined}
-                    />
-                  ))}
-                </div>
-              )
-            )}
-
-            {/* ОТКАЗАНО */}
-            {tab === 'declined' && (
-              declinedOrders.length === 0 ? (
-                <EmptyState icon="XCircle" text="Нет отказанных заказов" />
-              ) : (
-                <div className="space-y-3">
-                  {declinedOrders.map(o => (
-                    <OrderCard key={o.id} order={o}
-                      onDelete={undefined}
-                      onArchive={() => handleArchive(o.id)}
-                      onPickup={undefined}
-                    />
-                  ))}
-                </div>
-              )
-            )}
-
-            {/* ДОЛГИ */}
-            {tab === 'debts' && (
-              <DebtsTab debts={debts} onChanged={load} />
-            )}
-
-            {/* СООБЩЕНИЯ */}
-            {tab === 'messages' && (
-              <MessagesChat />
+            {/* ══════════ ВКЛАДКА СООБЩЕНИЯ ══════════ */}
+            {mainTab === 'messages' && (
+              <MessagesChat onUnreadChange={setUnreadCount} />
             )}
           </>
         )}
       </div>
-
-      {/* Модалка пункта выдачи */}
-      {pickupForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="text-white font-semibold">Пункт выдачи</h3>
-            <Input value={pickupForm.point} onChange={e => setPickupForm(f => f ? { ...f, point: e.target.value } : f)}
-              placeholder="Адрес или название" className="bg-white/10 border-white/20 text-white" autoFocus />
-            <div className="flex gap-2">
-              <Button onClick={handlePickup} disabled={pickupSaving || !pickupForm.point.trim()} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
-                {pickupSaving ? 'Сохраняю...' : 'Сохранить'}
-              </Button>
-              <Button variant="outline" onClick={() => setPickupForm(null)} className="border-white/20 text-white/50 hover:bg-white/10">Отмена</Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-function EmptyState({ icon, text, children }: { icon: string; text: string; children?: React.ReactNode }) {
+function OrderCard({ order: o, children }: { order: Order; children?: React.ReactNode }) {
   return (
-    <div className="text-center py-14">
-      <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={36} className="mx-auto mb-3 text-white/15" />
-      <div className="text-white/40 text-sm">{text}</div>
-      {children}
-    </div>
-  )
-}
-
-function ProductThumb({ order }: { order: Order }) {
-  return (
-    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500/20 to-purple-500/10 flex items-center justify-center shrink-0 overflow-hidden text-base">
-      {order.image_url ? <img src={order.image_url} className="w-full h-full object-cover" /> : '🌸'}
-    </div>
-  )
-}
-
-function OrderCard({ order: o, onDelete, onArchive, onPickup }: {
-  order: Order
-  onDelete?: () => void
-  onArchive?: () => void
-  onPickup?: () => void
-}) {
-  return (
-    <div className={`bg-white/5 border rounded-xl p-4 transition-colors ${o.status === 'declined' ? 'border-red-500/15' : 'border-white/10'}`}>
+    <div className="bg-white/3 border border-white/8 hover:border-white/15 rounded-xl p-4 transition-all">
       <div className="flex items-start gap-3">
-        <Link to={`/catalog/${o.product_id}`} className="hover:opacity-80 transition-opacity shrink-0">
-          <ProductThumb order={o} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-0.5">
-            <div className="text-white/40 text-xs">{o.brand}</div>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLOR[o.status] ?? 'bg-white/10 text-white/50'}`}>
-              {STATUS_LABEL[o.status] ?? o.status}
-            </span>
-          </div>
-          <div className="text-white text-sm font-medium truncate">{o.product_name}</div>
-          <div className="text-white/40 text-xs mt-0.5">{o.volume_ml} мл · {o.atomizer_name} · <span className="text-white/60 font-medium">{o.total_price} ₽</span></div>
-        </div>
-      </div>
-
-      {/* Пункт выдачи (ожидается) */}
-      {o.status === 'waiting' && (
-        <div className="mt-3 pt-3 border-t border-white/10">
-          {o.pickup_point ? (
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-1.5 text-purple-300"><Icon name="MapPin" size={13} />{o.pickup_point}</div>
-              {onPickup && <button onClick={onPickup} className="text-white/30 hover:text-white/60 text-xs transition-colors">Изменить</button>}
-            </div>
-          ) : onPickup ? (
-            <button onClick={onPickup} className="w-full flex items-center justify-center gap-2 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-300 text-sm hover:bg-purple-500/20 transition-colors">
-              <Icon name="MapPin" size={14} />Выбрать пункт выдачи
-            </button>
-          ) : null}
-        </div>
-      )}
-
-      {/* Раздача */}
-      {o.status === 'delivery' && (
-        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-green-400 text-sm">
-            <Icon name="PackageCheck" size={14} />Готово к получению!
-            {o.pickup_point && <span className="text-white/40 text-xs">· {o.pickup_point}</span>}
-          </div>
-          {onArchive && <button onClick={onArchive} className="text-white/30 hover:text-white/50 text-xs transition-colors">Получил, убрать</button>}
-        </div>
-      )}
-
-      {/* Действия */}
-      <div className="mt-3 pt-3 border-t border-white/8 flex gap-3 justify-end">
-        {onArchive && o.status === 'declined' && (
-          <button onClick={onArchive} className="text-white/30 hover:text-white/50 text-xs transition-colors">В архив</button>
-        )}
-        {onDelete && (
-          <button onClick={onDelete} className="text-red-400/50 hover:text-red-400 text-xs transition-colors flex items-center gap-1">
-            <Icon name="Trash2" size={12} />Удалить
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function DebtsTab({ debts, onChanged }: { debts: ClientDebt[]; onChanged: () => void }) {
-  const active = debts.filter(d => !d.resolved)
-  const resolved = debts.filter(d => d.resolved)
-  const [showResolved, setShowResolved] = useState(false)
-
-  const weOwe = active.filter(d => d.type === 'we_owe')
-  const clientOwes = active.filter(d => d.type === 'client_owes')
-
-  if (debts.length === 0) return <EmptyState icon="HandCoins" text="Долгов нет" />
-
-  return (
-    <div className="space-y-4">
-      {/* Суммы */}
-      {(weOwe.length > 0 || clientOwes.length > 0) && (
-        <div className="grid grid-cols-2 gap-3">
-          {weOwe.length > 0 && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-              <div className="text-blue-400/70 text-xs mb-1">Нам должны вам</div>
-              <div className="text-blue-300 font-bold text-xl">{weOwe.reduce((s, d) => s + d.amount, 0).toFixed(2)} ₽</div>
-            </div>
-          )}
-          {clientOwes.length > 0 && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <div className="text-red-400/70 text-xs mb-1">Вы должны нам</div>
-              <div className="text-red-300 font-bold text-xl">{clientOwes.reduce((s, d) => s + d.amount, 0).toFixed(2)} ₽</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Активные долги */}
-      {active.map(d => <DebtClientCard key={d.id} debt={d} onChanged={onChanged} />)}
-
-      {/* Закрытые */}
-      {resolved.length > 0 && (
-        <div>
-          <button onClick={() => setShowResolved(v => !v)} className="text-white/30 hover:text-white/60 text-xs flex items-center gap-1 transition-colors">
-            <Icon name={showResolved ? 'ChevronUp' : 'ChevronDown'} size={12} />
-            Закрытые ({resolved.length})
-          </button>
-          {showResolved && <div className="space-y-2 mt-2">{resolved.map(d => <DebtClientCard key={d.id} debt={d} onChanged={onChanged} />)}</div>}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DebtClientCard({ debt: d, onChanged }: { debt: ClientDebt; onChanged: () => void }) {
-  const [showForm, setShowForm] = useState(false)
-  const [requestType, setRequestType] = useState<'refund' | 'credit'>('credit')
-  const [card, setCard] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const isWeOwe = d.type === 'we_owe'
-
-  const handleRequest = async () => {
-    if (requestType === 'refund' && !card.trim()) { toast.error('Укажите номер карты'); return }
-    setSaving(true)
-    const r = await api.orders.debtRequest(d.id, requestType, card || undefined)
-    setSaving(false)
-    if (r.error) { toast.error(r.error); return }
-    toast.success(requestType === 'refund' ? 'Запрос на возврат отправлен' : 'Запрос на зачёт отправлен')
-    setShowForm(false); onChanged()
-  }
-
-  return (
-    <div className={`border rounded-xl p-4 space-y-3 ${d.resolved ? 'border-white/8 opacity-50' : isWeOwe ? 'border-blue-500/20 bg-blue-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isWeOwe ? 'bg-blue-500/20 text-blue-300' : 'bg-red-500/20 text-red-300'}`}>
-              {isWeOwe ? 'Организатор должен вам' : 'Вы должны организатору'}
-            </span>
-            {d.order_id && <span className="text-white/30 text-xs">заказ #{d.order_id}</span>}
-          </div>
-          <div className="text-white/60 text-sm">{d.reason}</div>
-          {d.resolve_note && <div className="text-green-400/60 text-xs mt-1 italic">Закрыт: {d.resolve_note}</div>}
-          {d.client_request && !d.resolved && (
-            <div className="text-white/40 text-xs mt-1 flex items-center gap-1">
-              <Icon name="Clock" size={10} />
-              {d.client_request === 'refund' ? `Запрошен возврат${d.client_card ? ` на карту ${d.client_card}` : ''}` : 'Запрошен зачёт в выкуп'}
-            </div>
-          )}
-        </div>
-        <div className={`font-bold text-lg shrink-0 ${isWeOwe ? 'text-blue-300' : 'text-red-300'}`}>{d.amount.toFixed(2)} ₽</div>
-      </div>
-
-      {/* Кнопки действия — только для долгов организатора */}
-      {isWeOwe && !d.resolved && !d.client_request && (
-        !showForm ? (
-          <div className="flex gap-2">
-            <button onClick={() => { setRequestType('credit'); setShowForm(true) }}
-              className="flex-1 text-xs py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-300 rounded-lg transition-colors">
-              Зачесть в следующий выкуп
-            </button>
-            <button onClick={() => { setRequestType('refund'); setShowForm(true) }}
-              className="flex-1 text-xs py-2 bg-white/5 hover:bg-white/10 border border-white/15 text-white/60 rounded-lg transition-colors">
-              Вернуть на карту
-            </button>
-          </div>
+        {o.image_url ? (
+          <img src={o.image_url} alt={o.product_name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
         ) : (
-          <div className="space-y-2 pt-2 border-t border-white/10">
-            <div className="flex gap-2">
-              <button onClick={() => setRequestType('credit')}
-                className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors ${requestType === 'credit' ? 'bg-blue-500/20 border-blue-500/40 text-blue-300' : 'bg-white/5 border-white/10 text-white/40'}`}>
-                Зачесть
-              </button>
-              <button onClick={() => setRequestType('refund')}
-                className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors ${requestType === 'refund' ? 'bg-white/10 border-white/30 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}>
-                Возврат
-              </button>
+          <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-lg">🌸</div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{o.brand} — {o.product_name}</div>
+              <div className="text-white/50 text-xs mt-0.5">{o.volume_ml} мл · {o.atomizer_name}</div>
             </div>
-            {requestType === 'refund' && (
-              <Input value={card} onChange={e => setCard(e.target.value)} placeholder="Номер карты для перевода"
-                className="bg-white/10 border-white/20 text-white text-sm h-9" />
-            )}
-            <div className="flex gap-2">
-              <Button onClick={handleRequest} disabled={saving} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm h-9">
-                {saving ? '...' : requestType === 'refund' ? 'Запросить возврат' : 'Запросить зачёт'}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowForm(false)} className="text-white/40 text-sm h-9">Отмена</Button>
+            <div className="text-right shrink-0">
+              <div className="font-semibold text-sm">{o.total_price.toFixed(0)} ₽</div>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[o.status] || 'bg-white/10 text-white/50'}`}>
+                {STATUS_LABEL[o.status] || o.status}
+              </span>
             </div>
           </div>
-        )
-      )}
+          {o.delivery_option_name && (
+            <div className="mt-1.5 text-xs text-white/40 flex items-center gap-1">
+              <Icon name="MapPin" size={11} />
+              {o.delivery_option_name}
+              {o.delivery_comment && <span className="ml-1 text-white/30">· {o.delivery_comment}</span>}
+            </div>
+          )}
+          {children && <div className="mt-2">{children}</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Empty({ text, icon = 'Package' }: { text: string; icon?: string }) {
+  return (
+    <div className="text-center py-12 text-white/30">
+      <Icon name={icon} size={32} className="mx-auto mb-3 opacity-40" />
+      <div className="text-sm">{text}</div>
     </div>
   )
 }

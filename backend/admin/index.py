@@ -75,11 +75,14 @@ def handler(event: dict, context) -> dict:
                 SELECT o.id, o.created_at, u.nickname, p.name, p.brand,
                        o.volume_ml, o.total_price, o.atomizer_price, o.price_per_ml,
                        o.status, o.pickup_point, o.payment_amount, o.payment_confirmed,
-                       o.payment_note, a.name, p.id
+                       o.payment_note, a.name, p.id,
+                       o.delivery_option_id, o.delivery_comment,
+                       dopt.name, dopt.address, dopt.schedule
                 FROM orders o
                 JOIN users u ON o.user_id = u.id
                 JOIN products p ON o.product_id = p.id
                 LEFT JOIN atomizers a ON o.atomizer_id = a.id
+                LEFT JOIN delivery_options dopt ON o.delivery_option_id = dopt.id
                 WHERE o.is_archived = FALSE
             """
             conditions, values = [], []
@@ -106,6 +109,8 @@ def handler(event: dict, context) -> dict:
                 'payment_amount': float(r[11]) if r[11] else None,
                 'payment_confirmed': r[12], 'payment_note': r[13],
                 'atomizer_name': r[14], 'product_id': r[15],
+                'delivery_option_id': r[16], 'delivery_comment': r[17],
+                'delivery_option_name': r[18], 'delivery_address': r[19], 'delivery_schedule': r[20],
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
                 'orders': orders,
@@ -573,5 +578,36 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'edit_delivery':
+            order_id = body.get('order_id')
+            delivery_option_id = body.get('delivery_option_id')
+            delivery_comment = (body.get('delivery_comment') or '').strip()
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM orders WHERE id = %s AND is_archived = FALSE", (order_id,))
+            if not cur.fetchone():
+                conn.close()
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Заказ не найден'})}
+            cur.execute(
+                "UPDATE orders SET delivery_option_id = %s, delivery_comment = %s WHERE id = %s",
+                (delivery_option_id or None, delivery_comment or None, order_id)
+            )
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'get_delivery_options':
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT id, name, description, address, schedule, is_active, sort_order FROM delivery_options ORDER BY sort_order ASC")
+            rows = cur.fetchall()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+                'id': r[0], 'name': r[1], 'description': r[2], 'address': r[3],
+                'schedule': r[4], 'is_active': r[5], 'sort_order': r[6],
+            } for r in rows])}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}

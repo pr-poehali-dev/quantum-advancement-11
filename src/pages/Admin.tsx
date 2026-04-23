@@ -27,6 +27,11 @@ interface AdminOrder {
   payment_note: string | null
   atomizer_name: string | null
   product_id: number
+  delivery_option_id: number | null
+  delivery_option_name: string | null
+  delivery_address: string | null
+  delivery_schedule: string | null
+  delivery_comment: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -919,8 +924,19 @@ export default function Admin() {
                       <span className="text-white font-semibold">{order.volume_ml}</span>
                       <span className="text-white/30 text-xs"> мл</span>
                     </td>
-                    <td className="px-3 py-3 text-white/50 text-xs max-w-[140px] truncate">
-                      {order.pickup_point || <span className="text-white/20">—</span>}
+                    <td className="px-3 py-3 text-xs max-w-[180px]">
+                      {order.delivery_option_name ? (
+                        <div className="space-y-0.5">
+                          <div className="text-white/70 font-medium truncate">{order.delivery_option_name}</div>
+                          {order.delivery_address && <div className="text-white/30 truncate">{order.delivery_address}</div>}
+                          {order.delivery_comment && <div className="text-purple-300/60 truncate italic">{order.delivery_comment}</div>}
+                        </div>
+                      ) : order.pickup_point ? (
+                        <span className="text-white/50">{order.pickup_point}</span>
+                      ) : (
+                        <span className="text-white/20">—</span>
+                      )}
+                      <DeliveryEditBtn order={order} onDone={load} />
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="text-orange-400 font-semibold">{order.total_price} ₽</span>
@@ -1306,5 +1322,68 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
     >
       {STATUS_LABEL[order.status] ?? order.status}
     </button>
+  )
+}
+
+function DeliveryEditBtn({ order, onDone }: { order: AdminOrder; onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<{id: number; name: string; address: string | null; schedule: string | null}[]>([])
+  const [selectedId, setSelectedId] = useState<number | null>(order.delivery_option_id)
+  const [comment, setComment] = useState(order.delivery_comment || '')
+  const [saving, setSaving] = useState(false)
+
+  const handleOpen = async () => {
+    if (!open && options.length === 0) {
+      const res = await api.admin.getDeliveryOptions()
+      if (Array.isArray(res)) setOptions(res)
+    }
+    setSelectedId(order.delivery_option_id)
+    setComment(order.delivery_comment || '')
+    setOpen(v => !v)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const res = await api.admin.editDelivery(order.id, selectedId, comment)
+    setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Доставка обновлена'); setOpen(false); onDone()
+  }
+
+  return (
+    <div className="relative">
+      <button onClick={handleOpen} className="text-xs text-white/25 hover:text-purple-400 transition-colors mt-1 block">
+        ✎ доставка
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-64 bg-zinc-900 border border-white/15 rounded-xl shadow-2xl z-50 p-3 space-y-2">
+          <div className="text-xs text-white/40 mb-1">Способ получения</div>
+          {options.map(opt => (
+            <label key={opt.id} className={`flex gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedId === opt.id ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/8 hover:border-white/15'}`}>
+              <input type="radio" className="sr-only" checked={selectedId === opt.id} onChange={() => setSelectedId(opt.id)} />
+              <div className={`mt-0.5 w-3 h-3 rounded-full border-2 shrink-0 flex items-center justify-center ${selectedId === opt.id ? 'border-purple-400' : 'border-white/30'}`}>
+                {selectedId === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
+              </div>
+              <div className="text-xs">
+                <div className="text-white/80">{opt.name}</div>
+                {opt.address && <div className="text-white/30">{opt.address}</div>}
+              </div>
+            </label>
+          ))}
+          <button onClick={() => setSelectedId(null)} className={`text-xs w-full text-left p-2 rounded-lg border transition-all ${!selectedId ? 'border-white/20 text-white/60' : 'border-transparent text-white/30 hover:text-white/50'}`}>
+            Не выбрано
+          </button>
+          <Input value={comment} onChange={e => setComment(e.target.value)}
+            placeholder="Комментарий"
+            className="bg-white/5 border-white/10 text-white placeholder-white/20 text-xs h-7" />
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saving} size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs h-7">
+              {saving ? '...' : 'Сохранить'}
+            </Button>
+            <Button onClick={() => setOpen(false)} variant="ghost" size="sm" className="text-white/30 text-xs h-7">×</Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

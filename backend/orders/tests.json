@@ -1,9 +1,16 @@
 {
   "tests": [
     {
-      "name": "GET /my without auth",
+      "name": "GET /my without auth returns 401",
       "method": "GET",
       "path": "/",
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET /delivery_options without auth returns 401",
+      "method": "GET",
+      "path": "/?action=delivery_options",
       "expectedStatus": 401,
       "bodyMatcher": "partial"
     }

@@ -60,8 +60,12 @@ export const api = {
       post(`${ORDERS_URL}/`, { action: 'pickup', order_id, pickup_point }),
     myDebts: () =>
       get(`${ORDERS_URL}/?action=my_debts`),
-    debtRequest: (debt_id: number, request_type: 'refund' | 'credit', card?: string) =>
-      post(`${ORDERS_URL}/`, { action: 'debt_request', debt_id, request_type, card }),
+    deliveryOptions: () =>
+      get(`${ORDERS_URL}/?action=delivery_options`),
+    setDelivery: (data: { order_ids: number[]; delivery_option_id: number; delivery_comment?: string }) =>
+      post(`${ORDERS_URL}/`, { action: 'set_delivery', ...data }),
+    debtRequest: (data: { debt_id: number; request_type: 'refund' | 'credit'; card?: string }) =>
+      post(`${ORDERS_URL}/`, { action: 'debt_request', ...data }),
   },
 
   admin: {
@@ -112,6 +116,10 @@ export const api = {
     updateUser: (data: Record<string, unknown>) => post(`${ADMIN_URL}/`, { action: 'update_user', ...data }),
     blockUser: (user_id: number, is_blocked: boolean, reason?: string) =>
       post(`${ADMIN_URL}/`, { action: 'block_user', user_id, is_blocked, reason }),
+    editDelivery: (order_id: number, delivery_option_id: number | null, delivery_comment?: string) =>
+      post(`${ADMIN_URL}/`, { action: 'edit_delivery', order_id, delivery_option_id, delivery_comment }),
+    getDeliveryOptions: () =>
+      post(`${ADMIN_URL}/`, { action: 'get_delivery_options' }),
   },
 
   messages: {

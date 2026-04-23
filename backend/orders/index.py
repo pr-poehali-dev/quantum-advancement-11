@@ -1,11 +1,14 @@
 """
-Заказы Распивошной. Все запросы на корневой URL, action в теле или query.
-GET  /?action=my       — мои заказы
-POST / body={action:place,...}   — оформить заказ
-POST / body={action:delete,...}  — удалить (accepted/fixed)
-POST / body={action:archive,...} — архивировать (delivery/declined)
-POST / body={action:pay,...}     — отметить оплату
-POST / body={action:pickup,...}  — выбрать пункт выдачи
+Заказы Распивошной.
+GET  /?action=my                   — мои заказы
+GET  /?action=my_debts             — мои долги
+GET  /?action=delivery_options     — список вариантов доставки
+POST / body={action:place,...}     — оформить заказ
+POST / body={action:delete,...}    — удалить (accepted/fixed)
+POST / body={action:archive,...}   — архивировать (delivery/declined)
+POST / body={action:pay,...}       — отметить оплату
+POST / body={action:set_delivery}  — выбрать/изменить вариант доставки (waiting)
+POST / body={action:debt_request}  — запрос возврата/зачёта
 """
 import json
 import os
@@ -56,6 +59,7 @@ def get_atomizer(cur, volume_ml: int):
 
 
 def handler(event: dict, context) -> dict:
+    """Обработчик заказов клиента"""
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
@@ -67,19 +71,34 @@ def handler(event: dict, context) -> dict:
     if not user:
         return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Необходима авторизация'})}
 
-    # GET /?action=my
     if method == 'GET':
         action = params.get('action', 'my')
+
+        if action == 'delivery_options':
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, name, description, address, schedule FROM delivery_options WHERE is_active = TRUE ORDER BY sort_order ASC"
+            )
+            rows = cur.fetchall()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+                'id': r[0], 'name': r[1], 'description': r[2], 'address': r[3], 'schedule': r[4],
+            } for r in rows])}
+
         if action == 'my':
             conn = get_conn()
             cur = conn.cursor()
             cur.execute(
                 """SELECT o.id, p.name, p.brand, p.image_url, o.volume_ml, o.price_per_ml, o.atomizer_price, o.total_price,
                           o.status, o.payment_confirmed, o.pickup_point, o.created_at,
-                          a.name as atomizer_name, o.payment_amount, o.payment_date, o.payment_note, p.id as product_id
+                          a.name as atomizer_name, o.payment_amount, o.payment_date, o.payment_note, p.id as product_id,
+                          o.delivery_option_id, o.delivery_comment,
+                          dopt.name as delivery_option_name, dopt.address as delivery_address, dopt.schedule as delivery_schedule
                    FROM orders o
                    JOIN products p ON o.product_id = p.id
                    LEFT JOIN atomizers a ON o.atomizer_id = a.id
+                   LEFT JOIN delivery_options dopt ON o.delivery_option_id = dopt.id
                    WHERE o.user_id = %s AND o.is_archived = FALSE
                    ORDER BY o.created_at DESC""",
                 (user['id'],)
@@ -97,6 +116,11 @@ def handler(event: dict, context) -> dict:
                     'payment_date': str(r[14]) if r[14] else None,
                     'payment_note': r[15],
                     'product_id': r[16],
+                    'delivery_option_id': r[17],
+                    'delivery_comment': r[18],
+                    'delivery_option_name': r[19],
+                    'delivery_address': r[20],
+                    'delivery_schedule': r[21],
                 })
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(orders)}
 
@@ -121,7 +145,6 @@ def handler(event: dict, context) -> dict:
 
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
-    # POST /
     if method == 'POST':
         body = json.loads(event.get('body') or '{}')
         action = body.get('action', 'place')
@@ -190,13 +213,12 @@ def handler(event: dict, context) -> dict:
             if not order or order[1] not in ARCHIVABLE_STATUSES:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нельзя архивировать'})}
-            cur.execute("UPDATE orders SET is_archived = TRUE WHERE id = %s", (order_id,))
+            cur.execute("UPDATE orders SET is_archived = TRUE, archived_at = NOW() WHERE id = %s", (order_id,))
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
         if action == 'pay':
-            # Принимаем order_ids (список) или order_id (один)
             order_ids = body.get('order_ids') or ([body.get('order_id')] if body.get('order_id') else [])
             payment_amount = body.get('payment_amount')
             payment_note = body.get('payment_note', '')
@@ -222,27 +244,39 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
-        if action == 'pickup':
-            order_id = body.get('order_id')
-            pickup_point = (body.get('pickup_point') or '').strip()
-            if not order_id or not pickup_point:
-                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id и пункт'})}
+        if action == 'set_delivery':
+            order_ids = body.get('order_ids') or ([body.get('order_id')] if body.get('order_id') else [])
+            delivery_option_id = body.get('delivery_option_id')
+            delivery_comment = (body.get('delivery_comment') or '').strip()
+            if not order_ids or not delivery_option_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите заказы и вариант доставки'})}
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("SELECT id, status FROM orders WHERE id = %s AND user_id = %s", (order_id, user['id']))
-            order = cur.fetchone()
-            if not order or order[1] != 'waiting':
+            cur.execute("SELECT id FROM delivery_options WHERE id = %s AND is_active = TRUE", (delivery_option_id,))
+            if not cur.fetchone():
                 conn.close()
-                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Выбор пункта недоступен'})}
-            cur.execute("UPDATE orders SET pickup_point = %s WHERE id = %s", (pickup_point, order_id))
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Вариант доставки не найден'})}
+            placeholders = ','.join(['%s'] * len(order_ids))
+            cur.execute(
+                f"SELECT id FROM orders WHERE id IN ({placeholders}) AND user_id = %s AND status = 'waiting'",
+                list(order_ids) + [user['id']]
+            )
+            valid_ids = [r[0] for r in cur.fetchall()]
+            if not valid_ids:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет подходящих заказов'})}
+            ph2 = ','.join(['%s'] * len(valid_ids))
+            cur.execute(
+                f"UPDATE orders SET delivery_option_id = %s, delivery_comment = %s WHERE id IN ({ph2})",
+                [delivery_option_id, delivery_comment or None] + valid_ids
+            )
             conn.commit()
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': len(valid_ids)})}
 
         if action == 'debt_request':
-            # Клиент запрашивает возврат или зачёт по своему долгу (we_owe)
             debt_id = body.get('debt_id')
-            request_type = body.get('request_type')  # 'refund' или 'credit'
+            request_type = body.get('request_type')
             card = (body.get('card') or '').strip()
             if not debt_id or request_type not in ('refund', 'credit'):
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите debt_id и request_type (refund/credit)'})}
@@ -250,18 +284,17 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor()
             cur.execute("SELECT id, type FROM debts WHERE id = %s AND user_id = %s AND resolved = FALSE", (debt_id, user['id']))
             debt = cur.fetchone()
-            if not debt:
+            if not debt or debt[1] != 'we_owe':
                 conn.close()
-                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Долг не найден'})}
-            if debt[1] != 'we_owe':
-                conn.close()
-                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Запрос возможен только по долгу организатора'})}
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Долг не найден или уже закрыт'})}
             cur.execute(
                 "UPDATE debts SET client_request = %s, client_card = %s, client_request_at = NOW() WHERE id = %s",
-                (request_type, card if request_type == 'refund' else None, debt_id)
+                (request_type, card or None, debt_id)
             )
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
-    return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
+        return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Unknown action'})}
+
+    return {'statusCode': 405, 'headers': CORS, 'body': json.dumps({'error': 'Method not allowed'})}
