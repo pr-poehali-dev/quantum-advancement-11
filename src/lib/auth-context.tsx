@@ -33,21 +33,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    const res = await api.auth.login({ email, password })
-    if (res.error) return { error: res.error }
-    setToken(res.token)
-    if (res.user?.id) setUserId(res.user.id)
-    setUser(res.user)
-    return {}
+    try {
+      const res = await api.auth.login({ email, password })
+      if (!res || res.error) return { error: res?.error || 'Ошибка соединения' }
+      setToken(res.token)
+      if (res.user?.id) setUserId(res.user.id)
+      setUser(res.user)
+      return {}
+    } catch {
+      return { error: 'Не удалось подключиться. Попробуйте ещё раз.' }
+    }
   }
 
   const register = async (data: { nickname: string; email: string; phone: string; password: string }) => {
-    const res = await api.auth.register(data)
-    if (res.error) return { error: res.error }
-    setToken(res.token)
-    if (res.user?.id) setUserId(res.user.id)
-    setUser(res.user)
-    return {}
+    try {
+      const res = await api.auth.register(data)
+      if (!res || res.error) return { error: res?.error || 'Ошибка соединения' }
+      setToken(res.token)
+      if (res.user?.id) setUserId(res.user.id)
+      setUser(res.user)
+      return {}
+    } catch {
+      return { error: 'Не удалось подключиться. Попробуйте ещё раз.' }
+    }
   }
 
   const logout = async () => {

@@ -102,6 +102,10 @@ export default function Catalog() {
         <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-orange-400 transition-colors">
           Распивошная
         </Link>
+        <nav className="hidden md:flex items-center gap-5 text-sm">
+          <Link to="/forum" className="text-white/50 hover:text-white transition-colors">Форум</Link>
+          <Link to="/how-it-works" className="text-white/50 hover:text-white transition-colors">Как это работает</Link>
+        </nav>
         <div className="flex items-center gap-2">
           {user ? (
             <>

@@ -14,6 +14,7 @@ interface Topic {
   created_at: string
   updated_at: string
   author_nickname: string
+  image_url: string | null
 }
 
 function fmt(dt: string) {
@@ -79,6 +80,11 @@ export default function Forum() {
                 onClick={() => navigate(`/forum/${t.id}`)}
                 className="w-full text-left border border-white/8 bg-white/2 hover:bg-white/5 hover:border-white/15 rounded-2xl p-4 transition-all group"
               >
+                {t.image_url && (
+                  <div className="w-full h-40 rounded-xl overflow-hidden mb-3">
+                    <img src={t.image_url} alt={t.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">

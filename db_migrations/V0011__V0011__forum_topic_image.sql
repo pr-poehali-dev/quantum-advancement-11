@@ -1,0 +1,1 @@
+ALTER TABLE forum_topics ADD COLUMN IF NOT EXISTS image_url TEXT;

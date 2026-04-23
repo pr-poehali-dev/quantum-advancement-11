@@ -14,11 +14,17 @@ export const clearUserId = () => localStorage.removeItem('user_id')
 const authHeaders = () => ({
   'Content-Type': 'application/json',
   'X-Auth-Token': getToken(),
+})
+
+const forumHeaders = () => ({
+  'Content-Type': 'application/json',
+  'X-Auth-Token': getToken(),
   'X-User-Id': getUserId(),
 })
 
-const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken(), 'X-User-Id': getUserId() } }).then(r => r.json())
+const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken() } }).then(r => r.json())
 const post = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data ?? {}) }).then(r => r.json())
+const forumPost = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: forumHeaders(), body: JSON.stringify(data ?? {}) }).then(r => r.json())
 
 export const api = {
   auth: {
@@ -144,20 +150,20 @@ export const api = {
   forum: {
     topics: () => fetch(`${CATALOG_URL}/?action=topics`).then(r => r.json()),
     topic: (id: number) => fetch(`${CATALOG_URL}/?action=topic&id=${id}`).then(r => r.json()),
-    createTopic: (data: { title: string; body: string }) =>
-      post(`${CATALOG_URL}/`, { action: 'create_topic', ...data }),
-    editTopic: (topic_id: number, data: { title: string; body: string }) =>
-      post(`${CATALOG_URL}/`, { action: 'edit_topic', topic_id, ...data }),
+    createTopic: (data: { title: string; body: string; image_b64?: string }) =>
+      forumPost(`${CATALOG_URL}/`, { action: 'create_topic', ...data }),
+    editTopic: (topic_id: number, data: { title: string; body: string; image_b64?: string }) =>
+      forumPost(`${CATALOG_URL}/`, { action: 'edit_topic', topic_id, ...data }),
     deleteTopic: (topic_id: number) =>
-      post(`${CATALOG_URL}/`, { action: 'delete_topic', topic_id }),
+      forumPost(`${CATALOG_URL}/`, { action: 'delete_topic', topic_id }),
     pinTopic: (topic_id: number, pinned: boolean) =>
-      post(`${CATALOG_URL}/`, { action: 'pin_topic', topic_id, pinned }),
+      forumPost(`${CATALOG_URL}/`, { action: 'pin_topic', topic_id, pinned }),
     closeTopic: (topic_id: number, closed: boolean) =>
-      post(`${CATALOG_URL}/`, { action: 'close_topic', topic_id, closed }),
+      forumPost(`${CATALOG_URL}/`, { action: 'close_topic', topic_id, closed }),
     addComment: (topic_id: number, body: string) =>
-      post(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body }),
+      forumPost(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body }),
     deleteComment: (comment_id: number) =>
-      post(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
+      forumPost(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
   },
 
   messages: {

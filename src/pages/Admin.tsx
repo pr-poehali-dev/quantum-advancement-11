@@ -1917,12 +1917,13 @@ interface ForumTopicItem {
   is_closed: boolean
   comments_count: number
   created_at: string
+  image_url?: string | null
 }
 
 function AdminForumTab() {
   const [topics, setTopics] = useState<ForumTopicItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState<{ title: string; body: string } | null>(null)
+  const [form, setForm] = useState<{ title: string; body: string; imageFile?: File | null; imagePreview?: string } | null>(null)
   const [editTopic, setEditTopic] = useState<ForumTopicItem | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -1934,13 +1935,25 @@ function AdminForumTab() {
 
   useEffect(() => { load() }, [load])
 
+  const readFileAsBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
   const handleCreate = async () => {
     if (!form?.title.trim() || !form.body.trim()) { toast.error('Заполните заголовок и текст'); return }
     setSaving(true)
-    const res = await api.forum.createTopic({ title: form.title.trim(), body: form.body.trim() })
+    let image_b64: string | undefined
+    if (form.imageFile) {
+      try { image_b64 = await readFileAsBase64(form.imageFile) } catch { /* ignore */ }
+    }
+    const res = await api.forum.createTopic({ title: form.title.trim(), body: form.body.trim(), image_b64 })
     setSaving(false)
     if (res.error) { toast.error(res.error); return }
-    toast.success('Тема создана')
+    toast.success('Тема опубликована, участники получат уведомление')
     setForm(null)
     load()
   }
@@ -2015,10 +2028,35 @@ function AdminForumTab() {
             rows={4}
             className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
           />
+          {/* Загрузка изображения */}
+          <div>
+            <label className="text-white/40 text-xs mb-1.5 block">Изображение (необязательно)</label>
+            {form.imagePreview ? (
+              <div className="relative w-full max-w-sm">
+                <img src={form.imagePreview} alt="preview" className="rounded-xl w-full h-40 object-cover border border-white/10" />
+                <button onClick={() => setForm(f => f ? { ...f, imageFile: null, imagePreview: undefined } : f)}
+                  className="absolute top-2 right-2 bg-black/60 text-white/70 hover:text-white rounded-full p-1 transition-colors">
+                  <Icon name="X" size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 cursor-pointer w-fit bg-white/5 border border-white/15 hover:border-white/25 rounded-xl px-4 py-2 text-white/40 hover:text-white/60 text-sm transition-colors">
+                <Icon name="ImagePlus" size={16} />
+                Выбрать изображение
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const url = URL.createObjectURL(file)
+                    setForm(f => f ? { ...f, imageFile: file, imagePreview: url } : f)
+                  }} />
+              </label>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleCreate} disabled={saving}
               className="bg-orange-500 hover:bg-orange-600 text-white text-sm h-9">
-              {saving ? 'Публикую...' : 'Опубликовать'}
+              {saving ? <><Icon name="Loader2" size={14} className="animate-spin mr-1" />Публикую...</> : 'Опубликовать'}
             </Button>
             <Button onClick={() => setForm(null)} variant="ghost" className="text-white/40 text-sm h-9">Отмена</Button>
           </div>

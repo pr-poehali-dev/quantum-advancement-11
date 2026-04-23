@@ -16,6 +16,7 @@ interface Topic {
   created_at: string
   author_nickname: string
   author_id: number
+  image_url: string | null
 }
 
 interface Comment {
@@ -170,7 +171,11 @@ export default function ForumTopic() {
               </div>
             )}
           </div>
-          <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">{topic.body}</p>
+          {topic.image_url && (
+            <img src={topic.image_url} alt={topic.title}
+              className="w-full rounded-xl object-cover max-h-80 mt-3 border border-white/8" />
+          )}
+          <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap mt-3">{topic.body}</p>
         </div>
 
         {/* Comments */}

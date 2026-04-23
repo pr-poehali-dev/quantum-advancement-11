@@ -20,7 +20,10 @@ concentration: parfum_water | parfum | cologne | eau_de_toilette
 """
 import json
 import os
+import base64
+import uuid
 import psycopg2
+import boto3
 
 
 def get_conn():
@@ -73,6 +76,33 @@ def is_admin(user):
     return user and user['role'] in ('admin', 'moderator')
 
 
+def upload_image(b64data: str, prefix: str = 'forum') -> str:
+    """Загружает base64-изображение в S3 и возвращает CDN URL."""
+    if ',' in b64data:
+        header, b64data = b64data.split(',', 1)
+        ext = 'jpg'
+        if 'png' in header:
+            ext = 'png'
+        elif 'webp' in header:
+            ext = 'webp'
+        elif 'gif' in header:
+            ext = 'gif'
+    else:
+        ext = 'jpg'
+    data = base64.b64decode(b64data)
+    key = f"{prefix}/{uuid.uuid4().hex}.{ext}"
+    s3 = boto3.client(
+        's3',
+        endpoint_url='https://bucket.poehali.dev',
+        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    )
+    content_type = f'image/{ext}' if ext != 'jpg' else 'image/jpeg'
+    s3.put_object(Bucket='files', Key=key, Body=data, ContentType=content_type)
+    project_id = os.environ['AWS_ACCESS_KEY_ID']
+    return f"https://cdn.poehali.dev/projects/{project_id}/bucket/{key}"
+
+
 def handler(event: dict, context) -> dict:
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
@@ -90,7 +120,7 @@ def handler(event: dict, context) -> dict:
         if action == 'topics':
             cur.execute("""
                 SELECT t.id, t.title, t.body, t.is_pinned, t.is_closed,
-                       t.comments_count, t.created_at, t.updated_at, u.nickname
+                       t.comments_count, t.created_at, t.updated_at, u.nickname, t.image_url
                 FROM forum_topics t
                 JOIN users u ON t.author_id = u.id
                 ORDER BY t.is_pinned DESC, t.created_at DESC
@@ -100,7 +130,8 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
                 'id': r[0], 'title': r[1], 'body': r[2],
                 'is_pinned': r[3], 'is_closed': r[4], 'comments_count': r[5],
-                'created_at': str(r[6]), 'updated_at': str(r[7]), 'author_nickname': r[8],
+                'created_at': str(r[6]), 'updated_at': str(r[7]),
+                'author_nickname': r[8], 'image_url': r[9],
             } for r in rows])}
 
         if action == 'topic':
@@ -110,7 +141,7 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
             cur.execute("""
                 SELECT t.id, t.title, t.body, t.is_pinned, t.is_closed,
-                       t.comments_count, t.created_at, t.updated_at, u.nickname, t.author_id
+                       t.comments_count, t.created_at, t.updated_at, u.nickname, t.author_id, t.image_url
                 FROM forum_topics t JOIN users u ON t.author_id = u.id
                 WHERE t.id = %s
             """, (int(topic_id),))
@@ -122,7 +153,7 @@ def handler(event: dict, context) -> dict:
                 'id': row[0], 'title': row[1], 'body': row[2],
                 'is_pinned': row[3], 'is_closed': row[4], 'comments_count': row[5],
                 'created_at': str(row[6]), 'updated_at': str(row[7]),
-                'author_nickname': row[8], 'author_id': row[9],
+                'author_nickname': row[8], 'author_id': row[9], 'image_url': row[10],
             }
             cur.execute("""
                 SELECT c.id, c.body, c.created_at, u.nickname, u.id, u.role
@@ -270,11 +301,29 @@ def handler(event: dict, context) -> dict:
                 if not title or not text:
                     conn.close()
                     return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заполните заголовок и текст'})}
+                # Загрузка изображения
+                image_url = None
+                image_b64 = body.get('image_b64')
+                if image_b64:
+                    try:
+                        image_url = upload_image(image_b64, 'forum')
+                    except Exception:
+                        pass
                 cur.execute(
-                    "INSERT INTO forum_topics (title, body, author_id) VALUES (%s, %s, %s) RETURNING id",
-                    (title, text, forum_user['id'])
+                    "INSERT INTO forum_topics (title, body, author_id, image_url) VALUES (%s, %s, %s, %s) RETURNING id",
+                    (title, text, forum_user['id'], image_url)
                 )
                 new_id = cur.fetchone()[0]
+                # Уведомление всем пользователям через сообщение
+                cur.execute("SELECT id FROM users WHERE id != %s AND is_blocked = FALSE", (forum_user['id'],))
+                user_ids = [r[0] for r in cur.fetchall()]
+                if user_ids:
+                    msg = f'📌 Новая тема на форуме: «{title}». Откройте форум чтобы прочитать и оставить комментарий.'
+                    for uid in user_ids:
+                        cur.execute(
+                            "INSERT INTO messages (from_user_id, to_user_id, body) VALUES (%s, %s, %s)",
+                            (forum_user['id'], uid, msg)
+                        )
                 conn.commit()
                 conn.close()
                 return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'id': new_id})}
@@ -286,10 +335,23 @@ def handler(event: dict, context) -> dict:
                 if not topic_id or not title or not text:
                     conn.close()
                     return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id, title, body'})}
-                cur.execute(
-                    "UPDATE forum_topics SET title = %s, body = %s, updated_at = NOW() WHERE id = %s",
-                    (title, text, int(topic_id))
-                )
+                image_url_update = None
+                image_b64 = body.get('image_b64')
+                if image_b64:
+                    try:
+                        image_url_update = upload_image(image_b64, 'forum')
+                    except Exception:
+                        pass
+                if image_url_update:
+                    cur.execute(
+                        "UPDATE forum_topics SET title = %s, body = %s, image_url = %s, updated_at = NOW() WHERE id = %s",
+                        (title, text, image_url_update, int(topic_id))
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE forum_topics SET title = %s, body = %s, updated_at = NOW() WHERE id = %s",
+                        (title, text, int(topic_id))
+                    )
                 conn.commit()
                 conn.close()
                 return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
