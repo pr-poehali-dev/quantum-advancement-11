@@ -85,6 +85,9 @@ interface Debt {
   nickname: string
   order_id: number | null
   resolve_note: string | null
+  client_request: 'refund' | 'credit' | null
+  client_card: string | null
+  client_request_at: string | null
 }
 
 export default function Admin() {
@@ -363,7 +366,12 @@ export default function Admin() {
             className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors relative ${tab === 'debts' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
           >
             Долги
-            {debts.filter(d => !d.resolved).length > 0 && (
+            {debts.filter(d => !d.resolved && d.client_request).length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-yellow-400 text-black text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                {debts.filter(d => !d.resolved && d.client_request).length}
+              </span>
+            )}
+            {debts.filter(d => !d.resolved && !d.client_request).length > 0 && debts.filter(d => !d.resolved && d.client_request).length === 0 && (
               <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-400" />
             )}
           </button>
@@ -1161,9 +1169,19 @@ function PaymentCard({ payment: p, onConfirmed }: { payment: Payment; onConfirme
         )}
       </div>
 
-      <Button onClick={handle} disabled={confirming} className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold h-10 text-sm">
-        {confirming ? 'Подтверждаю...' : `✓ Подтвердить ${ca.toFixed(2)} ₽ → перевести в «Ожидается»`}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={handle} disabled={confirming} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold h-10 text-sm">
+          {confirming ? 'Подтверждаю...' : `✓ Подтвердить ${ca.toFixed(2)} ₽ → «Ожидается»`}
+        </Button>
+        <Button onClick={async () => {
+          if (!confirm('Удалить отметку о платеже?')) return
+          const res = await api.admin.deletePayment(p.order_id)
+          if (res.error) { toast.error(res.error); return }
+          toast.success('Платёж удалён'); onConfirmed()
+        }} variant="ghost" className="text-red-400/50 hover:text-red-400 h-10 px-3 border border-white/10">
+          <Icon name="Trash2" size={14} />
+        </Button>
+      </div>
     </div>
   )
 }
@@ -1209,9 +1227,21 @@ function ConfirmedPaymentCard({ payment: p, onChanged }: { payment: Payment & { 
             </div>
           )}
         </div>
-        <button onClick={() => setEditing(v => !v)} className="text-white/30 hover:text-white/60 transition-colors text-xs shrink-0">
-          {editing ? 'Отмена' : '✎ Изменить'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setEditing(v => !v)} className="text-white/30 hover:text-white/60 transition-colors text-xs">
+            {editing ? 'Отмена' : '✎'}
+          </button>
+          {!editing && (
+            <button onClick={async () => {
+              if (!confirm('Удалить отметку о платеже?')) return
+              const res = await api.admin.deletePayment(p.order_id)
+              if (res.error) { toast.error(res.error); return }
+              toast.success('Платёж удалён'); onChanged()
+            }} className="text-red-400/40 hover:text-red-400 transition-colors">
+              <Icon name="Trash2" size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {editing && (
@@ -1370,20 +1400,72 @@ function DebtRow({ debt: d, onResolved }: { debt: Debt; onResolved: () => void }
   const [resolveNote, setResolveNote] = useState('')
   const [resolving, setResolving] = useState(false)
   const [showResolve, setShowResolve] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editAmount, setEditAmount] = useState(String(d.amount))
+  const [editReason, setEditReason] = useState(d.reason)
+  const [saving, setSaving] = useState(false)
+  const [confirmingRequest, setConfirmingRequest] = useState(false)
 
   const handle = async () => {
     setResolving(true)
     const res = await api.admin.resolveDebt(d.id, resolveNote)
     setResolving(false)
     if (res.error) { toast.error(res.error); return }
-    toast.success('Долг закрыт')
-    onResolved()
+    toast.success('Долг закрыт'); onResolved()
+  }
+
+  const handleEdit = async () => {
+    setSaving(true)
+    const res = await api.admin.editDebt(d.id, { amount: parseFloat(editAmount) || undefined, reason: editReason })
+    setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Долг обновлён'); setEditing(false); onResolved()
+  }
+
+  const handleConfirmRequest = async () => {
+    setConfirmingRequest(true)
+    const res = await api.admin.resolveDebtRequest(d.id, resolveNote || undefined)
+    setConfirmingRequest(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Запрос подтверждён, долг списан'); onResolved()
   }
 
   const isClient = d.type === 'client_owes'
+  const hasRequest = !d.resolved && d.client_request
 
   return (
-    <div className={`border rounded-xl p-3 ${d.resolved ? 'border-white/5 opacity-50' : isClient ? 'border-red-500/20 bg-red-500/5' : 'border-blue-500/20 bg-blue-500/5'}`}>
+    <div className={`border rounded-xl p-3 transition-all ${
+      d.resolved ? 'border-white/5 opacity-50'
+      : hasRequest ? 'border-yellow-500/40 bg-yellow-500/5'
+      : isClient ? 'border-red-500/20 bg-red-500/5'
+      : 'border-blue-500/20 bg-blue-500/5'
+    }`}>
+      {/* Баннер запроса клиента */}
+      {hasRequest && (
+        <div className="flex items-start gap-2 mb-3 pb-3 border-b border-yellow-500/20">
+          <Icon name="Bell" size={14} className="text-yellow-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-yellow-300 text-xs font-medium">
+              Клиент запросил {d.client_request === 'refund' ? 'возврат на карту' : 'зачёт в счёт заказов'}
+            </div>
+            {d.client_card && <div className="text-yellow-200/60 text-xs mt-0.5">Карта: {d.client_card}</div>}
+            {d.client_request_at && <div className="text-white/30 text-xs">{new Date(d.client_request_at).toLocaleDateString('ru-RU')}</div>}
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <input
+              value={resolveNote}
+              onChange={e => setResolveNote(e.target.value)}
+              placeholder="комментарий (необяз.)"
+              className="bg-white/5 border border-white/15 rounded px-2 py-1 text-white text-xs w-40 hidden sm:block"
+            />
+            <Button onClick={handleConfirmRequest} disabled={confirmingRequest}
+              className="bg-yellow-500 hover:bg-yellow-400 text-black text-xs h-7 px-3 font-semibold">
+              {confirmingRequest ? '...' : '✓ Выполнено'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -1394,25 +1476,41 @@ function DebtRow({ debt: d, onResolved }: { debt: Debt; onResolved: () => void }
             {d.order_id && <span className="text-white/30 text-xs">#{d.order_id}</span>}
             <span className="text-white/30 text-xs">{new Date(d.created_at).toLocaleDateString('ru-RU')}</span>
           </div>
-          <div className="text-white/60 text-xs mt-1">{d.reason}</div>
+          {!editing
+            ? <div className="text-white/60 text-xs mt-1">{d.reason}</div>
+            : <div className="mt-2 space-y-1.5">
+                <Input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white text-xs h-7 w-28" />
+                <Input value={editReason} onChange={e => setEditReason(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white text-xs h-7" />
+                <div className="flex gap-1">
+                  <Button onClick={handleEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3">
+                    {saving ? '...' : 'Сохранить'}
+                  </Button>
+                  <Button onClick={() => setEditing(false)} variant="ghost" className="text-white/30 text-xs h-7">Отмена</Button>
+                </div>
+              </div>
+          }
           {d.resolve_note && <div className="text-green-400/60 text-xs mt-0.5 italic">Закрыт: {d.resolve_note}</div>}
         </div>
         <div className="text-right shrink-0">
           <div className={`font-bold ${isClient ? 'text-red-300' : 'text-blue-300'}`}>{d.amount.toFixed(2)} ₽</div>
-          {!d.resolved && (
-            <button onClick={() => setShowResolve(v => !v)} className="text-white/30 hover:text-white/60 text-xs transition-colors mt-1">
-              Закрыть
-            </button>
+          {!d.resolved && !editing && (
+            <div className="flex flex-col items-end gap-0.5 mt-1">
+              <button onClick={() => setEditing(true)} className="text-white/25 hover:text-white/50 text-xs transition-colors">✎ изменить</button>
+              <button onClick={() => setShowResolve(v => !v)} className="text-white/30 hover:text-white/60 text-xs transition-colors">Списать</button>
+            </div>
           )}
         </div>
       </div>
+
       {showResolve && !d.resolved && (
         <div className="mt-3 pt-3 border-t border-white/10 flex gap-2">
           <Input value={resolveNote} onChange={e => setResolveNote(e.target.value)}
             placeholder="Как закрыт? (зачёт, возврат...)"
             className="bg-white/10 border-white/20 text-white text-sm h-8 flex-1" />
           <Button onClick={handle} disabled={resolving} className="bg-green-600 hover:bg-green-500 text-white text-xs h-8 px-3">
-            {resolving ? '...' : 'Закрыть'}
+            {resolving ? '...' : 'Списать'}
           </Button>
         </div>
       )}

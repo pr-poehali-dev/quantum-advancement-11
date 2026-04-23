@@ -197,10 +197,11 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor()
             cur.execute("""
                 SELECT d.id, d.type, d.amount, d.reason, d.resolved, d.created_at,
-                       u.id, u.nickname, d.order_id, d.resolve_note
+                       u.id, u.nickname, d.order_id, d.resolve_note,
+                       d.client_request, d.client_card, d.client_request_at
                 FROM debts d
                 JOIN users u ON d.user_id = u.id
-                ORDER BY d.resolved ASC, d.created_at DESC
+                ORDER BY d.client_request DESC NULLS LAST, d.resolved ASC, d.created_at DESC
             """)
             rows = cur.fetchall()
             conn.close()
@@ -209,6 +210,8 @@ def handler(event: dict, context) -> dict:
                 'reason': r[3], 'resolved': r[4], 'created_at': str(r[5]),
                 'user_id': r[6], 'nickname': r[7], 'order_id': r[8],
                 'resolve_note': r[9],
+                'client_request': r[10], 'client_card': r[11],
+                'client_request_at': str(r[12]) if r[12] else None,
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(debts)}
 
@@ -465,6 +468,61 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных для обновления'})}
             values.append(int(order_id))
             cur.execute(f"UPDATE orders SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'delete_payment':
+            order_id = body.get('order_id')
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                """UPDATE orders SET payment_amount = NULL, payment_date = NULL, payment_note = NULL,
+                   payment_confirmed = FALSE, payment_confirmed_amount = NULL WHERE id = %s""",
+                (int(order_id),)
+            )
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'edit_debt':
+            debt_id = body.get('debt_id')
+            if not debt_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите debt_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            fields, values = [], []
+            if 'amount' in body:
+                fields.append("amount = %s"); values.append(float(body['amount']))
+            if 'reason' in body:
+                fields.append("reason = %s"); values.append(str(body['reason']).strip())
+            if 'type' in body and body['type'] in ('client_owes', 'we_owe'):
+                fields.append("type = %s"); values.append(body['type'])
+            if not fields:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных'})}
+            values.append(int(debt_id))
+            cur.execute(f"UPDATE debts SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'resolve_debt_request':
+            debt_id = body.get('debt_id')
+            resolve_note = (body.get('resolve_note') or '').strip()
+            if not debt_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите debt_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE debts SET resolved = TRUE, resolved_at = NOW(), resolve_note = %s WHERE id = %s AND client_request IS NOT NULL",
+                (resolve_note or 'Выполнено по запросу клиента', int(debt_id))
+            )
+            if cur.rowcount == 0:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Долг не найден или нет запроса'})}
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

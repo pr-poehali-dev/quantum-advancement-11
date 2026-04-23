@@ -87,12 +87,18 @@ export const api = {
       get(`${ADMIN_URL}/?action=confirmed_payments`),
     editPayment: (order_id: number, data: { payment_amount?: number; payment_date?: string; payment_note?: string; payment_confirmed_amount?: number }) =>
       post(`${ADMIN_URL}/`, { action: 'edit_payment', order_id, ...data }),
+    deletePayment: (order_id: number) =>
+      post(`${ADMIN_URL}/`, { action: 'delete_payment', order_id }),
     debts: () =>
       get(`${ADMIN_URL}/?action=debts`),
     addDebt: (data: { user_id: number; type: 'client_owes' | 'we_owe'; amount: number; reason: string; order_id?: number }) =>
       post(`${ADMIN_URL}/`, { action: 'add_debt', ...data }),
     resolveDebt: (debt_id: number, resolve_note: string) =>
       post(`${ADMIN_URL}/`, { action: 'resolve_debt', debt_id, resolve_note }),
+    editDebt: (debt_id: number, data: { amount?: number; reason?: string; type?: string }) =>
+      post(`${ADMIN_URL}/`, { action: 'edit_debt', debt_id, ...data }),
+    resolveDebtRequest: (debt_id: number, resolve_note?: string) =>
+      post(`${ADMIN_URL}/`, { action: 'resolve_debt_request', debt_id, resolve_note }),
     archiveOrder: (order_id: number) =>
       post(`${ADMIN_URL}/`, { action: 'archive_order', order_id }),
     archiveOrders: (order_ids: number[]) =>
