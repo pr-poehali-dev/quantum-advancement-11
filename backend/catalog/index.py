@@ -56,16 +56,15 @@ def get_session_user(headers: dict):
 
 
 def get_auth_user(headers: dict):
-    """Авторизация через X-Auth-Token + X-User-Id (токен авторизации, не сессия)."""
+    """Авторизация через сессионный токен (X-Auth-Token)."""
     token = (headers.get('x-auth-token') or headers.get('X-Auth-Token') or '').strip()
-    user_id = headers.get('x-user-id') or headers.get('X-User-Id')
-    if not token or not user_id:
+    if not token:
         return None
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, nickname, role FROM users WHERE id = %s AND auth_token = %s",
-        (int(user_id), token)
+        "SELECT u.id, u.nickname, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
+        (token,)
     )
     row = cur.fetchone()
     conn.close()
