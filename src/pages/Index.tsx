@@ -12,9 +12,9 @@ export default function Index() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute inset-0 bg-black">
+      <div className="absolute inset-0 bg-black pointer-events-none">
         {/* Flowing wave rays overlay */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <svg
             className="absolute inset-0 w-full h-full"
             viewBox="0 0 1200 800"
@@ -715,12 +715,16 @@ export default function Index() {
         </button>
 
         {user ? (
-          <Link to="/cabinet" className="hidden md:flex items-center px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
-            Личный кабинет
+          <Link to="/cabinet">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Личный кабинет
+            </ShimmerButton>
           </Link>
         ) : (
-          <Link to="/login" className="hidden md:flex items-center px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
-            Войти
+          <Link to="/login">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Войти
+            </ShimmerButton>
           </Link>
         )}
       </header>
@@ -738,12 +742,16 @@ export default function Index() {
               Форум
             </a>
             {user ? (
-              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)} className="text-white font-medium hover:text-orange-400 transition-colors">
-                Личный кабинет
+              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
+                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                  Личный кабинет
+                </ShimmerButton>
               </Link>
             ) : (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-white font-medium hover:text-orange-400 transition-colors">
-                Войти
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                  Войти
+                </ShimmerButton>
               </Link>
             )}
           </nav>
