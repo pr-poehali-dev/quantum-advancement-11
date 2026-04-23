@@ -4,6 +4,8 @@ import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
 import Icon from '@/components/ui/icon'
 
+interface TopicProduct { id: number; name: string; brand: string; image_url: string | null; price_per_ml: number }
+
 interface Topic {
   id: number
   title: string
@@ -15,6 +17,7 @@ interface Topic {
   updated_at: string
   author_nickname: string
   image_url: string | null
+  products_preview: TopicProduct[]
 }
 
 function fmt(dt: string) {
@@ -111,6 +114,17 @@ export default function Forum() {
                       <span>@{t.author_nickname}</span>
                       <span>{fmt(t.created_at)}</span>
                     </div>
+                    {/* Превью товаров */}
+                    {t.products_preview && t.products_preview.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {t.products_preview.map(p => (
+                          <div key={p.id} className="flex items-center gap-1 bg-orange-500/8 border border-orange-500/15 rounded-lg px-2 py-0.5">
+                            {p.image_url && <img src={p.image_url} className="w-4 h-4 rounded object-cover" />}
+                            <span className="text-orange-300/70 text-xs">{p.brand} {p.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="shrink-0 flex flex-col items-center gap-1 text-white/30 pt-1">
                     <Icon name="MessageCircle" size={16} />

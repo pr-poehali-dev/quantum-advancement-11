@@ -157,6 +157,8 @@ export const api = {
       post(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body, ...(parent_id ? { parent_id } : {}) }),
     deleteComment: (comment_id: number) =>
       post(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
+    setTopicProducts: (topic_id: number, product_ids: number[]) =>
+      post(`${CATALOG_URL}/`, { action: 'set_topic_products', topic_id, product_ids }),
   },
 
   messages: {

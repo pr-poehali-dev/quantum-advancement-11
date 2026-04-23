@@ -124,14 +124,26 @@ def handler(event: dict, context) -> dict:
                 JOIN users u ON t.author_id = u.id
                 ORDER BY t.is_pinned DESC, t.created_at DESC
             """)
-            rows = cur.fetchall()
+            topic_rows = cur.fetchall()
+            # Для каждой темы подгружаем первый товар (превью)
+            topics_out = []
+            for r in topic_rows:
+                cur.execute("""
+                    SELECT p.id, p.name, p.brand, p.image_url, p.price_per_ml
+                    FROM forum_topic_products ftp
+                    JOIN products p ON ftp.product_id = p.id
+                    WHERE ftp.topic_id = %s ORDER BY ftp.sort_order ASC LIMIT 3
+                """, (r[0],))
+                products_preview = [{'id': pr[0], 'name': pr[1], 'brand': pr[2], 'image_url': pr[3], 'price_per_ml': float(pr[4])} for pr in cur.fetchall()]
+                topics_out.append({
+                    'id': r[0], 'title': r[1], 'body': r[2],
+                    'is_pinned': r[3], 'is_closed': r[4], 'comments_count': r[5],
+                    'created_at': str(r[6]), 'updated_at': str(r[7]),
+                    'author_nickname': r[8], 'image_url': r[9],
+                    'products_preview': products_preview,
+                })
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
-                'id': r[0], 'title': r[1], 'body': r[2],
-                'is_pinned': r[3], 'is_closed': r[4], 'comments_count': r[5],
-                'created_at': str(r[6]), 'updated_at': str(r[7]),
-                'author_nickname': r[8], 'image_url': r[9],
-            } for r in rows])}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(topics_out)}
 
         if action == 'topic':
             topic_id = params.get('id')
@@ -154,6 +166,22 @@ def handler(event: dict, context) -> dict:
                 'created_at': str(row[6]), 'updated_at': str(row[7]),
                 'author_nickname': row[8], 'author_id': row[9], 'image_url': row[10],
             }
+            # Товары темы
+            cur.execute("""
+                SELECT p.id, p.name, p.brand, p.description, p.price_per_ml,
+                       p.bottle_ml, p.booked_ml, p.image_url, p.concentration, p.category
+                FROM forum_topic_products ftp
+                JOIN products p ON ftp.product_id = p.id
+                WHERE ftp.topic_id = %s ORDER BY ftp.sort_order ASC
+            """, (int(topic_id),))
+            products = [{
+                'id': pr[0], 'name': pr[1], 'brand': pr[2], 'description': pr[3],
+                'price_per_ml': float(pr[4]), 'bottle_ml': pr[5], 'booked_ml': pr[6],
+                'available_ml': pr[5] - pr[6], 'image_url': pr[7],
+                'fill_percent': round(pr[6] / pr[5] * 100) if pr[5] else 0,
+                'concentration': pr[8] or 'parfum_water', 'category': pr[9] or 'decant',
+            } for pr in cur.fetchall()]
+            topic['products'] = products
             cur.execute("""
                 SELECT c.id, c.body, c.created_at, u.nickname, u.id, u.role, c.parent_id
                 FROM forum_comments c JOIN users u ON c.author_id = u.id
@@ -232,7 +260,8 @@ def handler(event: dict, context) -> dict:
 
         # ── Форум: авторизация через auth_token ──────────────────────────
         forum_actions = ('create_topic', 'edit_topic', 'delete_topic',
-                         'pin_topic', 'close_topic', 'add_comment', 'delete_comment')
+                         'pin_topic', 'close_topic', 'add_comment', 'delete_comment',
+                         'set_topic_products')
         if post_action in forum_actions:
             forum_user = get_auth_user(headers)
 
@@ -404,6 +433,26 @@ def handler(event: dict, context) -> dict:
                 topic_id = body.get('topic_id')
                 cur.execute("UPDATE forum_topics SET is_closed = %s WHERE id = %s",
                             (bool(body.get('closed', True)), int(topic_id)))
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            if post_action == 'set_topic_products':
+                if not is_admin(forum_user):
+                    conn.close()
+                    return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+                topic_id = body.get('topic_id')
+                product_ids = body.get('product_ids', [])  # список id в нужном порядке
+                if not topic_id:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id'})}
+                # Удаляем старые привязки и вставляем новые
+                cur.execute("DELETE FROM forum_topic_products WHERE topic_id = %s", (int(topic_id),))
+                for i, pid in enumerate(product_ids[:10]):  # максимум 10 товаров
+                    cur.execute(
+                        "INSERT INTO forum_topic_products (topic_id, product_id, sort_order) VALUES (%s, %s, %s)",
+                        (int(topic_id), int(pid), i)
+                    )
                 conn.commit()
                 conn.close()
                 return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

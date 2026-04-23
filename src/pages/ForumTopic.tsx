@@ -6,6 +6,21 @@ import { Button } from '@/components/ui/button'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
 
+interface TopicProduct {
+  id: number
+  name: string
+  brand: string
+  description: string
+  price_per_ml: number
+  bottle_ml: number
+  booked_ml: number
+  available_ml: number
+  image_url: string | null
+  fill_percent: number
+  concentration: string
+  category: string
+}
+
 interface Topic {
   id: number
   title: string
@@ -17,6 +32,7 @@ interface Topic {
   author_nickname: string
   author_id: number
   image_url: string | null
+  products: TopicProduct[]
 }
 
 interface Comment {
@@ -348,6 +364,57 @@ export default function ForumTopic() {
           )}
           <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">{topic.body}</p>
         </div>
+
+        {/* Карточки товаров */}
+        {topic.products && topic.products.length > 0 && (
+          <div className="mb-6">
+            <div className="text-white/40 text-xs font-medium uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Icon name="ShoppingBag" size={12} />
+              Товары в этой теме
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {topic.products.map(p => (
+                <div key={p.id} className="border border-white/10 bg-white/3 rounded-2xl overflow-hidden hover:border-orange-500/30 hover:bg-white/5 transition-all group">
+                  {p.image_url && (
+                    <div className="h-44 overflow-hidden bg-white/5">
+                      <img src={p.image_url} alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <div className="text-white/40 text-xs mb-0.5">{p.brand}</div>
+                    <div className="text-white font-semibold text-sm leading-snug mb-1">{p.name}</div>
+                    {p.description && (
+                      <p className="text-white/40 text-xs leading-relaxed line-clamp-2 mb-2">{p.description}</p>
+                    )}
+                    {/* Заполненность */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-white/30 mb-1">
+                        <span>Осталось {p.available_ml} мл</span>
+                        <span>{p.fill_percent}% заполнен</span>
+                      </div>
+                      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-500/60 rounded-full transition-all"
+                          style={{ width: `${p.fill_percent}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-orange-300 font-bold text-sm">{p.price_per_ml} ₽/мл</div>
+                      {p.available_ml > 0 ? (
+                        <Link to={`/catalog/${p.id}`}
+                          className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                          Заказать
+                        </Link>
+                      ) : (
+                        <span className="text-white/20 text-xs">Нет в наличии</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Комментарии */}
         <div className="mb-4">
