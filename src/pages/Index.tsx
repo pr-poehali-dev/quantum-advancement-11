@@ -698,17 +698,14 @@ export default function Index() {
         </div>
 
         <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
-          <a href="#" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+          <Link to="/catalog" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
             Каталог
-          </a>
-          <a href="#" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+          </Link>
+          <Link to="/how-it-works" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
             Как это работает
-          </a>
-          <a href="#" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+          </Link>
+          <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
             Форум
-          </a>
-          <a href="#" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Контакты
           </a>
         </nav>
 
@@ -718,39 +715,36 @@ export default function Index() {
         </button>
 
         {user ? (
-          <ShimmerLink to="/cabinet" className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+          <Link to="/cabinet" className="hidden md:flex items-center px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
             Личный кабинет
-          </ShimmerLink>
+          </Link>
         ) : (
-          <ShimmerLink to="/login" className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+          <Link to="/login" className="hidden md:flex items-center px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
             Войти
-          </ShimmerLink>
+          </Link>
         )}
       </header>
 
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 z-20">
           <nav className="flex flex-col space-y-4 px-6 py-6">
-            <a href="#" className="text-white/80 hover:text-white transition-colors">
+            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
               Каталог
-            </a>
-            <a href="#" className="text-white/80 hover:text-white transition-colors">
+            </Link>
+            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
               Как это работает
-            </a>
-            <a href="#" className="text-white/80 hover:text-white transition-colors">
+            </Link>
+            <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors">
               Форум
             </a>
-            <a href="#" className="text-white/80 hover:text-white transition-colors">
-              Контакты
-            </a>
             {user ? (
-              <ShimmerLink to="/cabinet" className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)} className="text-white font-medium hover:text-orange-400 transition-colors">
                 Личный кабинет
-              </ShimmerLink>
+              </Link>
             ) : (
-              <ShimmerLink to="/login" className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-white font-medium hover:text-orange-400 transition-colors">
                 Войти
-              </ShimmerLink>
+              </Link>
             )}
           </nav>
         </div>
