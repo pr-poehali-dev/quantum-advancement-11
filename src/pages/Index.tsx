@@ -11,7 +11,76 @@ export default function Index() {
   const { user } = useAuth()
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen bg-black flex flex-col">
+
+      {/* ═══ ШАПКА — полностью отдельный блок, никакого фона рядом ═══ */}
+      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12 border-b border-white/10">
+        <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
+          <span className="text-white font-bold text-lg sm:text-xl lg:text-2xl tracking-wide">Распивошная</span>
+        </div>
+
+        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
+          <Link to="/catalog" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+            Каталог
+          </Link>
+          <Link to="/how-it-works" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+            Как это работает
+          </Link>
+          <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+            Форум
+          </a>
+        </nav>
+
+        <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Menu className="w-6 h-6" />
+        </button>
+
+        {user ? (
+          <Link to="/cabinet">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Личный кабинет
+            </ShimmerButton>
+          </Link>
+        ) : (
+          <Link to="/login">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Войти
+            </ShimmerButton>
+          </Link>
+        )}
+      </header>
+
+      {mobileMenuOpen && (
+        <div className="relative z-50 md:hidden bg-black/95 backdrop-blur-sm border-b border-white/10">
+          <nav className="flex flex-col space-y-4 px-6 py-6">
+            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
+              Каталог
+            </Link>
+            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
+              Как это работает
+            </Link>
+            <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors">
+              Форум
+            </a>
+            {user ? (
+              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
+                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                  Личный кабинет
+                </ShimmerButton>
+              </Link>
+            ) : (
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                  Войти
+                </ShimmerButton>
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
+
+      {/* ═══ HERO — анимированный фон только здесь ═══ */}
+      <div className="relative flex-1 overflow-hidden">
       <div className="absolute inset-0 bg-black pointer-events-none">
         {/* Flowing wave rays overlay */}
         <div className="absolute inset-0 pointer-events-none">
@@ -691,73 +760,6 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Header Navigation */}
-      <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12">
-        <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
-          <span className="text-white font-bold text-lg sm:text-xl lg:text-2xl tracking-wide">Распивошная</span>
-        </div>
-
-        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
-          <Link to="/catalog" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Каталог
-          </Link>
-          <Link to="/how-it-works" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Как это работает
-          </Link>
-          <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Форум
-          </a>
-        </nav>
-
-        {/* Mobile menu button */}
-        <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          <Menu className="w-6 h-6" />
-        </button>
-
-        {user ? (
-          <Link to="/cabinet">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Личный кабинет
-            </ShimmerButton>
-          </Link>
-        ) : (
-          <Link to="/login">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Войти
-            </ShimmerButton>
-          </Link>
-        )}
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 z-20">
-          <nav className="flex flex-col space-y-4 px-6 py-6">
-            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
-              Каталог
-            </Link>
-            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
-              Как это работает
-            </Link>
-            <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors">
-              Форум
-            </a>
-            {user ? (
-              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
-                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
-                  Личный кабинет
-                </ShimmerButton>
-              </Link>
-            ) : (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
-                  Войти
-                </ShimmerButton>
-              </Link>
-            )}
-          </nav>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="relative z-10 flex flex-col items-start justify-start sm:justify-center min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-12 max-w-6xl pt-4 sm:-mt-12 lg:-mt-24 pl-6 sm:pl-12 lg:pl-20">
         {/* Badge */}
@@ -816,6 +818,7 @@ export default function Index() {
           </div>
         </div>
       </main>
+      </div>{/* конец hero relative flex-1 */}
     </div>
   )
 }
