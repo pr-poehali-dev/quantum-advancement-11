@@ -1,10 +1,19 @@
 """
-Каталог ароматов Распивошной. Все запросы на GET /?action=...
+Каталог ароматов + Форум Распивошной.
 GET /?action=list&sort=filling&category=decant — список товаров
 GET /?action=product&id=1     — карточка товара
 GET /?action=atomizers         — список атомайзеров
-POST / body={action:create,...} — создать товар (admin/moderator)
-POST / body={action:update,...} — обновить товар (admin/moderator)
+GET /?action=topics            — список тем форума
+GET /?action=topic&id=X        — тема + комментарии
+POST / body={action:create,...}        — создать товар (admin/moderator)
+POST / body={action:update,...}        — обновить товар (admin/moderator)
+POST / body={action:create_topic,...}  — создать тему форума (admin/moderator)
+POST / body={action:edit_topic,...}    — редактировать тему (admin/moderator)
+POST / body={action:delete_topic,...}  — удалить тему (admin/moderator)
+POST / body={action:pin_topic,...}     — закрепить/открепить (admin/moderator)
+POST / body={action:close_topic,...}   — закрыть/открыть тему (admin/moderator)
+POST / body={action:add_comment,...}   — добавить комментарий (авторизован)
+POST / body={action:delete_comment,..} — удалить комментарий (admin/moderator или свой)
 
 category: decant (отливанты) | bottle (полноразмерные флаконы)
 concentration: parfum_water | parfum | cologne | eau_de_toilette
@@ -21,7 +30,7 @@ def get_conn():
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token, X-User-Id',
 }
 
 CONCENTRATIONS = ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette')
@@ -43,6 +52,27 @@ def get_session_user(headers: dict):
     return {'id': row[0], 'role': row[1]} if row else None
 
 
+def get_auth_user(headers: dict):
+    """Авторизация через X-Auth-Token + X-User-Id (токен авторизации, не сессия)."""
+    token = (headers.get('x-auth-token') or headers.get('X-Auth-Token') or '').strip()
+    user_id = headers.get('x-user-id') or headers.get('X-User-Id')
+    if not token or not user_id:
+        return None
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, nickname, role FROM users WHERE id = %s AND auth_token = %s",
+        (int(user_id), token)
+    )
+    row = cur.fetchone()
+    conn.close()
+    return {'id': row[0], 'nickname': row[1], 'role': row[2]} if row else None
+
+
+def is_admin(user):
+    return user and user['role'] in ('admin', 'moderator')
+
+
 def handler(event: dict, context) -> dict:
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
@@ -56,6 +86,55 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     if method == 'GET':
+
+        if action == 'topics':
+            cur.execute("""
+                SELECT t.id, t.title, t.body, t.is_pinned, t.is_closed,
+                       t.comments_count, t.created_at, t.updated_at, u.nickname
+                FROM forum_topics t
+                JOIN users u ON t.author_id = u.id
+                ORDER BY t.is_pinned DESC, t.created_at DESC
+            """)
+            rows = cur.fetchall()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+                'id': r[0], 'title': r[1], 'body': r[2],
+                'is_pinned': r[3], 'is_closed': r[4], 'comments_count': r[5],
+                'created_at': str(r[6]), 'updated_at': str(r[7]), 'author_nickname': r[8],
+            } for r in rows])}
+
+        if action == 'topic':
+            topic_id = params.get('id')
+            if not topic_id:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
+            cur.execute("""
+                SELECT t.id, t.title, t.body, t.is_pinned, t.is_closed,
+                       t.comments_count, t.created_at, t.updated_at, u.nickname, t.author_id
+                FROM forum_topics t JOIN users u ON t.author_id = u.id
+                WHERE t.id = %s
+            """, (int(topic_id),))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Тема не найдена'})}
+            topic = {
+                'id': row[0], 'title': row[1], 'body': row[2],
+                'is_pinned': row[3], 'is_closed': row[4], 'comments_count': row[5],
+                'created_at': str(row[6]), 'updated_at': str(row[7]),
+                'author_nickname': row[8], 'author_id': row[9],
+            }
+            cur.execute("""
+                SELECT c.id, c.body, c.created_at, u.nickname, u.id, u.role
+                FROM forum_comments c JOIN users u ON c.author_id = u.id
+                WHERE c.topic_id = %s ORDER BY c.created_at ASC
+            """, (int(topic_id),))
+            comments = [{
+                'id': r[0], 'body': r[1], 'created_at': str(r[2]),
+                'author_nickname': r[3], 'author_id': r[4], 'author_role': r[5],
+            } for r in cur.fetchall()]
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'topic': topic, 'comments': comments})}
 
         if action == 'atomizers':
             cur.execute("SELECT id, name, min_ml, max_ml, price FROM atomizers ORDER BY min_ml")
