@@ -1,5 +1,5 @@
 """
-Каталог ароматов + Форум Распивошной.
+Каталог ароматов + Форум Распивошной. v2
 GET /?action=list&sort=filling&category=decant — список товаров
 GET /?action=product&id=1     — карточка товара
 GET /?action=atomizers         — список атомайзеров
