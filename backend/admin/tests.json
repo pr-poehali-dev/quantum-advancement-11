@@ -6,6 +6,14 @@
       "path": "/",
       "expectedStatus": 403,
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST archive_orders without auth",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "archive_orders", "order_ids": [999]},
+      "expectedStatus": 403,
+      "bodyMatcher": "partial"
     }
   ]
 }

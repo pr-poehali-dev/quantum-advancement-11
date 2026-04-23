@@ -7,6 +7,8 @@ POST / {action:confirm_payment, order_id, confirmed_amount, debt_note?} — по
 POST / {action:set_status}    — групповая смена статуса
 POST / {action:add_debt}      — добавить долг вручную
 POST / {action:resolve_debt}  — закрыть долг
+POST / {action:archive_order, order_id}       — архивировать один заказ (Раздача/Отказано)
+POST / {action:archive_orders, order_ids}     — групповая архивация; долги сохраняются
 """
 import json
 import os
@@ -268,6 +270,22 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'archive_orders':
+            order_ids = body.get('order_ids', [])
+            if not order_ids or not isinstance(order_ids, list):
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_ids'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            placeholders = ','.join(['%s'] * len(order_ids))
+            cur.execute(
+                f"UPDATE orders SET is_archived = TRUE, archived_at = NOW(), updated_at = NOW() WHERE id IN ({placeholders}) AND is_archived = FALSE",
+                list(order_ids)
+            )
+            archived = cur.rowcount
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': archived})}
 
         if action == 'set_status':
             order_ids = body.get('order_ids', [])

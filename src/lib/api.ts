@@ -81,5 +81,7 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'resolve_debt', debt_id, resolve_note }),
     archiveOrder: (order_id: number) =>
       post(`${ADMIN_URL}/`, { action: 'archive_order', order_id }),
+    archiveOrders: (order_ids: number[]) =>
+      post(`${ADMIN_URL}/`, { action: 'archive_orders', order_ids }),
   },
 }

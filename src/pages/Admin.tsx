@@ -96,6 +96,7 @@ export default function Admin() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [applying, setApplying] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
   const [payments, setPayments] = useState<Payment[]>([])
   const [paymentsLoading, setPaymentsLoading] = useState(false)
@@ -170,6 +171,19 @@ export default function Admin() {
     setApplying(false)
     if (res.error) { toast.error(res.error); return }
     toast.success(`Статус обновлён у ${res.updated} заказ(ов)`)
+    load()
+  }
+
+  const handleArchiveSelected = async () => {
+    const ids = selected.size > 0 ? Array.from(selected) : orders.map(o => o.id)
+    if (ids.length === 0) return
+    const label = selected.size > 0 ? `${ids.length} выбранных` : `всех ${ids.length} отфильтрованных`
+    if (!window.confirm(`Архивировать ${label} заказов?\n\nДолги по ним сохранятся до погашения. Архивные заказы удаляются через 4 месяца.`)) return
+    setArchiving(true)
+    const res = await api.admin.archiveOrders(ids)
+    setArchiving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Архивировано заказов: ${res.archived}`)
     load()
   }
 
@@ -309,6 +323,15 @@ export default function Admin() {
               className="bg-orange-500 hover:bg-orange-600 text-white h-8 text-xs px-4 disabled:opacity-40"
             >
               {applying ? 'Применяю...' : 'Применить'}
+            </Button>
+            <Button
+              onClick={handleArchiveSelected}
+              disabled={archiving || orders.length === 0}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white h-8 text-xs px-4 disabled:opacity-40 border border-white/10"
+              title={selected.size > 0 ? 'Архивировать выбранные заказы' : 'Архивировать все отфильтрованные заказы'}
+            >
+              <Icon name="Archive" size={13} className="mr-1.5" />
+              {archiving ? 'Архивирую...' : selected.size > 0 ? `В архив (${selected.size})` : `В архив (все ${orders.length})`}
             </Button>
             {selected.size > 0 && (
               <button onClick={() => setSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">
