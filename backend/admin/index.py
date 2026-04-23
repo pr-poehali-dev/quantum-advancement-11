@@ -1,14 +1,19 @@
 """
 Кабинет модератора Распивошной.
-GET  /?action=orders          — все заказы с фильтром
-GET  /?action=payments        — неподтверждённые платежи
-GET  /?action=debts           — все активные долги
-POST / {action:confirm_payment, order_id, confirmed_amount, debt_note?} — подтвердить платёж
-POST / {action:set_status}    — групповая смена статуса
-POST / {action:add_debt}      — добавить долг вручную
-POST / {action:resolve_debt}  — закрыть долг
-POST / {action:archive_order, order_id}       — архивировать один заказ (Раздача/Отказано)
-POST / {action:archive_orders, order_ids}     — групповая архивация; долги сохраняются
+GET  /?action=orders             — все заказы с фильтром
+GET  /?action=payments           — неподтверждённые платежи
+GET  /?action=debts              — все активные долги
+GET  /?action=archived_orders    — архивные заказы
+GET  /?action=admin_products     — список товаров для редактирования (admin)
+POST / {action:confirm_payment}  — подтвердить платёж
+POST / {action:set_status}       — групповая смена статуса
+POST / {action:add_debt}         — добавить долг вручную
+POST / {action:resolve_debt}     — закрыть долг
+POST / {action:archive_order}    — архивировать один заказ
+POST / {action:archive_orders}   — групповая архивация
+POST / {action:unarchive_orders} — разархивация
+POST / {action:update_product}   — обновить товар (цена, bottle_ml, booked_ml, name, brand)
+POST / {action:import_products}  — импорт из Excel: [{id?,name,brand,price_per_ml,bottle_ml,...}]
 """
 import json
 import os
@@ -212,6 +217,40 @@ def handler(event: dict, context) -> dict:
                 'count': len(orders),
             })}
 
+        if action == 'admin_products':
+            name_filter = (params.get('name') or '').strip().lower()
+            brand_filter = (params.get('brand') or '').strip().lower()
+            conn = get_conn()
+            cur = conn.cursor()
+            query = """
+                SELECT p.id, p.name, p.brand, p.price_per_ml, p.bottle_ml, p.booked_ml,
+                       p.is_active, p.image_url, p.description,
+                       COALESCE(SUM(CASE WHEN o.status NOT IN ('declined') AND o.is_archived = FALSE THEN o.volume_ml ELSE 0 END), 0) as active_booked
+                FROM products p
+                LEFT JOIN orders o ON o.product_id = p.id
+                WHERE 1=1
+            """
+            conditions, values = [], []
+            if name_filter:
+                conditions.append("LOWER(p.name) LIKE %s")
+                values.append(f'%{name_filter}%')
+            if brand_filter:
+                conditions.append("LOWER(p.brand) LIKE %s")
+                values.append(f'%{brand_filter}%')
+            if conditions:
+                query += " AND " + " AND ".join(conditions)
+            query += " GROUP BY p.id ORDER BY p.created_at DESC"
+            cur.execute(query, values)
+            rows = cur.fetchall()
+            conn.close()
+            products = [{
+                'id': r[0], 'name': r[1], 'brand': r[2],
+                'price_per_ml': float(r[3]), 'bottle_ml': r[4], 'booked_ml': r[5],
+                'is_active': r[6], 'image_url': r[7], 'description': r[8],
+                'active_booked': int(r[9]),
+            } for r in rows]
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': products, 'count': len(products)})}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':
@@ -372,5 +411,73 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': updated})}
+
+        if action == 'update_product':
+            product_id = body.get('id')
+            if not product_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            fields, values = [], []
+            for field in ('name', 'brand', 'description', 'image_url'):
+                if field in body:
+                    fields.append(f"{field} = %s")
+                    values.append(body[field])
+            if 'price_per_ml' in body:
+                fields.append("price_per_ml = %s")
+                values.append(float(body['price_per_ml']))
+            if 'bottle_ml' in body:
+                fields.append("bottle_ml = %s")
+                values.append(int(body['bottle_ml']))
+            if 'booked_ml' in body:
+                fields.append("booked_ml = %s")
+                values.append(int(body['booked_ml']))
+            if 'is_active' in body:
+                fields.append("is_active = %s")
+                values.append(bool(body['is_active']))
+            if not fields:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных для обновления'})}
+            values.append(int(product_id))
+            cur.execute(f"UPDATE products SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'import_products':
+            items = body.get('items', [])
+            if not items or not isinstance(items, list):
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите items'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            created, updated = 0, 0
+            for item in items:
+                pid = item.get('id')
+                name = (item.get('name') or '').strip()
+                brand = (item.get('brand') or '').strip()
+                price_per_ml = item.get('price_per_ml')
+                bottle_ml = item.get('bottle_ml')
+                if not name or not brand or price_per_ml is None or bottle_ml is None:
+                    continue
+                if pid:
+                    cur.execute("SELECT id FROM products WHERE id = %s", (int(pid),))
+                    exists = cur.fetchone()
+                    if exists:
+                        cur.execute(
+                            "UPDATE products SET price_per_ml = %s, bottle_ml = %s WHERE id = %s",
+                            (float(price_per_ml), int(bottle_ml), int(pid))
+                        )
+                        updated += 1
+                        continue
+                description = (item.get('description') or '').strip()
+                image_url = item.get('image_url')
+                cur.execute(
+                    "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url)
+                )
+                created += 1
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated})}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}

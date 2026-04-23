@@ -91,5 +91,15 @@ export const api = {
     },
     unarchiveOrders: (order_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'unarchive_orders', order_ids }),
+    adminProducts: (filters: { name?: string; brand?: string }) => {
+      const p = new URLSearchParams({ action: 'admin_products' })
+      if (filters.name) p.set('name', filters.name)
+      if (filters.brand) p.set('brand', filters.brand)
+      return get(`${ADMIN_URL}/?${p.toString()}`)
+    },
+    updateProduct: (data: Record<string, unknown>) =>
+      post(`${ADMIN_URL}/`, { action: 'update_product', ...data }),
+    importProducts: (items: Record<string, unknown>[]) =>
+      post(`${ADMIN_URL}/`, { action: 'import_products', items }),
   },
 }

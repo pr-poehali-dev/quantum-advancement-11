@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
@@ -82,7 +83,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products'>('orders')
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [totalSum, setTotalSum] = useState(0)
@@ -110,6 +111,18 @@ export default function Admin() {
   const [archiveFilterProduct, setArchiveFilterProduct] = useState('')
   const [archiveSelected, setArchiveSelected] = useState<Set<number>>(new Set())
   const [unarchiving, setUnarchiving] = useState(false)
+
+  type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number }
+  const [products, setProducts] = useState<AdminProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [prodFilterName, setProdFilterName] = useState('')
+  const [prodFilterBrand, setProdFilterBrand] = useState('')
+  const [prodFilterMinBooked, setProdFilterMinBooked] = useState('')
+  const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [savingCell, setSavingCell] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -217,6 +230,64 @@ export default function Admin() {
     load()
   }
 
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true)
+    const res = await api.admin.adminProducts({ name: prodFilterName, brand: prodFilterBrand })
+    setProductsLoading(false)
+    if (res.error) { toast.error(res.error); return }
+    setProducts(res.products || [])
+  }, [prodFilterName, prodFilterBrand])
+
+  useEffect(() => {
+    if (tab === 'products') loadProducts()
+  }, [tab, loadProducts])
+
+  const startEdit = (id: number, field: string, value: string) => {
+    setEditingCell({ id, field })
+    setEditValue(value)
+  }
+
+  const saveCell = async (id: number, field: string) => {
+    setSavingCell(true)
+    const val = field === 'price_per_ml' ? parseFloat(editValue) : parseInt(editValue)
+    if (isNaN(val) || val < 0) { toast.error('Некорректное значение'); setSavingCell(false); return }
+    const res = await api.admin.updateProduct({ id, [field]: val })
+    setSavingCell(false)
+    if (res.error) { toast.error(res.error); return }
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
+    setEditingCell(null)
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImporting(true)
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws)
+      const items = rows.map(r => ({
+        id: r['id'] || r['ID'] || r['Id'] || undefined,
+        name: r['name'] || r['название'] || r['Название'] || '',
+        brand: r['brand'] || r['бренд'] || r['Бренд'] || '',
+        price_per_ml: r['price_per_ml'] || r['цена_мл'] || r['цена'] || r['Цена'] || 0,
+        bottle_ml: r['bottle_ml'] || r['флакон_мл'] || r['флакон'] || r['Флакон'] || 0,
+        description: r['description'] || r['описание'] || r['Описание'] || '',
+        image_url: r['image_url'] || r['фото'] || r['Фото'] || null,
+      }))
+      const res = await api.admin.importProducts(items)
+      setImporting(false)
+      if (res.error) { toast.error(res.error); return }
+      toast.success(`Создано: ${res.created}, обновлено: ${res.updated}`)
+      loadProducts()
+    } catch {
+      setImporting(false)
+      toast.error('Ошибка чтения файла')
+    }
+  }
+
   if (!user || (user.role !== 'admin' && user.role !== 'moderator')) return null
 
   return (
@@ -272,6 +343,12 @@ export default function Admin() {
             {archivedOrders.length > 0 && tab !== 'archive' && (
               <span className="absolute -top-0.5 -right-0.5 bg-zinc-600 text-white/60 text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{archivedOrders.length > 99 ? '99+' : archivedOrders.length}</span>
             )}
+          </button>
+          <button
+            onClick={() => setTab('products')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'products' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Товары
           </button>
         </div>
 
@@ -416,6 +493,176 @@ export default function Admin() {
             <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
               <span>Всего: <span className="text-white/60">{archivedOrders.length}</span></span>
               <span>С открытыми долгами: <span className="text-red-400">{archivedOrders.filter(o => o.open_debts > 0).length}</span></span>
+            </div>
+          )}
+        </>}
+
+        {tab === 'products' && <>
+          {/* Фильтры + импорт */}
+          <div className="flex flex-wrap gap-3 mb-4 items-end">
+            <div className="flex-1 min-w-[130px]">
+              <label className="text-white/40 text-xs mb-1 block">Название</label>
+              <Input value={prodFilterName} onChange={e => setProdFilterName(e.target.value)}
+                placeholder="поиск по названию"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[130px]">
+              <label className="text-white/40 text-xs mb-1 block">Бренд</label>
+              <Input value={prodFilterBrand} onChange={e => setProdFilterBrand(e.target.value)}
+                placeholder="поиск по бренду"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <div className="w-[120px]">
+              <label className="text-white/40 text-xs mb-1 block">Забронир. мл ≥</label>
+              <Input value={prodFilterMinBooked} onChange={e => setProdFilterMinBooked(e.target.value)}
+                placeholder="0" type="number"
+                className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
+            </div>
+            <Button onClick={loadProducts} disabled={productsLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
+              {productsLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setProdFilterName(''); setProdFilterBrand(''); setProdFilterMinBooked('') }}
+              className="text-white/30 hover:text-white h-9 text-sm">
+              Сбросить
+            </Button>
+            <div className="ml-auto">
+              <input type="file" accept=".xlsx,.xls,.csv" ref={fileInputRef} onChange={handleImport} className="hidden" />
+              <Button onClick={() => fileInputRef.current?.click()} disabled={importing}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 text-sm px-4">
+                <Icon name="Upload" size={14} className="mr-2" />
+                {importing ? 'Загружаю...' : 'Импорт из Excel'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Подсказка по формату */}
+          <div className="mb-3 text-xs text-white/25 px-1">
+            Колонки Excel: <span className="text-white/40">id, name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: description, image_url. Если id совпадает — обновляется цена и объём флакона.
+          </div>
+
+          {/* Таблица товаров */}
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm min-w-[860px]">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/3">
+                  <th className="px-3 py-3 text-left text-white/40 font-medium w-14">ID</th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Название</th>
+                  <th className="px-3 py-3 text-left text-white/40 font-medium">Бренд</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">₽/мл</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">Флакон, мл</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">Забронир.</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium w-24">Свободно</th>
+                  <th className="px-3 py-3 text-center text-white/40 font-medium w-20">Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productsLoading && (
+                  <tr><td colSpan={8} className="py-12 text-center text-white/30">
+                    <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
+                  </td></tr>
+                )}
+                {!productsLoading && products.length === 0 && (
+                  <tr><td colSpan={8} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
+                )}
+                {!productsLoading && products
+                  .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
+                  .map(p => {
+                    const free = p.bottle_ml - p.booked_ml
+                    const fillPct = p.bottle_ml ? Math.round(p.booked_ml / p.bottle_ml * 100) : 0
+                    return (
+                      <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${!p.is_active ? 'opacity-40' : ''}`}>
+                        <td className="px-3 py-2.5 text-white/30 text-xs">{p.id}</td>
+                        <td className="px-3 py-2.5 text-white/80 max-w-[180px] truncate">{p.name}</td>
+                        <td className="px-3 py-2.5 text-white/50 text-xs">{p.brand}</td>
+
+                        {/* цена — inline edit */}
+                        <td className="px-3 py-2.5 text-center">
+                          {editingCell?.id === p.id && editingCell?.field === 'price_per_ml' ? (
+                            <div className="flex items-center gap-1 justify-center">
+                              <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveCell(p.id, 'price_per_ml'); if (e.key === 'Escape') setEditingCell(null) }}
+                                className="w-20 bg-white/10 border border-orange-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                              <button onClick={() => saveCell(p.id, 'price_per_ml')} disabled={savingCell} className="text-orange-400 hover:text-orange-300">
+                                <Icon name="Check" size={13} />
+                              </button>
+                              <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => startEdit(p.id, 'price_per_ml', String(p.price_per_ml))}
+                              className="text-white/80 hover:text-orange-300 transition-colors group flex items-center gap-1 mx-auto">
+                              {p.price_per_ml} ₽
+                              <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-orange-400" />
+                            </button>
+                          )}
+                        </td>
+
+                        {/* флакон мл — inline edit */}
+                        <td className="px-3 py-2.5 text-center">
+                          {editingCell?.id === p.id && editingCell?.field === 'bottle_ml' ? (
+                            <div className="flex items-center gap-1 justify-center">
+                              <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveCell(p.id, 'bottle_ml'); if (e.key === 'Escape') setEditingCell(null) }}
+                                className="w-20 bg-white/10 border border-orange-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                              <button onClick={() => saveCell(p.id, 'bottle_ml')} disabled={savingCell} className="text-orange-400 hover:text-orange-300">
+                                <Icon name="Check" size={13} />
+                              </button>
+                              <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => startEdit(p.id, 'bottle_ml', String(p.bottle_ml))}
+                              className="text-white/80 hover:text-orange-300 transition-colors group flex items-center gap-1 mx-auto">
+                              {p.bottle_ml}
+                              <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-orange-400" />
+                            </button>
+                          )}
+                        </td>
+
+                        {/* забронировано — inline edit */}
+                        <td className="px-3 py-2.5 text-center">
+                          {editingCell?.id === p.id && editingCell?.field === 'booked_ml' ? (
+                            <div className="flex items-center gap-1 justify-center">
+                              <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveCell(p.id, 'booked_ml'); if (e.key === 'Escape') setEditingCell(null) }}
+                                className="w-20 bg-white/10 border border-orange-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                              <button onClick={() => saveCell(p.id, 'booked_ml')} disabled={savingCell} className="text-orange-400 hover:text-orange-300">
+                                <Icon name="Check" size={13} />
+                              </button>
+                              <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => startEdit(p.id, 'booked_ml', String(p.booked_ml))}
+                              className="text-white/80 hover:text-orange-300 transition-colors group flex items-center gap-1 mx-auto">
+                              <span>{p.booked_ml}</span>
+                              <span className="text-white/25 text-xs">({fillPct}%)</span>
+                              <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-orange-400" />
+                            </button>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={free > 0 ? 'text-green-400' : 'text-red-400/60'}>{free}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <button onClick={async () => {
+                            const res = await api.admin.updateProduct({ id: p.id, is_active: !p.is_active })
+                            if (res.error) { toast.error(res.error); return }
+                            setProducts(prev => prev.map(x => x.id === p.id ? { ...x, is_active: !p.is_active } : x))
+                          }} className={`text-xs px-2 py-0.5 rounded-full transition-colors ${p.is_active ? 'bg-green-500/15 text-green-300 hover:bg-red-500/15 hover:text-red-300' : 'bg-red-500/15 text-red-300 hover:bg-green-500/15 hover:text-green-300'}`}>
+                            {p.is_active ? 'Активен' : 'Скрыт'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+              </tbody>
+            </table>
+          </div>
+
+          {products.length > 0 && (
+            <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
+              <span>Всего: <span className="text-white/60">{products.length}</span></span>
+              <span>Активных: <span className="text-white/60">{products.filter(p => p.is_active).length}</span></span>
+              <span>Заполнено полностью: <span className="text-orange-400">{products.filter(p => p.booked_ml >= p.bottle_ml).length}</span></span>
             </div>
           )}
         </>}
