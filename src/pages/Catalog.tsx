@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
-import { Button } from '@/components/ui/button'
+import { ShimmerButton } from '@/components/shimmer-button'
 import Icon from '@/components/ui/icon'
 
 interface Product {
@@ -30,23 +30,50 @@ const CONC_LABEL: Record<string, string> = {
 export default function Catalog() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [products, setProducts] = useState<Product[]>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState('')
   const [category, setCategory] = useState('')
+  const [brandFilter, setBrandFilter] = useState('')
 
   useEffect(() => {
     setLoading(true)
+    setBrandFilter('')
     api.catalog.list(sort, category).then(data => {
-      setProducts(Array.isArray(data) ? data : [])
+      setAllProducts(Array.isArray(data) ? data : [])
       setLoading(false)
     })
   }, [sort, category])
+
+  // Уникальные бренды из загруженных товаров
+  const brands = useMemo(() => {
+    const set = new Set(allProducts.map(p => p.brand))
+    return Array.from(set).sort()
+  }, [allProducts])
+
+  // Клиентская фильтрация по бренду
+  const products = useMemo(() => {
+    if (!brandFilter) return allProducts
+    return allProducts.filter(p => p.brand === brandFilter)
+  }, [allProducts, brandFilter])
 
   const handleLogout = async () => {
     await logout()
     navigate('/')
   }
+
+  const sortOptions = category === 'bottle'
+    ? [
+        { val: '', label: 'Новые' },
+        { val: 'price_asc', label: 'Цена ↑' },
+        { val: 'price_desc', label: 'Цена ↓' },
+      ]
+    : [
+        { val: '', label: 'Новые' },
+        { val: 'filling', label: 'По заполнению' },
+        { val: 'price_asc', label: 'Цена ↑' },
+        { val: 'price_desc', label: 'Цена ↓' },
+      ]
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -55,37 +82,38 @@ export default function Catalog() {
         <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-orange-400 transition-colors">
           Распивошная
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {user ? (
             <>
-              <span className="text-white/50 text-sm hidden sm:block">@{user.nickname}</span>
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.role === 'moderator') && (
                 <Link to="/admin">
-                  <Button variant="outline" size="sm" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 text-xs">
+                  <ShimmerButton shimmerColor="#f97316" shimmerDuration="2.5s" borderRadius="8px"
+                    className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
                     Админ
-                  </Button>
+                  </ShimmerButton>
                 </Link>
               )}
               <Link to="/cabinet">
-                <Button variant="outline" size="sm" className="border-white/20 text-white/70 hover:bg-white/10 text-xs">
-                  Кабинет
-                </Button>
+                <ShimmerButton borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
+                  Личный кабинет
+                </ShimmerButton>
               </Link>
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/40 hover:text-white text-xs">
+              <button onClick={handleLogout} className="text-white/30 hover:text-white/60 text-xs px-2 py-2 transition-colors">
                 Выйти
-              </Button>
+              </button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <Button variant="outline" size="sm" className="border-white/20 text-white/70 hover:bg-white/10 text-xs">
+                <ShimmerButton borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
                   Войти
-                </Button>
+                </ShimmerButton>
               </Link>
               <Link to="/register">
-                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                <ShimmerButton shimmerColor="#f97316" shimmerDuration="2s" borderRadius="8px"
+                  className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
                   Регистрация
-                </Button>
+                </ShimmerButton>
               </Link>
             </>
           )}
@@ -93,42 +121,92 @@ export default function Catalog() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-        {/* Title + Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Каталог ароматов</h1>
-            <p className="text-white/50 text-sm mt-1">Оригинальный парфюм — от 1 мл</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Категория */}
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+        {/* Заголовок */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Каталог ароматов</h1>
+          <p className="text-white/50 text-sm mt-1">Оригинальный парфюм — от 1 мл</p>
+        </div>
+
+        {/* Фильтры — два ряда */}
+        <div className="mb-8 space-y-3">
+          {/* Ряд 1: категория */}
+          <div className="flex items-center gap-2">
+            <span className="text-white/30 text-xs uppercase tracking-wider w-20 shrink-0">Раздел</span>
+            <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
               {[
                 { val: '', label: 'Все' },
                 { val: 'decant', label: 'Отливанты' },
                 { val: 'bottle', label: 'Флаконы' },
               ].map(opt => (
                 <button key={opt.val} onClick={() => setCategory(opt.val)}
-                  className={`text-sm px-3 py-1.5 rounded-md transition-colors ${category === opt.val ? 'bg-orange-500 text-white' : 'text-white/60 hover:bg-white/10'}`}>
+                  className={`text-sm px-4 py-2 rounded-lg font-medium transition-all ${
+                    category === opt.val
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                      : 'text-white/50 hover:text-white hover:bg-white/8'
+                  }`}>
                   {opt.label}
                 </button>
               ))}
             </div>
-            {/* Сортировка — только для отливантов */}
-            {category !== 'bottle' && (
-              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
-                {[
-                  { val: '', label: 'Новые' },
-                  { val: 'filling', label: 'По заполнению' },
-                ].map(opt => (
+          </div>
+
+          {/* Ряд 2: сортировка + фильтр по бренду */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Сортировка */}
+            <div className="flex items-center gap-2">
+              <span className="text-white/30 text-xs uppercase tracking-wider w-20 shrink-0">Сортировка</span>
+              <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
+                {sortOptions.map(opt => (
                   <button key={opt.val} onClick={() => setSort(opt.val)}
-                    className={`text-sm px-3 py-1.5 rounded-md transition-colors ${sort === opt.val ? 'bg-white/20 text-white' : 'text-white/40 hover:bg-white/10'}`}>
+                    className={`text-sm px-4 py-2 rounded-lg transition-all ${
+                      sort === opt.val
+                        ? 'bg-white/15 text-white font-medium'
+                        : 'text-white/40 hover:text-white hover:bg-white/8'
+                    }`}>
                     {opt.label}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Фильтр по бренду */}
+            {brands.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-white/30 text-xs uppercase tracking-wider w-20 shrink-0">Бренд</span>
+                <div className="flex flex-wrap items-center gap-1">
+                  <button
+                    onClick={() => setBrandFilter('')}
+                    className={`text-sm px-3 py-1.5 rounded-lg transition-all border ${
+                      brandFilter === ''
+                        ? 'border-white/30 bg-white/10 text-white'
+                        : 'border-transparent text-white/40 hover:text-white hover:border-white/15'
+                    }`}>
+                    Все
+                  </button>
+                  {brands.map(brand => (
+                    <button key={brand} onClick={() => setBrandFilter(brand)}
+                      className={`text-sm px-3 py-1.5 rounded-lg transition-all border ${
+                        brandFilter === brand
+                          ? 'border-orange-500/60 bg-orange-500/10 text-orange-300'
+                          : 'border-transparent text-white/40 hover:text-white hover:border-white/15'
+                      }`}>
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
+
+        {/* Результат + счётчик */}
+        {!loading && products.length > 0 && (
+          <div className="mb-4 text-white/30 text-sm">
+            {brandFilter
+              ? `${products.length} ${num(products.length, 'товар', 'товара', 'товаров')} · бренд ${brandFilter}`
+              : `${products.length} ${num(products.length, 'товар', 'товара', 'товаров')}`}
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -140,9 +218,13 @@ export default function Catalog() {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="text-6xl mb-4">🌸</div>
             <h2 className="text-white text-xl font-semibold mb-2">
-              {category === 'bottle' ? 'Флаконы ещё не добавлены' : 'Каталог пока пуст'}
+              {brandFilter ? `Нет товаров бренда ${brandFilter}` : category === 'bottle' ? 'Флаконы ещё не добавлены' : 'Каталог пока пуст'}
             </h2>
-            <p className="text-white/40 text-sm max-w-xs">Скоро здесь появятся ароматы. Следите за обновлениями!</p>
+            {brandFilter && (
+              <button onClick={() => setBrandFilter('')} className="mt-3 text-orange-400 text-sm hover:underline">
+                Показать все бренды
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -154,6 +236,14 @@ export default function Catalog() {
       </div>
     </div>
   )
+}
+
+function num(n: number, one: string, few: string, many: string) {
+  const mod10 = n % 10, mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 14) return many
+  if (mod10 === 1) return one
+  if (mod10 >= 2 && mod10 <= 4) return few
+  return many
 }
 
 function ProductCard({ product }: { product: Product }) {
@@ -192,7 +282,6 @@ function ProductCard({ product }: { product: Product }) {
           <div className="text-white/30 text-xs mb-3">{CONC_LABEL[product.concentration] || product.concentration}</div>
 
           {isBottle ? (
-            /* Флакон — показываем объём и цену за флакон */
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-orange-400 font-bold text-lg">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
@@ -203,7 +292,6 @@ function ProductCard({ product }: { product: Product }) {
               </div>
             </div>
           ) : (
-            /* Отливант — шкала заполнения + цена за мл */
             <>
               <div className="mb-3">
                 <div className="flex justify-between text-xs text-white/40 mb-1.5">

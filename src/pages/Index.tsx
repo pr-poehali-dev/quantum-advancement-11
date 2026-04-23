@@ -4,9 +4,11 @@ import { LineShadowText } from "@/components/line-shadow-text"
 import { ShimmerButton } from "@/components/shimmer-button"
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { useAuth } from "@/lib/auth-context"
 
 export default function Index() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user } = useAuth()
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -715,11 +717,19 @@ export default function Index() {
           <Menu className="w-6 h-6" />
         </button>
 
-        <Link to="/login">
-          <ShimmerButton className="hidden md:flex bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-xl text-sm lg:text-base font-medium shadow-lg">
-            Войти
-          </ShimmerButton>
-        </Link>
+        {user ? (
+          <Link to="/cabinet">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Личный кабинет
+            </ShimmerButton>
+          </Link>
+        ) : (
+          <Link to="/login">
+            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
+              Войти
+            </ShimmerButton>
+          </Link>
+        )}
       </header>
 
       {mobileMenuOpen && (
@@ -737,11 +747,19 @@ export default function Index() {
             <a href="#" className="text-white/80 hover:text-white transition-colors">
               Контакты
             </a>
-            <Link to="/login">
-              <ShimmerButton className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-lg w-fit">
-                Войти
-              </ShimmerButton>
-            </Link>
+            {user ? (
+              <Link to="/cabinet">
+                <ShimmerButton className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+                  Личный кабинет
+                </ShimmerButton>
+              </Link>
+            ) : (
+              <Link to="/login">
+                <ShimmerButton className="text-white px-6 py-2.5 rounded-xl text-sm font-medium w-fit">
+                  Войти
+                </ShimmerButton>
+              </Link>
+            )}
           </nav>
         </div>
       )}
