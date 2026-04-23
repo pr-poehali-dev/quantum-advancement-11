@@ -1,0 +1,17 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS blocked_reason TEXT NULL,
+  ADD COLUMN IF NOT EXISTS admin_note TEXT NULL,
+  ADD COLUMN IF NOT EXISTS admin_tags TEXT[] NOT NULL DEFAULT '{}';
+
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  from_user_id INTEGER NOT NULL REFERENCES users(id),
+  to_user_id INTEGER NOT NULL REFERENCES users(id),
+  body TEXT NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_to_user ON messages(to_user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_messages_from_user ON messages(from_user_id);

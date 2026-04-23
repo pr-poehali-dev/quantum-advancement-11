@@ -2,6 +2,7 @@ const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
 const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
 const ADMIN_URL = 'https://functions.poehali.dev/029f6170-ce3b-4284-acff-07d6c3c33519'
+const MESSAGES_URL = 'https://functions.poehali.dev/1f46aa84-5bd4-48b5-b35f-5d08262ca926'
 
 export const getToken = () => localStorage.getItem('auth_token') || ''
 export const setToken = (t: string) => localStorage.setItem('auth_token', t)
@@ -107,5 +108,19 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'update_product', ...data }),
     importProducts: (items: Record<string, unknown>[]) =>
       post(`${ADMIN_URL}/`, { action: 'import_products', items }),
+    users: (q?: string) => get(`${ADMIN_URL}/?action=users${q ? '&q=' + encodeURIComponent(q) : ''}`),
+    updateUser: (data: Record<string, unknown>) => post(`${ADMIN_URL}/`, { action: 'update_user', ...data }),
+    blockUser: (user_id: number, is_blocked: boolean, reason?: string) =>
+      post(`${ADMIN_URL}/`, { action: 'block_user', user_id, is_blocked, reason }),
+  },
+
+  messages: {
+    inbox: () => get(`${MESSAGES_URL}/?action=inbox`),
+    unreadCount: () => get(`${MESSAGES_URL}/?action=unread_count`),
+    send: (body: string) => post(`${MESSAGES_URL}/`, { action: 'send', body }),
+    adminInbox: () => get(`${MESSAGES_URL}/?action=admin_inbox`),
+    thread: (user_id: number) => get(`${MESSAGES_URL}/?action=thread&user_id=${user_id}`),
+    reply: (to_user_id: number, body: string) => post(`${MESSAGES_URL}/`, { action: 'reply', to_user_id, body }),
+    broadcast: (user_ids: number[], body: string) => post(`${MESSAGES_URL}/`, { action: 'broadcast', user_ids, body }),
   },
 }

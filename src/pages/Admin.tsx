@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
+import UsersTab from '@/components/admin/UsersTab'
+import MessagesTab from '@/components/admin/MessagesTab'
 
 interface AdminOrder {
   id: number
@@ -83,7 +85,8 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products' | 'users' | 'messages'>('orders')
+  const [adminUnread, setAdminUnread] = useState(0)
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [totalSum, setTotalSum] = useState(0)
@@ -130,6 +133,13 @@ export default function Admin() {
     if (!user) { navigate('/login'); return }
     if (user.role !== 'admin' && user.role !== 'moderator') { navigate('/'); return }
   }, [user, navigate])
+
+  useEffect(() => {
+    if (!user) return
+    api.messages.adminInbox().then(res => {
+      if (Array.isArray(res)) setAdminUnread(res.filter((d: { has_unread: boolean }) => d.has_unread).length)
+    })
+  }, [user])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -356,6 +366,21 @@ export default function Admin() {
             className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'products' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
           >
             Товары
+          </button>
+          <button
+            onClick={() => setTab('users')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'users' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Юзеры
+          </button>
+          <button
+            onClick={() => setTab('messages')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors relative ${tab === 'messages' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Сообщения
+            {adminUnread > 0 && tab !== 'messages' && (
+              <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{adminUnread}</span>
+            )}
           </button>
         </div>
 
@@ -727,6 +752,10 @@ export default function Admin() {
             </div>
           )}
         </>}
+
+        {tab === 'users' && <UsersTab />}
+
+        {tab === 'messages' && <MessagesTab />}
 
         {tab === 'orders' && <>
         {/* Фильтры */}

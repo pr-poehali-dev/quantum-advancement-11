@@ -257,6 +257,36 @@ def handler(event: dict, context) -> dict:
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': products, 'count': len(products)})}
 
+        if action == 'users':
+            q = (params.get('q') or '').strip().lower()
+            conn = get_conn()
+            cur = conn.cursor()
+            query = """
+                SELECT u.id, u.nickname, u.email, u.phone, u.role, u.created_at,
+                       u.is_blocked, u.blocked_reason, u.admin_note, u.admin_tags,
+                       COUNT(DISTINCT o.id) as order_count,
+                       COALESCE(SUM(CASE WHEN o.is_archived = FALSE AND o.status != 'declined' THEN o.total_price ELSE 0 END), 0) as total_spent
+                FROM users u
+                LEFT JOIN orders o ON o.user_id = u.id
+                WHERE 1=1
+            """
+            values = []
+            if q:
+                query += " AND (LOWER(u.nickname) LIKE %s OR LOWER(u.email) LIKE %s OR u.phone LIKE %s)"
+                values.extend([f'%{q}%', f'%{q}%', f'%{q}%'])
+            query += " GROUP BY u.id ORDER BY u.created_at DESC"
+            cur.execute(query, values)
+            rows = cur.fetchall()
+            conn.close()
+            users = [{
+                'id': r[0], 'nickname': r[1], 'email': r[2], 'phone': r[3],
+                'role': r[4], 'created_at': str(r[5]),
+                'is_blocked': r[6], 'blocked_reason': r[7],
+                'admin_note': r[8], 'admin_tags': list(r[9]) if r[9] else [],
+                'order_count': int(r[10]), 'total_spent': float(r[11]),
+            } for r in rows]
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'users': users, 'count': len(users)})}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':
@@ -497,5 +527,51 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated})}
+
+        if action == 'update_user':
+            uid = body.get('user_id')
+            if not uid:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            fields, values = [], []
+            for field in ('nickname', 'email', 'phone'):
+                if field in body:
+                    fields.append(f"{field} = %s")
+                    values.append(str(body[field]).strip())
+            if 'role' in body and body['role'] in ('buyer', 'moderator', 'admin'):
+                fields.append("role = %s")
+                values.append(body['role'])
+            if 'admin_note' in body:
+                fields.append("admin_note = %s")
+                values.append(body['admin_note'])
+            if 'admin_tags' in body:
+                tags = [str(t).strip() for t in body['admin_tags'] if str(t).strip()]
+                fields.append("admin_tags = %s")
+                values.append(tags)
+            if not fields:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных'})}
+            values.append(int(uid))
+            cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'block_user':
+            uid = body.get('user_id')
+            is_blocked = body.get('is_blocked', True)
+            reason = (body.get('reason') or '').strip()
+            if not uid:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE users SET is_blocked = %s, blocked_reason = %s WHERE id = %s",
+                (bool(is_blocked), reason if is_blocked else None, int(uid))
+            )
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}

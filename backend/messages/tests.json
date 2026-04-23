@@ -1,0 +1,17 @@
+{
+  "tests": [
+    {
+      "name": "GET inbox without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "OPTIONS cors",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

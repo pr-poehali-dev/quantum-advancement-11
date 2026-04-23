@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
+import MessagesChat from '@/components/MessagesChat'
 
 interface Order {
   id: number
@@ -52,7 +53,7 @@ const STATUS_COLOR: Record<string, string> = {
   declined: 'bg-red-500/15 text-red-400',
 }
 
-type Tab = 'active' | 'payment' | 'delivery' | 'declined' | 'debts'
+type Tab = 'active' | 'payment' | 'delivery' | 'declined' | 'debts' | 'messages'
 
 export default function Cabinet() {
   const { user, logout } = useAuth()
@@ -61,6 +62,8 @@ export default function Cabinet() {
   const [debts, setDebts] = useState<ClientDebt[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('active')
+
+  const [unreadCount, setUnreadCount] = useState(0)
 
   // оплата
   const [paySelected, setPaySelected] = useState<Set<number>>(new Set())
@@ -83,6 +86,11 @@ export default function Cabinet() {
   }, [])
 
   useEffect(() => { if (user) load() }, [user, load])
+
+  useEffect(() => {
+    if (!user) return
+    api.messages.unreadCount().then(r => { if (!r.error) setUnreadCount(r.count || 0) })
+  }, [user])
 
   const handleLogout = async () => { await logout(); navigate('/') }
 
@@ -145,6 +153,7 @@ export default function Cabinet() {
     { id: 'delivery', label: 'В пути', badge: deliveryOrders.length || undefined },
     { id: 'declined', label: 'Отказано', badge: declinedOrders.length || undefined },
     { id: 'debts', label: 'Долги', badge: activeDebts.length || undefined },
+    { id: 'messages', label: 'Сообщения', badge: unreadCount || undefined },
   ]
 
   return (
@@ -320,6 +329,11 @@ export default function Cabinet() {
             {/* ДОЛГИ */}
             {tab === 'debts' && (
               <DebtsTab debts={debts} onChanged={load} />
+            )}
+
+            {/* СООБЩЕНИЯ */}
+            {tab === 'messages' && (
+              <MessagesChat />
             )}
           </>
         )}
