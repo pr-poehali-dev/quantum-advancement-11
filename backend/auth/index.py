@@ -4,6 +4,7 @@ POST / body={action:register,...} — регистрация
 POST / body={action:login,...}    — вход
 POST / body={action:logout}       — выход
 GET  /?action=me                  — текущий пользователь
+v2
 """
 import json
 import os
