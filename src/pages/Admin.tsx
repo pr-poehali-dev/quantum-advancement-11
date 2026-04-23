@@ -157,7 +157,9 @@ export default function Admin() {
 
   useEffect(() => {
     refreshUnread()
-    const iv = setInterval(refreshUnread, 15000)
+    const iv = setInterval(() => {
+      if (!document.hidden) refreshUnread()
+    }, 60000)
     return () => clearInterval(iv)
   }, [refreshUnread])
 

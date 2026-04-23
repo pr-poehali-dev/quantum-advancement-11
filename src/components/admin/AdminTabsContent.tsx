@@ -588,7 +588,7 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
 
   useEffect(() => {
     loadThreads()
-    const iv = setInterval(loadThreads, 10000)
+    const iv = setInterval(() => { if (!document.hidden) loadThreads() }, 30000)
     return () => clearInterval(iv)
   }, [loadThreads])
 
@@ -596,7 +596,7 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
     if (!activeUserId) return
     loadThread(activeUserId)
     isFirstOpen.current = true
-    const iv = setInterval(() => loadThread(activeUserId, true), 10000)
+    const iv = setInterval(() => { if (!document.hidden) loadThread(activeUserId, true) }, 30000)
     return () => clearInterval(iv)
   }, [activeUserId, loadThread])
 

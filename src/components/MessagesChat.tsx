@@ -42,7 +42,7 @@ export default function MessagesChat({ onUnreadChange }: { onUnreadChange?: (n: 
 
   useEffect(() => {
     load()
-    const iv = setInterval(() => load(true), 10000)
+    const iv = setInterval(() => { if (!document.hidden) load(true) }, 30000)
     return () => clearInterval(iv)
   }, [load])
 

@@ -124,7 +124,7 @@ export default function Cabinet() {
     if (!user) return
     const check = () => api.messages.unreadCount().then(r => { if (!r.error) setUnreadCount(r.count || 0) })
     check()
-    const iv = setInterval(check, 15000)
+    const iv = setInterval(() => { if (!document.hidden) check() }, 60000)
     return () => clearInterval(iv)
   }, [user])
 
