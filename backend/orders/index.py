@@ -222,8 +222,11 @@ def handler(event: dict, context) -> dict:
             order_ids = body.get('order_ids') or ([body.get('order_id')] if body.get('order_id') else [])
             payment_amount = body.get('payment_amount')
             payment_note = body.get('payment_note', '')
+            payment_date = body.get('payment_date')  # ISO строка от клиента, напр. "2025-01-15T14:30"
             if not order_ids or not payment_amount:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите заказы и сумму'})}
+            if not payment_date:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите дату и время платежа'})}
             conn = get_conn()
             cur = conn.cursor()
             placeholders = ','.join(['%s'] * len(order_ids))
@@ -237,8 +240,8 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет заказов, ожидающих оплаты'})}
             ph2 = ','.join(['%s'] * len(valid_ids))
             cur.execute(
-                f"UPDATE orders SET payment_amount = %s, payment_date = NOW(), payment_note = %s WHERE id IN ({ph2})",
-                [float(payment_amount), payment_note] + valid_ids
+                f"UPDATE orders SET payment_amount = %s, payment_date = %s, payment_note = %s WHERE id IN ({ph2})",
+                [float(payment_amount), payment_date, payment_note] + valid_ids
             )
             conn.commit()
             conn.close()

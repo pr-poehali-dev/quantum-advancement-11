@@ -83,6 +83,11 @@ export default function Cabinet() {
   // оплата
   const [paySelected, setPaySelected] = useState<Set<number>>(new Set())
   const [payNote, setPayNote] = useState('')
+  const [payDateTime, setPayDateTime] = useState(() => {
+    const now = new Date()
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    return now.toISOString().slice(0, 16)
+  })
   const [paying, setPaying] = useState(false)
 
   // доставка
@@ -145,12 +150,14 @@ export default function Cabinet() {
 
   const handlePay = async () => {
     if (paySelected.size === 0) { toast.error('Отметьте заказы'); return }
+    if (!payDateTime) { toast.error('Укажите дату и время платежа'); return }
     setPaying(true)
-    const r = await api.orders.pay({ order_ids: Array.from(paySelected), payment_amount: selectedPayTotal, payment_note: payNote } as Parameters<typeof api.orders.pay>[0])
+    const r = await api.orders.pay({ order_ids: Array.from(paySelected), payment_amount: selectedPayTotal, payment_note: payNote, payment_date: payDateTime } as Parameters<typeof api.orders.pay>[0])
     setPaying(false)
     if (r.error) { toast.error(r.error); return }
     toast.success('Отметка отправлена модератору')
-    setPaySelected(new Set()); setPayNote(''); load()
+    const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    setPaySelected(new Set()); setPayNote(''); setPayDateTime(now.toISOString().slice(0, 16)); load()
   }
 
   const toggleDeliveryOrder = (id: number) => {
@@ -349,6 +356,12 @@ export default function Cabinet() {
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-white/50">Итого к оплате:</span>
                               <span className="font-bold text-orange-300">{selectedPayTotal.toFixed(0)} ₽</span>
+                            </div>
+                            <div>
+                              <label className="text-white/40 text-xs mb-1 block">Дата и время платежа *</label>
+                              <input type="datetime-local" value={payDateTime} onChange={e => setPayDateTime(e.target.value)}
+                                required
+                                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white text-sm [color-scheme:dark]" />
                             </div>
                             <Input value={payNote} onChange={e => setPayNote(e.target.value)}
                               placeholder="Комментарий к платежу (необязательно)"

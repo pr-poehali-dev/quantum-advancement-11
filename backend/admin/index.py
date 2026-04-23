@@ -159,6 +159,39 @@ def handler(event: dict, context) -> dict:
                 })
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(payments)}
 
+        if action == 'confirmed_payments':
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT o.id, o.created_at, u.id as uid, u.nickname, p.name, p.brand,
+                       o.volume_ml, o.total_price, o.payment_amount, o.payment_note, o.payment_date,
+                       o.payment_confirmed_amount
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                JOIN products p ON o.product_id = p.id
+                WHERE o.payment_confirmed = TRUE AND o.is_archived = FALSE
+                ORDER BY o.payment_date DESC
+                LIMIT 200
+            """)
+            rows = cur.fetchall()
+            conn.close()
+            result = []
+            for r in rows:
+                total = float(r[7])
+                paid = float(r[8]) if r[8] else 0
+                confirmed = float(r[11]) if r[11] else paid
+                result.append({
+                    'order_id': r[0], 'created_at': str(r[1]),
+                    'user_id': r[2], 'nickname': r[3],
+                    'product_name': r[4], 'brand': r[5], 'volume_ml': r[6],
+                    'total_price': total, 'payment_amount': paid,
+                    'payment_confirmed_amount': confirmed,
+                    'payment_note': r[9],
+                    'payment_date': str(r[10]) if r[10] else None,
+                    'diff': round(confirmed - total, 2),
+                })
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(result)}
+
         if action == 'debts':
             conn = get_conn()
             cur = conn.cursor()
@@ -408,6 +441,34 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
+        if action == 'edit_payment':
+            order_id = body.get('order_id')
+            payment_amount = body.get('payment_amount')
+            payment_date = body.get('payment_date')
+            payment_note = body.get('payment_note', '')
+            payment_confirmed_amount = body.get('payment_confirmed_amount')
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            fields, values = [], []
+            if payment_amount is not None:
+                fields.append("payment_amount = %s"); values.append(float(payment_amount))
+            if payment_date is not None:
+                fields.append("payment_date = %s"); values.append(payment_date)
+            if 'payment_note' in body:
+                fields.append("payment_note = %s"); values.append(payment_note)
+            if payment_confirmed_amount is not None:
+                fields.append("payment_confirmed_amount = %s"); values.append(float(payment_confirmed_amount))
+            if not fields:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных для обновления'})}
+            values.append(int(order_id))
+            cur.execute(f"UPDATE orders SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
         if action == 'archive_order':
             order_id = body.get('order_id')
             if not order_id:
@@ -470,6 +531,14 @@ def handler(event: dict, context) -> dict:
                 [new_status] + list(order_ids)
             )
             updated = cur.rowcount
+            # При переходе в delivery или declined — сбрасываем забронированные мл
+            if new_status in ('delivery', 'declined'):
+                cur.execute(
+                    f"""UPDATE products SET booked_ml = GREATEST(0,
+                        booked_ml - (SELECT COALESCE(SUM(o.volume_ml), 0) FROM orders o WHERE o.id IN ({placeholders}) AND o.product_id = products.id)
+                    ) WHERE id IN (SELECT DISTINCT product_id FROM orders WHERE id IN ({placeholders}))""",
+                    list(order_ids) + list(order_ids)
+                )
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': updated})}

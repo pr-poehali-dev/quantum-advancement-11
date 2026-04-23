@@ -54,7 +54,7 @@ export const api = {
       post(`${ORDERS_URL}/`, { action: 'delete', order_id }),
     archive: (order_id: number) =>
       post(`${ORDERS_URL}/`, { action: 'archive', order_id }),
-    pay: (data: { order_ids?: number[]; order_id?: number; payment_amount: number; payment_note: string }) =>
+    pay: (data: { order_ids?: number[]; order_id?: number; payment_amount: number; payment_note: string; payment_date?: string }) =>
       post(`${ORDERS_URL}/`, { action: 'pay', ...data }),
     pickup: (order_id: number, pickup_point: string) =>
       post(`${ORDERS_URL}/`, { action: 'pickup', order_id, pickup_point }),
@@ -83,6 +83,10 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id, confirmed_amount, debt_note }),
     payments: () =>
       get(`${ADMIN_URL}/?action=payments`),
+    confirmedPayments: () =>
+      get(`${ADMIN_URL}/?action=confirmed_payments`),
+    editPayment: (order_id: number, data: { payment_amount?: number; payment_date?: string; payment_note?: string; payment_confirmed_amount?: number }) =>
+      post(`${ADMIN_URL}/`, { action: 'edit_payment', order_id, ...data }),
     debts: () =>
       get(`${ADMIN_URL}/?action=debts`),
     addDebt: (data: { user_id: number; type: 'client_owes' | 'we_owe'; amount: number; reason: string; order_id?: number }) =>
