@@ -1545,10 +1545,6 @@ interface ThreadMessage {
   is_mine: boolean
 }
 
-function fmt(dt: string) {
-  return new Date(dt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
 function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: number) => void }) {
   const [threads, setThreads] = useState<AdminThread[]>([])
   const [activeUser, setActiveUser] = useState<AdminThread | null>(null)
