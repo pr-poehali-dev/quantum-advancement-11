@@ -12,6 +12,8 @@ import ProductPage from "./pages/ProductPage";
 import Cabinet from "./pages/Cabinet";
 import Admin from "./pages/Admin";
 import HowItWorks from "./pages/HowItWorks";
+import Forum from "./pages/Forum";
+import ForumTopic from "./pages/ForumTopic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/cabinet" element={<Cabinet />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/forum" element={<Forum />} />
+            <Route path="/forum/:id" element={<ForumTopic />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

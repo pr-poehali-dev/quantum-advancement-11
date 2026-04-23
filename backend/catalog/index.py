@@ -196,13 +196,136 @@ def handler(event: dict, context) -> dict:
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(products)}
 
     if method == 'POST':
+        body = json.loads(event.get('body') or '{}')
+        post_action = body.get('action', 'create')
+
+        # ── Форум: авторизация через auth_token ──────────────────────────
+        forum_actions = ('create_topic', 'edit_topic', 'delete_topic',
+                         'pin_topic', 'close_topic', 'add_comment', 'delete_comment')
+        if post_action in forum_actions:
+            forum_user = get_auth_user(headers)
+
+            if post_action == 'add_comment':
+                if not forum_user:
+                    conn.close()
+                    return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Войдите, чтобы комментировать'})}
+                topic_id = body.get('topic_id')
+                text = (body.get('body') or '').strip()
+                if not topic_id or not text:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id и текст'})}
+                cur.execute("SELECT is_closed FROM forum_topics WHERE id = %s", (int(topic_id),))
+                row = cur.fetchone()
+                if not row:
+                    conn.close()
+                    return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Тема не найдена'})}
+                if row[0] and not is_admin(forum_user):
+                    conn.close()
+                    return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Тема закрыта для комментариев'})}
+                cur.execute(
+                    "INSERT INTO forum_comments (topic_id, author_id, body) VALUES (%s, %s, %s)",
+                    (int(topic_id), forum_user['id'], text)
+                )
+                cur.execute(
+                    "UPDATE forum_topics SET comments_count = comments_count + 1, updated_at = NOW() WHERE id = %s",
+                    (int(topic_id),)
+                )
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            if post_action == 'delete_comment':
+                if not forum_user:
+                    conn.close()
+                    return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+                comment_id = body.get('comment_id')
+                if not comment_id:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите comment_id'})}
+                cur.execute("SELECT author_id, topic_id FROM forum_comments WHERE id = %s", (int(comment_id),))
+                row = cur.fetchone()
+                if not row:
+                    conn.close()
+                    return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Комментарий не найден'})}
+                if not is_admin(forum_user) and row[0] != forum_user['id']:
+                    conn.close()
+                    return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+                t_id = row[1]
+                cur.execute("DELETE FROM forum_comments WHERE id = %s", (int(comment_id),))
+                cur.execute(
+                    "UPDATE forum_topics SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = %s", (t_id,)
+                )
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            # Остальные форумные actions — только admin/moderator
+            if not is_admin(forum_user):
+                conn.close()
+                return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+
+            if post_action == 'create_topic':
+                title = (body.get('title') or '').strip()
+                text = (body.get('body') or '').strip()
+                if not title or not text:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заполните заголовок и текст'})}
+                cur.execute(
+                    "INSERT INTO forum_topics (title, body, author_id) VALUES (%s, %s, %s) RETURNING id",
+                    (title, text, forum_user['id'])
+                )
+                new_id = cur.fetchone()[0]
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'id': new_id})}
+
+            if post_action == 'edit_topic':
+                topic_id = body.get('topic_id')
+                title = (body.get('title') or '').strip()
+                text = (body.get('body') or '').strip()
+                if not topic_id or not title or not text:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id, title, body'})}
+                cur.execute(
+                    "UPDATE forum_topics SET title = %s, body = %s, updated_at = NOW() WHERE id = %s",
+                    (title, text, int(topic_id))
+                )
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            if post_action == 'delete_topic':
+                topic_id = body.get('topic_id')
+                if not topic_id:
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите topic_id'})}
+                cur.execute("DELETE FROM forum_comments WHERE topic_id = %s", (int(topic_id),))
+                cur.execute("DELETE FROM forum_topics WHERE id = %s", (int(topic_id),))
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            if post_action == 'pin_topic':
+                topic_id = body.get('topic_id')
+                cur.execute("UPDATE forum_topics SET is_pinned = %s WHERE id = %s",
+                            (bool(body.get('pinned', True)), int(topic_id)))
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+            if post_action == 'close_topic':
+                topic_id = body.get('topic_id')
+                cur.execute("UPDATE forum_topics SET is_closed = %s WHERE id = %s",
+                            (bool(body.get('closed', True)), int(topic_id)))
+                conn.commit()
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        # ── Товары: авторизация через session ────────────────────────────
         user = get_session_user(headers)
         if not user or user['role'] not in ('admin', 'moderator'):
             conn.close()
             return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Доступ запрещён'})}
-
-        body = json.loads(event.get('body') or '{}')
-        post_action = body.get('action', 'create')
 
         if post_action == 'update':
             product_id = body.get('id')

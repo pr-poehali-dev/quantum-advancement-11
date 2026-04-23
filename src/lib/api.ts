@@ -7,13 +7,17 @@ const MESSAGES_URL = 'https://functions.poehali.dev/1f46aa84-5bd4-48b5-b35f-5d08
 export const getToken = () => localStorage.getItem('auth_token') || ''
 export const setToken = (t: string) => localStorage.setItem('auth_token', t)
 export const clearToken = () => localStorage.removeItem('auth_token')
+export const getUserId = () => localStorage.getItem('user_id') || ''
+export const setUserId = (id: number) => localStorage.setItem('user_id', String(id))
+export const clearUserId = () => localStorage.removeItem('user_id')
 
 const authHeaders = () => ({
   'Content-Type': 'application/json',
   'X-Auth-Token': getToken(),
+  'X-User-Id': getUserId(),
 })
 
-const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken() } }).then(r => r.json())
+const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken(), 'X-User-Id': getUserId() } }).then(r => r.json())
 const post = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data ?? {}) }).then(r => r.json())
 
 export const api = {
@@ -135,6 +139,25 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'update_delivery_option', id, ...data }),
     deleteDeliveryOption: (id: number) =>
       post(`${ADMIN_URL}/`, { action: 'delete_delivery_option', id }),
+  },
+
+  forum: {
+    topics: () => fetch(`${CATALOG_URL}/?action=topics`).then(r => r.json()),
+    topic: (id: number) => fetch(`${CATALOG_URL}/?action=topic&id=${id}`).then(r => r.json()),
+    createTopic: (data: { title: string; body: string }) =>
+      post(`${CATALOG_URL}/`, { action: 'create_topic', ...data }),
+    editTopic: (topic_id: number, data: { title: string; body: string }) =>
+      post(`${CATALOG_URL}/`, { action: 'edit_topic', topic_id, ...data }),
+    deleteTopic: (topic_id: number) =>
+      post(`${CATALOG_URL}/`, { action: 'delete_topic', topic_id }),
+    pinTopic: (topic_id: number, pinned: boolean) =>
+      post(`${CATALOG_URL}/`, { action: 'pin_topic', topic_id, pinned }),
+    closeTopic: (topic_id: number, closed: boolean) =>
+      post(`${CATALOG_URL}/`, { action: 'close_topic', topic_id, closed }),
+    addComment: (topic_id: number, body: string) =>
+      post(`${CATALOG_URL}/`, { action: 'add_comment', topic_id, body }),
+    deleteComment: (comment_id: number) =>
+      post(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
   },
 
   messages: {

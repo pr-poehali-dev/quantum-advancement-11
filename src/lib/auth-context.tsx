@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { api, setToken, clearToken, getToken } from './api'
+import { api, setToken, clearToken, getToken, setUserId, clearUserId } from './api'
 
 interface User {
   id: number
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.login({ email, password })
     if (res.error) return { error: res.error }
     setToken(res.token)
+    if (res.user?.id) setUserId(res.user.id)
     setUser(res.user)
     return {}
   }
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.register(data)
     if (res.error) return { error: res.error }
     setToken(res.token)
+    if (res.user?.id) setUserId(res.user.id)
     setUser(res.user)
     return {}
   }
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await api.auth.logout()
     clearToken()
+    clearUserId()
     setUser(null)
   }
 

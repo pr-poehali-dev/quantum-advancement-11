@@ -26,9 +26,9 @@ export default function Index() {
           <Link to="/how-it-works" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
             Как это работает
           </Link>
-          <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
+          <Link to="/forum" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
             Форум
-          </a>
+          </Link>
         </nav>
 
         <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -59,9 +59,9 @@ export default function Index() {
             <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
               Как это работает
             </Link>
-            <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-white/80 hover:text-white transition-colors">
+            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
               Форум
-            </a>
+            </Link>
             {user ? (
               <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
                 <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">

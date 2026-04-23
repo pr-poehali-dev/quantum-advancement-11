@@ -94,7 +94,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum'>('orders')
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'archive'>('active')
   const [adminUnread, setAdminUnread] = useState(0)
 
@@ -409,6 +409,12 @@ export default function Admin() {
           >
             Доставка
           </button>
+          <button
+            onClick={() => setTab('forum')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'forum' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Форум
+          </button>
         </div>
 
         {tab === 'payments' && (
@@ -648,6 +654,8 @@ export default function Admin() {
         </>}
 
         {tab === 'users' && <UsersTab />}
+
+        {tab === 'forum' && <AdminForumTab />}
 
         {tab === 'messages' && <MessagesTab />}
 
@@ -1897,6 +1905,191 @@ function DeliveryTab() {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+interface ForumTopicItem {
+  id: number
+  title: string
+  body: string
+  is_pinned: boolean
+  is_closed: boolean
+  comments_count: number
+  created_at: string
+}
+
+function AdminForumTab() {
+  const [topics, setTopics] = useState<ForumTopicItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState<{ title: string; body: string } | null>(null)
+  const [editTopic, setEditTopic] = useState<ForumTopicItem | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const res = await api.forum.topics()
+    if (Array.isArray(res)) setTopics(res)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleCreate = async () => {
+    if (!form?.title.trim() || !form.body.trim()) { toast.error('Заполните заголовок и текст'); return }
+    setSaving(true)
+    const res = await api.forum.createTopic({ title: form.title.trim(), body: form.body.trim() })
+    setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Тема создана')
+    setForm(null)
+    load()
+  }
+
+  const handleEdit = async () => {
+    if (!editTopic?.title.trim() || !editTopic.body.trim()) { toast.error('Заполните поля'); return }
+    setSaving(true)
+    const res = await api.forum.editTopic(editTopic.id, { title: editTopic.title.trim(), body: editTopic.body.trim() })
+    setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Тема обновлена')
+    setEditTopic(null)
+    load()
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Удалить тему и все комментарии?')) return
+    const res = await api.forum.deleteTopic(id)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Тема удалена')
+    load()
+  }
+
+  const handlePin = async (t: ForumTopicItem) => {
+    const res = await api.forum.pinTopic(t.id, !t.is_pinned)
+    if (res.error) { toast.error(res.error); return }
+    load()
+  }
+
+  const handleClose = async (t: ForumTopicItem) => {
+    const res = await api.forum.closeTopic(t.id, !t.is_closed)
+    if (res.error) { toast.error(res.error); return }
+    load()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-white font-medium">Темы форума</div>
+          <div className="text-white/30 text-xs mt-0.5">Создавайте темы — покупатели смогут оставлять комментарии</div>
+        </div>
+        <div className="flex gap-2">
+          <a href="/forum" target="_blank"
+            className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs border border-white/10 rounded-lg px-3 py-1.5 transition-colors">
+            <Icon name="ExternalLink" size={12} />
+            Открыть форум
+          </a>
+          {!form && (
+            <Button onClick={() => setForm({ title: '', body: '' })}
+              className="bg-orange-500 hover:bg-orange-600 text-white text-sm h-9">
+              + Новая тема
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Форма создания */}
+      {form && (
+        <div className="border border-orange-500/20 bg-orange-500/5 rounded-2xl p-4 space-y-3">
+          <div className="text-white/60 text-sm font-medium">Новая тема</div>
+          <Input
+            value={form.title}
+            onChange={e => setForm(f => f ? { ...f, title: e.target.value } : f)}
+            placeholder="Заголовок темы"
+            className="bg-white/5 border-white/15 text-white placeholder:text-white/25 h-10"
+          />
+          <textarea
+            value={form.body}
+            onChange={e => setForm(f => f ? { ...f, body: e.target.value } : f)}
+            placeholder="Текст темы (можно несколько абзацев)"
+            rows={4}
+            className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
+          />
+          <div className="flex gap-2">
+            <Button onClick={handleCreate} disabled={saving}
+              className="bg-orange-500 hover:bg-orange-600 text-white text-sm h-9">
+              {saving ? 'Публикую...' : 'Опубликовать'}
+            </Button>
+            <Button onClick={() => setForm(null)} variant="ghost" className="text-white/40 text-sm h-9">Отмена</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Список тем */}
+      {loading ? (
+        <div className="flex justify-center py-10"><Icon name="Loader2" size={20} className="animate-spin text-white/30" /></div>
+      ) : topics.length === 0 ? (
+        <div className="text-center py-10 text-white/25 text-sm border border-white/5 rounded-2xl">
+          Тем пока нет — создайте первую!
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {topics.map(t => (
+            <div key={t.id} className={`border rounded-xl p-4 ${t.is_pinned ? 'border-orange-500/20 bg-orange-500/5' : 'border-white/8 bg-white/2'}`}>
+              {editTopic?.id === t.id ? (
+                <div className="space-y-2">
+                  <Input value={editTopic.title} onChange={e => setEditTopic(et => et ? { ...et, title: e.target.value } : et)}
+                    className="bg-white/10 border-white/20 text-white h-9 text-sm" />
+                  <textarea value={editTopic.body} onChange={e => setEditTopic(et => et ? { ...et, body: e.target.value } : et)}
+                    rows={3}
+                    className="w-full bg-white/10 border border-white/20 text-white rounded-lg px-3 py-2 text-sm resize-none outline-none" />
+                  <div className="flex gap-2">
+                    <Button onClick={handleEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-3">
+                      {saving ? '...' : 'Сохранить'}
+                    </Button>
+                    <Button onClick={() => setEditTopic(null)} variant="ghost" className="text-white/30 text-xs h-8">Отмена</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {t.is_pinned && <span className="text-orange-400 text-xs flex items-center gap-1"><Icon name="Pin" size={10} />Закреплено</span>}
+                      {t.is_closed && <span className="text-white/30 text-xs flex items-center gap-1"><Icon name="Lock" size={10} />Закрыто</span>}
+                    </div>
+                    <a href={`/forum/${t.id}`} target="_blank" className="text-white font-medium text-sm hover:text-orange-300 transition-colors">
+                      {t.title}
+                    </a>
+                    <p className="text-white/40 text-xs mt-1 line-clamp-2">{t.body}</p>
+                    <div className="flex items-center gap-3 mt-2 text-white/25 text-xs">
+                      <span className="flex items-center gap-1"><Icon name="MessageCircle" size={11} />{t.comments_count}</span>
+                      <span>{new Date(t.created_at).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => handlePin(t)} title={t.is_pinned ? 'Открепить' : 'Закрепить'}
+                      className={`p-1.5 rounded transition-colors ${t.is_pinned ? 'text-orange-400' : 'text-white/25 hover:text-orange-400'}`}>
+                      <Icon name="Pin" size={14} />
+                    </button>
+                    <button onClick={() => handleClose(t)} title={t.is_closed ? 'Открыть' : 'Закрыть'}
+                      className={`p-1.5 rounded transition-colors ${t.is_closed ? 'text-yellow-400' : 'text-white/25 hover:text-yellow-400'}`}>
+                      <Icon name={t.is_closed ? 'Unlock' : 'Lock'} size={14} />
+                    </button>
+                    <button onClick={() => setEditTopic(t)}
+                      className="p-1.5 rounded text-white/25 hover:text-blue-400 transition-colors">
+                      <Icon name="Pencil" size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(t.id)}
+                      className="p-1.5 rounded text-white/25 hover:text-red-400 transition-colors">
+                      <Icon name="Trash2" size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
