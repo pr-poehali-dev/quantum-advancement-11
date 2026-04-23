@@ -28,8 +28,12 @@ export const api = {
   },
 
   catalog: {
-    list: (sort?: string) =>
-      fetch(`${CATALOG_URL}/?action=list${sort ? '&sort=' + sort : ''}`).then(r => r.json()),
+    list: (sort?: string, category?: string) => {
+      const p = new URLSearchParams({ action: 'list' })
+      if (sort) p.set('sort', sort)
+      if (category) p.set('category', category)
+      return fetch(`${CATALOG_URL}/?${p.toString()}`).then(r => r.json())
+    },
     product: (id: number) =>
       fetch(`${CATALOG_URL}/?action=product&id=${id}`).then(r => r.json()),
     atomizers: () =>
@@ -91,10 +95,12 @@ export const api = {
     },
     unarchiveOrders: (order_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'unarchive_orders', order_ids }),
-    adminProducts: (filters: { name?: string; brand?: string }) => {
+    adminProducts: (filters: { name?: string; brand?: string; sort?: string; dir?: string }) => {
       const p = new URLSearchParams({ action: 'admin_products' })
       if (filters.name) p.set('name', filters.name)
       if (filters.brand) p.set('brand', filters.brand)
+      if (filters.sort) p.set('sort', filters.sort)
+      if (filters.dir) p.set('dir', filters.dir)
       return get(`${ADMIN_URL}/?${p.toString()}`)
     },
     updateProduct: (data: Record<string, unknown>) =>

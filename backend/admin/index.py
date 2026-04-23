@@ -220,11 +220,16 @@ def handler(event: dict, context) -> dict:
         if action == 'admin_products':
             name_filter = (params.get('name') or '').strip().lower()
             brand_filter = (params.get('brand') or '').strip().lower()
+            sort_by = (params.get('sort') or 'created_at').strip()
+            sort_dir = 'DESC' if (params.get('dir') or 'desc').lower() == 'desc' else 'ASC'
+            ALLOWED_SORT = {'id', 'name', 'brand', 'price_per_ml', 'bottle_ml', 'booked_ml', 'created_at'}
+            if sort_by not in ALLOWED_SORT:
+                sort_by = 'created_at'
             conn = get_conn()
             cur = conn.cursor()
             query = """
                 SELECT p.id, p.name, p.brand, p.price_per_ml, p.bottle_ml, p.booked_ml,
-                       p.is_active, p.image_url, p.description,
+                       p.is_active, p.image_url, p.description, p.concentration, p.category,
                        COALESCE(SUM(CASE WHEN o.status NOT IN ('declined') AND o.is_archived = FALSE THEN o.volume_ml ELSE 0 END), 0) as active_booked
                 FROM products p
                 LEFT JOIN orders o ON o.product_id = p.id
@@ -239,7 +244,7 @@ def handler(event: dict, context) -> dict:
                 values.append(f'%{brand_filter}%')
             if conditions:
                 query += " AND " + " AND ".join(conditions)
-            query += " GROUP BY p.id ORDER BY p.created_at DESC"
+            query += f" GROUP BY p.id ORDER BY p.{sort_by} {sort_dir}"
             cur.execute(query, values)
             rows = cur.fetchall()
             conn.close()
@@ -247,7 +252,8 @@ def handler(event: dict, context) -> dict:
                 'id': r[0], 'name': r[1], 'brand': r[2],
                 'price_per_ml': float(r[3]), 'bottle_ml': r[4], 'booked_ml': r[5],
                 'is_active': r[6], 'image_url': r[7], 'description': r[8],
-                'active_booked': int(r[9]),
+                'concentration': r[9] or 'parfum_water', 'category': r[10] or 'decant',
+                'active_booked': int(r[11]),
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': products, 'count': len(products)})}
 
@@ -435,6 +441,12 @@ def handler(event: dict, context) -> dict:
             if 'is_active' in body:
                 fields.append("is_active = %s")
                 values.append(bool(body['is_active']))
+            if 'concentration' in body and body['concentration'] in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
+                fields.append("concentration = %s")
+                values.append(body['concentration'])
+            if 'category' in body and body['category'] in ('decant', 'bottle'):
+                fields.append("category = %s")
+                values.append(body['category'])
             if not fields:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных для обновления'})}
@@ -471,9 +483,15 @@ def handler(event: dict, context) -> dict:
                         continue
                 description = (item.get('description') or '').strip()
                 image_url = item.get('image_url')
+                concentration = item.get('concentration', 'parfum_water')
+                if concentration not in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
+                    concentration = 'parfum_water'
+                category = item.get('category', 'decant')
+                if category not in ('decant', 'bottle'):
+                    category = 'decant'
                 cur.execute(
-                    "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url) VALUES (%s, %s, %s, %s, %s, %s)",
-                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url)
+                    "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category)
                 )
                 created += 1
             conn.commit()

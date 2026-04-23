@@ -112,12 +112,14 @@ export default function Admin() {
   const [archiveSelected, setArchiveSelected] = useState<Set<number>>(new Set())
   const [unarchiving, setUnarchiving] = useState(false)
 
-  type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number }
+  type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string }
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(false)
   const [prodFilterName, setProdFilterName] = useState('')
   const [prodFilterBrand, setProdFilterBrand] = useState('')
   const [prodFilterMinBooked, setProdFilterMinBooked] = useState('')
+  const [prodSort, setProdSort] = useState('created_at')
+  const [prodSortDir, setProdSortDir] = useState<'asc' | 'desc'>('desc')
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null)
   const [editValue, setEditValue] = useState('')
   const [savingCell, setSavingCell] = useState(false)
@@ -232,11 +234,16 @@ export default function Admin() {
 
   const loadProducts = useCallback(async () => {
     setProductsLoading(true)
-    const res = await api.admin.adminProducts({ name: prodFilterName, brand: prodFilterBrand })
+    const res = await api.admin.adminProducts({ name: prodFilterName, brand: prodFilterBrand, sort: prodSort, dir: prodSortDir })
     setProductsLoading(false)
     if (res.error) { toast.error(res.error); return }
     setProducts(res.products || [])
-  }, [prodFilterName, prodFilterBrand])
+  }, [prodFilterName, prodFilterBrand, prodSort, prodSortDir])
+
+  const toggleProdSort = (col: string) => {
+    if (prodSort === col) { setProdSortDir(d => d === 'desc' ? 'asc' : 'desc') }
+    else { setProdSort(col); setProdSortDir('desc') }
+  }
 
   useEffect(() => {
     if (tab === 'products') loadProducts()
@@ -542,38 +549,92 @@ export default function Admin() {
 
           {/* Таблица товаров */}
           <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm min-w-[860px]">
+            <table className="w-full text-sm min-w-[1060px]">
               <thead>
                 <tr className="border-b border-white/10 bg-white/3">
-                  <th className="px-3 py-3 text-left text-white/40 font-medium w-14">ID</th>
-                  <th className="px-3 py-3 text-left text-white/40 font-medium">Название</th>
-                  <th className="px-3 py-3 text-left text-white/40 font-medium">Бренд</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">₽/мл</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">Флакон, мл</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium w-28">Забронир.</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium w-24">Свободно</th>
-                  <th className="px-3 py-3 text-center text-white/40 font-medium w-20">Статус</th>
+                  {([
+                    { key: 'id', label: 'ID', cls: 'text-left w-14' },
+                    { key: 'name', label: 'Название', cls: 'text-left' },
+                    { key: 'brand', label: 'Бренд', cls: 'text-left w-32' },
+                    { key: null, label: 'Конц.', cls: 'text-center w-28' },
+                    { key: null, label: 'Категория', cls: 'text-center w-28' },
+                    { key: 'price_per_ml', label: '₽/мл', cls: 'text-center w-24' },
+                    { key: 'bottle_ml', label: 'Флакон', cls: 'text-center w-24' },
+                    { key: 'booked_ml', label: 'Забронир.', cls: 'text-center w-24' },
+                    { key: null, label: 'Своб.', cls: 'text-center w-20' },
+                    { key: null, label: 'Статус', cls: 'text-center w-20' },
+                  ] as { key: string | null; label: string; cls: string }[]).map(col => (
+                    <th key={col.label} className={`px-3 py-3 font-medium ${col.cls}`}>
+                      {col.key ? (
+                        <button onClick={() => toggleProdSort(col.key!)}
+                          className="flex items-center gap-1 text-white/40 hover:text-white transition-colors">
+                          {col.label}
+                          <Icon name={prodSort === col.key ? (prodSortDir === 'desc' ? 'ChevronDown' : 'ChevronUp') : 'ChevronsUpDown'} size={12} className={prodSort === col.key ? 'text-orange-400' : 'text-white/20'} />
+                        </button>
+                      ) : <span className="text-white/40">{col.label}</span>}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {productsLoading && (
-                  <tr><td colSpan={8} className="py-12 text-center text-white/30">
+                  <tr><td colSpan={10} className="py-12 text-center text-white/30">
                     <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
                   </td></tr>
                 )}
                 {!productsLoading && products.length === 0 && (
-                  <tr><td colSpan={8} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
+                  <tr><td colSpan={10} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
                 )}
                 {!productsLoading && products
                   .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
                   .map(p => {
                     const free = p.bottle_ml - p.booked_ml
                     const fillPct = p.bottle_ml ? Math.round(p.booked_ml / p.bottle_ml * 100) : 0
+                    const CONC_LABEL: Record<string, string> = { parfum_water: 'Парф. вода', parfum: 'Духи', cologne: 'Одеколон', eau_de_toilette: 'Туал. вода' }
+                    const CAT_LABEL: Record<string, string> = { decant: 'Отливант', bottle: 'Флакон' }
                     return (
                       <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${!p.is_active ? 'opacity-40' : ''}`}>
                         <td className="px-3 py-2.5 text-white/30 text-xs">{p.id}</td>
                         <td className="px-3 py-2.5 text-white/80 max-w-[180px] truncate">{p.name}</td>
                         <td className="px-3 py-2.5 text-white/50 text-xs">{p.brand}</td>
+
+                        {/* Концентрация */}
+                        <td className="px-3 py-2.5 text-center">
+                          {editingCell?.id === p.id && editingCell?.field === 'concentration' ? (
+                            <select autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
+                              onBlur={() => { api.admin.updateProduct({ id: p.id, concentration: editValue }).then(r => { if (!r.error) setProducts(prev => prev.map(x => x.id === p.id ? { ...x, concentration: editValue } : x)); setEditingCell(null) }) }}
+                              className="bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
+                              <option value="parfum_water">Парф. вода</option>
+                              <option value="parfum">Духи</option>
+                              <option value="cologne">Одеколон</option>
+                              <option value="eau_de_toilette">Туал. вода</option>
+                            </select>
+                          ) : (
+                            <button onClick={() => startEdit(p.id, 'concentration', p.concentration)}
+                              className="text-white/50 hover:text-orange-300 text-xs transition-colors group flex items-center gap-1 mx-auto">
+                              {CONC_LABEL[p.concentration] || p.concentration}
+                              <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-orange-400" />
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Категория */}
+                        <td className="px-3 py-2.5 text-center">
+                          {editingCell?.id === p.id && editingCell?.field === 'category' ? (
+                            <select autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
+                              onBlur={() => { api.admin.updateProduct({ id: p.id, category: editValue }).then(r => { if (!r.error) setProducts(prev => prev.map(x => x.id === p.id ? { ...x, category: editValue } : x)); setEditingCell(null) }) }}
+                              className="bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
+                              <option value="decant">Отливант</option>
+                              <option value="bottle">Флакон</option>
+                            </select>
+                          ) : (
+                            <button onClick={() => startEdit(p.id, 'category', p.category)}
+                              className={`text-xs px-2 py-0.5 rounded-full transition-colors group flex items-center gap-1 mx-auto ${p.category === 'bottle' ? 'text-purple-300 hover:text-orange-300' : 'text-blue-300 hover:text-orange-300'}`}>
+                              {CAT_LABEL[p.category] || p.category}
+                              <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-orange-400" />
+                            </button>
+                          )}
+                        </td>
 
                         {/* цена — inline edit */}
                         <td className="px-3 py-2.5 text-center">

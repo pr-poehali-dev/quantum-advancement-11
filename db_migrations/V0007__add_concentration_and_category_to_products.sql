@@ -1,0 +1,3 @@
+ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS concentration VARCHAR(50) NOT NULL DEFAULT 'parfum_water',
+  ADD COLUMN IF NOT EXISTS category VARCHAR(30) NOT NULL DEFAULT 'decant';

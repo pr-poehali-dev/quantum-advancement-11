@@ -16,6 +16,15 @@ interface Product {
   available_ml: number
   fill_percent: number
   image_url: string | null
+  concentration: string
+  category: string
+}
+
+const CONC_LABEL: Record<string, string> = {
+  parfum_water: 'Парфюмерная вода',
+  parfum: 'Духи',
+  cologne: 'Одеколон',
+  eau_de_toilette: 'Туалетная вода',
 }
 
 export default function Catalog() {
@@ -24,14 +33,15 @@ export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState('')
+  const [category, setCategory] = useState('')
 
   useEffect(() => {
     setLoading(true)
-    api.catalog.list(sort).then(data => {
+    api.catalog.list(sort, category).then(data => {
       setProducts(Array.isArray(data) ? data : [])
       setLoading(false)
     })
-  }, [sort])
+  }, [sort, category])
 
   const handleLogout = async () => {
     await logout()
@@ -83,26 +93,40 @@ export default function Catalog() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-        {/* Title + Sort */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        {/* Title + Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Каталог ароматов</h1>
             <p className="text-white/50 text-sm mt-1">Оригинальный парфюм — от 1 мл</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-white/40 text-sm">Сортировка:</span>
-            <button
-              onClick={() => setSort('')}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${sort === '' ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-            >
-              Новые
-            </button>
-            <button
-              onClick={() => setSort('filling')}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${sort === 'filling' ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-            >
-              По заполнению
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Категория */}
+            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+              {[
+                { val: '', label: 'Все' },
+                { val: 'decant', label: 'Отливанты' },
+                { val: 'bottle', label: 'Флаконы' },
+              ].map(opt => (
+                <button key={opt.val} onClick={() => setCategory(opt.val)}
+                  className={`text-sm px-3 py-1.5 rounded-md transition-colors ${category === opt.val ? 'bg-orange-500 text-white' : 'text-white/60 hover:bg-white/10'}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {/* Сортировка — только для отливантов */}
+            {category !== 'bottle' && (
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                {[
+                  { val: '', label: 'Новые' },
+                  { val: 'filling', label: 'По заполнению' },
+                ].map(opt => (
+                  <button key={opt.val} onClick={() => setSort(opt.val)}
+                    className={`text-sm px-3 py-1.5 rounded-md transition-colors ${sort === opt.val ? 'bg-white/20 text-white' : 'text-white/40 hover:bg-white/10'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -115,8 +139,10 @@ export default function Catalog() {
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="text-6xl mb-4">🌸</div>
-            <h2 className="text-white text-xl font-semibold mb-2">Каталог пока пуст</h2>
-            <p className="text-white/40 text-sm max-w-xs">Скоро здесь появятся ароматы. Следите за обновлениями в мессенджерах!</p>
+            <h2 className="text-white text-xl font-semibold mb-2">
+              {category === 'bottle' ? 'Флаконы ещё не добавлены' : 'Каталог пока пуст'}
+            </h2>
+            <p className="text-white/40 text-sm max-w-xs">Скоро здесь появятся ароматы. Следите за обновлениями!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -131,6 +157,7 @@ export default function Catalog() {
 }
 
 function ProductCard({ product }: { product: Product }) {
+  const isBottle = product.category === 'bottle'
   const fillPercent = Math.min(product.fill_percent, 100)
   const isAlmostFull = fillPercent >= 80
 
@@ -142,11 +169,16 @@ function ProductCard({ product }: { product: Product }) {
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="text-5xl">🌸</div>
+            <div className="text-5xl">{isBottle ? '🫙' : '🌸'}</div>
           )}
-          {isAlmostFull && (
+          {isAlmostFull && !isBottle && (
             <div className="absolute top-3 right-3 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
               Скоро выкуп
+            </div>
+          )}
+          {isBottle && (
+            <div className="absolute top-3 left-3 bg-purple-500/80 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Флакон
             </div>
           )}
         </div>
@@ -154,34 +186,49 @@ function ProductCard({ product }: { product: Product }) {
         {/* Info */}
         <div className="p-4">
           <div className="text-white/40 text-xs mb-1 uppercase tracking-wider">{product.brand}</div>
-          <h3 className="text-white font-semibold text-sm leading-tight mb-3 group-hover:text-orange-300 transition-colors line-clamp-2">
+          <h3 className="text-white font-semibold text-sm leading-tight mb-2 group-hover:text-orange-300 transition-colors line-clamp-2">
             {product.name}
           </h3>
+          <div className="text-white/30 text-xs mb-3">{CONC_LABEL[product.concentration] || product.concentration}</div>
 
-          {/* Fill bar */}
-          <div className="mb-3">
-            <div className="flex justify-between text-xs text-white/40 mb-1.5">
-              <span>Забронировано</span>
-              <span>{product.booked_ml} / {product.bottle_ml} мл</span>
+          {isBottle ? (
+            /* Флакон — показываем объём и цену за флакон */
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-orange-400 font-bold text-lg">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
+              </div>
+              <div className="flex items-center gap-1 text-white/30 text-xs">
+                <Icon name="Package" size={12} />
+                <span>{product.bottle_ml} мл</span>
+              </div>
             </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
-                style={{ width: `${fillPercent}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-orange-400 font-bold text-lg">{product.price_per_ml} ₽</span>
-              <span className="text-white/40 text-xs"> / мл</span>
-            </div>
-            <div className="flex items-center gap-1 text-white/30 text-xs">
-              <Icon name="Droplets" size={12} />
-              <span>от 1 мл</span>
-            </div>
-          </div>
+          ) : (
+            /* Отливант — шкала заполнения + цена за мл */
+            <>
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-white/40 mb-1.5">
+                  <span>Забронировано</span>
+                  <span>{product.booked_ml} / {product.bottle_ml} мл</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
+                    style={{ width: `${fillPercent}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-orange-400 font-bold text-lg">{product.price_per_ml} ₽</span>
+                  <span className="text-white/40 text-xs"> / мл</span>
+                </div>
+                <div className="flex items-center gap-1 text-white/30 text-xs">
+                  <Icon name="Droplets" size={12} />
+                  <span>от 1 мл</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Link>

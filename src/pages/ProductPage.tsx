@@ -18,6 +18,8 @@ interface Product {
   available_ml: number
   fill_percent: number
   image_url: string | null
+  concentration: string
+  category: string
 }
 
 interface Atomizer {
@@ -27,6 +29,15 @@ interface Atomizer {
   max_ml: number
   price: number
 }
+
+const CONC_LABEL: Record<string, string> = {
+  parfum_water: 'Парфюмерная вода',
+  parfum: 'Духи',
+  cologne: 'Одеколон',
+  eau_de_toilette: 'Туалетная вода',
+}
+
+const CONC_VALUES = ['parfum_water', 'parfum', 'cologne', 'eau_de_toilette']
 
 function getAtomizer(atomizers: Atomizer[], ml: number): Atomizer | null {
   return atomizers.find(a => ml >= a.min_ml && ml <= a.max_ml) || atomizers[atomizers.length - 1] || null
@@ -44,9 +55,8 @@ export default function ProductPage() {
   const [placing, setPlacing] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  // Режим редактирования (модератор)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState<Partial<Product>>({})
+  const [editForm, setEditForm] = useState<Partial<Product & { concentration: string; category: string }>>({})
   const [saving, setSaving] = useState(false)
 
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator'
@@ -65,20 +75,24 @@ export default function ProductPage() {
     })
   }, [id, navigate])
 
-  const atomizer = getAtomizer(atomizers, volume)
-  const perfumePrice = product ? Math.round(product.price_per_ml * volume * 100) / 100 : 0
+  const isBottle = product?.category === 'bottle'
+
+  const atomizer = (!isBottle && product) ? getAtomizer(atomizers, volume) : null
+  const perfumePrice = product ? Math.round(product.price_per_ml * (isBottle ? product.bottle_ml : volume) * 100) / 100 : 0
   const total = atomizer ? perfumePrice + atomizer.price : perfumePrice
 
   const handleOrder = async () => {
     if (!user) { navigate('/login'); return }
     if (!product) return
     setPlacing(true)
-    const res = await api.orders.place({ product_id: product.id, volume_ml: volume })
+    const res = await api.orders.place({ product_id: product.id, volume_ml: isBottle ? product.bottle_ml : volume })
     setPlacing(false)
     if (res.error) { toast.error(res.error); return }
     setSuccess(true)
-    setProduct(p => p ? { ...p, booked_ml: p.booked_ml + volume, available_ml: p.available_ml - volume } : p)
-    toast.success(`Заказ оформлен! ${volume} мл × ${product.price_per_ml} ₽ + атомайзер`)
+    if (!isBottle) {
+      setProduct(p => p ? { ...p, booked_ml: p.booked_ml + volume, available_ml: p.available_ml - volume } : p)
+    }
+    toast.success(isBottle ? `Заказ на флакон оформлен!` : `Заказ оформлен! ${volume} мл × ${product.price_per_ml} ₽`)
     setTimeout(() => setSuccess(false), 4000)
   }
 
@@ -92,6 +106,8 @@ export default function ProductPage() {
       price_per_ml: editForm.price_per_ml,
       bottle_ml: editForm.bottle_ml,
       image_url: editForm.image_url,
+      concentration: editForm.concentration,
+      category: editForm.category,
     })
     setSaving(false)
     if (res.error) { toast.error(res.error); return }
@@ -139,11 +155,16 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
 
           {/* Изображение */}
-          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-orange-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center">
+          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-orange-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center relative">
             {product.image_url ? (
               <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="text-8xl">🌸</div>
+              <div className="text-8xl">{isBottle ? '🫙' : '🌸'}</div>
+            )}
+            {isBottle && (
+              <div className="absolute top-4 left-4 bg-purple-500/80 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                Полноразмерный флакон
+              </div>
             )}
           </div>
 
@@ -199,6 +220,23 @@ export default function ProductPage() {
                       className="bg-white/10 border-white/20 text-white" />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-white/40 text-xs mb-1 block">Концентрация</label>
+                    <select value={editForm.concentration || 'parfum_water'} onChange={e => setEditForm(f => ({ ...f, concentration: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-10 appearance-none">
+                      {CONC_VALUES.map(c => <option key={c} value={c} className="bg-zinc-900">{CONC_LABEL[c]}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-xs mb-1 block">Категория</label>
+                    <select value={editForm.category || 'decant'} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-10 appearance-none">
+                      <option value="decant" className="bg-zinc-900">Отливант</option>
+                      <option value="bottle" className="bg-zinc-900">Флакон</option>
+                    </select>
+                  </div>
+                </div>
                 <div>
                   <label className="text-white/40 text-xs mb-1 block">URL изображения</label>
                   <Input value={editForm.image_url || ''} onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))}
@@ -210,6 +248,7 @@ export default function ProductPage() {
                 <div>
                   <div className="text-white/40 text-sm uppercase tracking-widest mb-1">{product.brand}</div>
                   <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{product.name}</h1>
+                  <div className="text-white/40 text-sm mt-1">{CONC_LABEL[product.concentration] || product.concentration}</div>
                 </div>
 
                 {product.description && (
@@ -218,61 +257,75 @@ export default function ProductPage() {
               </>
             )}
 
-            {/* Шкала заполнения */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/50">Забронировано</span>
-                <span className={`font-semibold ${isAlmostFull ? 'text-orange-400' : 'text-white'}`}>
-                  {product.booked_ml} / {product.bottle_ml} мл
-                </span>
+            {/* Шкала заполнения — только для отливантов */}
+            {!isBottle && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-white/50">Забронировано</span>
+                  <span className={`font-semibold ${isAlmostFull ? 'text-orange-400' : 'text-white'}`}>
+                    {product.booked_ml} / {product.bottle_ml} мл
+                  </span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+                  <div
+                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
+                    style={{ width: `${fillPercent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-white/30">
+                  <span>Свободно: {product.available_ml} мл</span>
+                  {isAlmostFull && <span className="text-orange-400 font-medium">Скоро выкуп!</span>}
+                </div>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-                <div
-                  className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
-                  style={{ width: `${fillPercent}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-white/30">
-                <span>Свободно: {product.available_ml} мл</span>
-                {isAlmostFull && <span className="text-orange-400 font-medium">Скоро выкуп!</span>}
-              </div>
-            </div>
+            )}
 
             {/* Цена */}
             <div className="flex items-baseline gap-2">
-              <span className="text-orange-400 text-3xl font-bold">{editing ? (editForm.price_per_ml ?? product.price_per_ml) : product.price_per_ml} ₽</span>
-              <span className="text-white/40">/ мл</span>
+              {isBottle ? (
+                <>
+                  <span className="text-orange-400 text-3xl font-bold">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
+                  <span className="text-white/40 text-sm">{product.bottle_ml} мл</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-orange-400 text-3xl font-bold">{editing ? (editForm.price_per_ml ?? product.price_per_ml) : product.price_per_ml} ₽</span>
+                  <span className="text-white/40">/ мл</span>
+                </>
+              )}
             </div>
 
             {/* Оформление заказа */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-              <h3 className="text-white font-semibold">Оформить заказ</h3>
+              <h3 className="text-white font-semibold">{isBottle ? 'Заказать флакон' : 'Оформить заказ'}</h3>
 
-              <div>
-                <label className="text-white/50 text-sm mb-2 block">Количество, мл</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setVolume(v => Math.max(1, v - 1))}
-                    className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
-                  >−</button>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={product.available_ml}
-                    value={volume}
-                    onChange={e => setVolume(Math.max(1, Math.min(product.available_ml, Number(e.target.value))))}
-                    className="text-center bg-white/10 border-white/20 text-white w-20 font-semibold text-lg"
-                  />
-                  <button
-                    onClick={() => setVolume(v => Math.min(product.available_ml, v + 1))}
-                    className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
-                  >+</button>
-                  <span className="text-white/30 text-sm">мл</span>
+              {/* Выбор мл — только для отливантов */}
+              {!isBottle && (
+                <div>
+                  <label className="text-white/50 text-sm mb-2 block">Количество, мл</label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setVolume(v => Math.max(1, v - 1))}
+                      className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
+                    >−</button>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={product.available_ml}
+                      value={volume}
+                      onChange={e => setVolume(Math.max(1, Math.min(product.available_ml, Number(e.target.value))))}
+                      className="text-center bg-white/10 border-white/20 text-white w-20 font-semibold text-lg"
+                    />
+                    <button
+                      onClick={() => setVolume(v => Math.min(product.available_ml, v + 1))}
+                      className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition-colors"
+                    >+</button>
+                    <span className="text-white/30 text-sm">мл</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Атомайзер */}
-              {atomizer && (
+              {/* Атомайзер — только для отливантов */}
+              {!isBottle && atomizer && (
                 <div className="flex items-center justify-between py-2 border-t border-white/10">
                   <div className="flex items-center gap-2 text-sm text-white/60">
                     <Icon name="Package" size={14} />
@@ -287,11 +340,13 @@ export default function ProductPage() {
                 <span className="text-white/50 text-sm">Итого:</span>
                 <div className="text-right">
                   <div className="text-white font-bold text-xl">{total} ₽</div>
-                  <div className="text-white/30 text-xs">{perfumePrice} ₽ парфюм + {atomizer?.price ?? 0} ₽ флакон</div>
+                  {!isBottle && (
+                    <div className="text-white/30 text-xs">{perfumePrice} ₽ парфюм + {atomizer?.price ?? 0} ₽ флакон</div>
+                  )}
                 </div>
               </div>
 
-              {product.available_ml < 1 ? (
+              {!isBottle && product.available_ml < 1 ? (
                 <div className="bg-white/5 rounded-lg px-4 py-3 text-white/40 text-sm text-center">
                   Весь объём забронирован
                 </div>
@@ -303,10 +358,10 @@ export default function ProductPage() {
               ) : (
                 <Button
                   onClick={handleOrder}
-                  disabled={placing || volume < 1}
+                  disabled={placing || (!isBottle && volume < 1)}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl"
                 >
-                  {placing ? 'Оформляем...' : user ? 'Оформить заказ' : 'Войдите, чтобы заказать'}
+                  {placing ? 'Оформляем...' : user ? (isBottle ? 'Заказать флакон' : 'Оформить заказ') : 'Войдите, чтобы заказать'}
                 </Button>
               )}
 

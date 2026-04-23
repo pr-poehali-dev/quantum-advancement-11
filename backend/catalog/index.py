@@ -1,10 +1,13 @@
 """
 Каталог ароматов Распивошной. Все запросы на GET /?action=...
-GET /?action=list&sort=filling — список товаров
+GET /?action=list&sort=filling&category=decant — список товаров
 GET /?action=product&id=1     — карточка товара
 GET /?action=atomizers         — список атомайзеров
 POST / body={action:create,...} — создать товар (admin/moderator)
 POST / body={action:update,...} — обновить товар (admin/moderator)
+
+category: decant (отливанты) | bottle (полноразмерные флаконы)
+concentration: parfum_water | parfum | cologne | eau_de_toilette
 """
 import json
 import os
@@ -20,6 +23,9 @@ CORS = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
 }
+
+CONCENTRATIONS = ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette')
+CATEGORIES = ('decant', 'bottle')
 
 
 def get_session_user(headers: dict):
@@ -65,7 +71,7 @@ def handler(event: dict, context) -> dict:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
             cur.execute(
-                "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url FROM products WHERE id = %s AND is_active = TRUE",
+                "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url, concentration, category FROM products WHERE id = %s AND is_active = TRUE",
                 (int(product_id),)
             )
             row = cur.fetchone()
@@ -76,14 +82,23 @@ def handler(event: dict, context) -> dict:
                 'id': row[0], 'name': row[1], 'brand': row[2], 'description': row[3],
                 'price_per_ml': float(row[4]), 'bottle_ml': row[5], 'booked_ml': row[6],
                 'available_ml': row[5] - row[6], 'image_url': row[7],
-                'fill_percent': round(row[6] / row[5] * 100) if row[5] else 0
+                'fill_percent': round(row[6] / row[5] * 100) if row[5] else 0,
+                'concentration': row[8] or 'parfum_water',
+                'category': row[9] or 'decant',
             })}
 
         # action == 'list'
         sort = params.get('sort', '')
-        query = "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url FROM products WHERE is_active = TRUE"
+        category_filter = params.get('category', '')
+        query = "SELECT id, name, brand, description, price_per_ml, bottle_ml, booked_ml, image_url, concentration, category FROM products WHERE is_active = TRUE"
+        if category_filter in CATEGORIES:
+            query += f" AND category = '{category_filter}'"
         if sort == 'filling':
             query += " ORDER BY (booked_ml::float / NULLIF(bottle_ml, 0)) DESC"
+        elif sort == 'price_asc':
+            query += " ORDER BY price_per_ml ASC"
+        elif sort == 'price_desc':
+            query += " ORDER BY price_per_ml DESC"
         else:
             query += " ORDER BY created_at DESC"
         cur.execute(query)
@@ -95,7 +110,9 @@ def handler(event: dict, context) -> dict:
                 'id': r[0], 'name': r[1], 'brand': r[2], 'description': r[3],
                 'price_per_ml': float(r[4]), 'bottle_ml': r[5], 'booked_ml': r[6],
                 'available_ml': r[5] - r[6], 'image_url': r[7],
-                'fill_percent': round(r[6] / r[5] * 100) if r[5] else 0
+                'fill_percent': round(r[6] / r[5] * 100) if r[5] else 0,
+                'concentration': r[8] or 'parfum_water',
+                'category': r[9] or 'decant',
             })
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(products)}
 
@@ -122,6 +139,12 @@ def handler(event: dict, context) -> dict:
                 if field in body:
                     fields.append(f"{field} = %s")
                     values.append(float(body[field]) if field == 'price_per_ml' else int(body[field]))
+            if 'concentration' in body and body['concentration'] in CONCENTRATIONS:
+                fields.append("concentration = %s")
+                values.append(body['concentration'])
+            if 'category' in body and body['category'] in CATEGORIES:
+                fields.append("category = %s")
+                values.append(body['category'])
             if not fields:
                 conn.close()
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных'})}
@@ -139,9 +162,15 @@ def handler(event: dict, context) -> dict:
         if not all([name, brand, price_per_ml, bottle_ml]):
             conn.close()
             return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заполните название, бренд, цену и объём'})}
+        concentration = body.get('concentration', 'parfum_water')
+        if concentration not in CONCENTRATIONS:
+            concentration = 'parfum_water'
+        category = body.get('category', 'decant')
+        if category not in CATEGORIES:
+            category = 'decant'
         cur.execute(
-            "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-            (name, brand, body.get('description', ''), float(price_per_ml), int(bottle_ml), body.get('image_url'))
+            "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (name, brand, body.get('description', ''), float(price_per_ml), int(bottle_ml), body.get('image_url'), concentration, category)
         )
         new_id = cur.fetchone()[0]
         conn.commit()
