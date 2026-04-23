@@ -90,7 +90,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products' | 'users' | 'messages'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'archive' | 'products' | 'users' | 'messages' | 'delivery'>('orders')
   const [adminUnread, setAdminUnread] = useState(0)
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
@@ -101,6 +101,7 @@ export default function Admin() {
   const [filterNick, setFilterNick] = useState('')
   const [filterProduct, setFilterProduct] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterDelivery, setFilterDelivery] = useState('')
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
@@ -148,14 +149,14 @@ export default function Admin() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await api.admin.orders({ nick: filterNick, product: filterProduct, status: filterStatus })
+    const res = await api.admin.orders({ nick: filterNick, product: filterProduct, status: filterStatus, delivery: filterDelivery })
     setLoading(false)
     if (res.error) { toast.error(res.error); return }
     setOrders(res.orders || [])
     setTotalSum(res.total_sum || 0)
     setTotalMl(res.total_ml || 0)
     setSelected(new Set())
-  }, [filterNick, filterProduct, filterStatus])
+  }, [filterNick, filterProduct, filterStatus, filterDelivery])
 
   const loadPayments = useCallback(async () => {
     setPaymentsLoading(true)
@@ -386,6 +387,12 @@ export default function Admin() {
             {adminUnread > 0 && tab !== 'messages' && (
               <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{adminUnread}</span>
             )}
+          </button>
+          <button
+            onClick={() => setTab('delivery')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'delivery' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Доставка
           </button>
         </div>
 
@@ -796,10 +803,19 @@ export default function Admin() {
               ))}
             </select>
           </div>
+          <div className="min-w-[160px]">
+            <label className="text-white/40 text-xs mb-1 block">Доставка</label>
+            <Input
+              value={filterDelivery}
+              onChange={e => setFilterDelivery(e.target.value)}
+              placeholder="название доставки"
+              className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm"
+            />
+          </div>
           <Button onClick={load} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
             {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
           </Button>
-          <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus('') }}
+          <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery('') }}
             className="text-white/30 hover:text-white h-9 text-sm">
             Сбросить
           </Button>
@@ -928,7 +944,6 @@ export default function Admin() {
                       {order.delivery_option_name ? (
                         <div className="space-y-0.5">
                           <div className="text-white/70 font-medium truncate">{order.delivery_option_name}</div>
-                          {order.delivery_address && <div className="text-white/30 truncate">{order.delivery_address}</div>}
                           {order.delivery_comment && <div className="text-purple-300/60 truncate italic">{order.delivery_comment}</div>}
                         </div>
                       ) : order.pickup_point ? (
@@ -936,7 +951,6 @@ export default function Admin() {
                       ) : (
                         <span className="text-white/20">—</span>
                       )}
-                      <DeliveryEditBtn order={order} onDone={load} />
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="text-orange-400 font-semibold">{order.total_price} ₽</span>
@@ -977,6 +991,7 @@ export default function Admin() {
             </div>
           </div>
         )}
+        {tab === 'delivery' && <DeliveryTab />}
         </>}
       </div>
     </div>
@@ -1325,65 +1340,134 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
   )
 }
 
-function DeliveryEditBtn({ order, onDone }: { order: AdminOrder; onDone: () => void }) {
-  const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<{id: number; name: string; address: string | null; schedule: string | null}[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(order.delivery_option_id)
-  const [comment, setComment] = useState(order.delivery_comment || '')
+function DeliveryTab() {
+  type DeliveryOption = { id: number; name: string; description: string | null; address: string | null; schedule: string | null; is_active: boolean; sort_order: number }
+  const [options, setOptions] = useState<DeliveryOption[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editId, setEditId] = useState<number | 'new' | null>(null)
+  const [form, setForm] = useState({ name: '', description: '', address: '', schedule: '', sort_order: '0' })
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<number | null>(null)
 
-  const handleOpen = async () => {
-    if (!open && options.length === 0) {
-      const res = await api.admin.getDeliveryOptions()
-      if (Array.isArray(res)) setOptions(res)
-    }
-    setSelectedId(order.delivery_option_id)
-    setComment(order.delivery_comment || '')
-    setOpen(v => !v)
+  const loadOptions = async () => {
+    setLoading(true)
+    const res = await api.admin.getDeliveryOptions()
+    setLoading(false)
+    if (Array.isArray(res)) setOptions(res)
+  }
+
+  useEffect(() => { loadOptions() }, [])
+
+  const startNew = () => {
+    setForm({ name: '', description: '', address: '', schedule: '', sort_order: String(options.length + 1) })
+    setEditId('new')
+  }
+
+  const startEdit = (o: DeliveryOption) => {
+    setForm({ name: o.name, description: o.description || '', address: o.address || '', schedule: o.schedule || '', sort_order: String(o.sort_order) })
+    setEditId(o.id)
   }
 
   const handleSave = async () => {
+    if (!form.name.trim()) { toast.error('Введите название'); return }
     setSaving(true)
-    const res = await api.admin.editDelivery(order.id, selectedId, comment)
+    const data = { name: form.name.trim(), description: form.description.trim() || null, address: form.address.trim() || null, schedule: form.schedule.trim() || null, sort_order: Number(form.sort_order) || 0 }
+    const res = editId === 'new'
+      ? await api.admin.createDeliveryOption(data)
+      : await api.admin.updateDeliveryOption(editId as number, data)
     setSaving(false)
     if (res.error) { toast.error(res.error); return }
-    toast.success('Доставка обновлена'); setOpen(false); onDone()
+    toast.success(editId === 'new' ? 'Добавлено' : 'Сохранено')
+    setEditId(null); loadOptions()
   }
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Удалить способ доставки?')) return
+    setDeleting(id)
+    const res = await api.admin.deleteDeliveryOption(id)
+    setDeleting(null)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Удалено'); loadOptions()
+  }
+
+  const handleToggle = async (o: DeliveryOption) => {
+    await api.admin.updateDeliveryOption(o.id, { is_active: !o.is_active })
+    loadOptions()
+  }
+
+  if (loading) return <div className="flex justify-center py-16"><Icon name="Loader2" size={24} className="animate-spin text-white/30" /></div>
+
   return (
-    <div className="relative">
-      <button onClick={handleOpen} className="text-xs text-white/25 hover:text-purple-400 transition-colors mt-1 block">
-        ✎ доставка
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-zinc-900 border border-white/15 rounded-xl shadow-2xl z-50 p-3 space-y-2">
-          <div className="text-xs text-white/40 mb-1">Способ получения</div>
-          {options.map(opt => (
-            <label key={opt.id} className={`flex gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedId === opt.id ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/8 hover:border-white/15'}`}>
-              <input type="radio" className="sr-only" checked={selectedId === opt.id} onChange={() => setSelectedId(opt.id)} />
-              <div className={`mt-0.5 w-3 h-3 rounded-full border-2 shrink-0 flex items-center justify-center ${selectedId === opt.id ? 'border-purple-400' : 'border-white/30'}`}>
-                {selectedId === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
-              </div>
-              <div className="text-xs">
-                <div className="text-white/80">{opt.name}</div>
-                {opt.address && <div className="text-white/30">{opt.address}</div>}
-              </div>
-            </label>
-          ))}
-          <button onClick={() => setSelectedId(null)} className={`text-xs w-full text-left p-2 rounded-lg border transition-all ${!selectedId ? 'border-white/20 text-white/60' : 'border-transparent text-white/30 hover:text-white/50'}`}>
-            Не выбрано
-          </button>
-          <Input value={comment} onChange={e => setComment(e.target.value)}
-            placeholder="Комментарий"
-            className="bg-white/5 border-white/10 text-white placeholder-white/20 text-xs h-7" />
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={saving} size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs h-7">
-              {saving ? '...' : 'Сохранить'}
+    <div className="max-w-2xl space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-white/40 text-sm">Способы получения заказа</div>
+        <Button onClick={startNew} className="bg-purple-600 hover:bg-purple-700 text-white text-sm h-9 gap-2">
+          <Icon name="Plus" size={14} /> Добавить
+        </Button>
+      </div>
+
+      {/* Форма добавления / редактирования */}
+      {editId !== null && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <div className="text-sm font-medium text-white">{editId === 'new' ? 'Новый способ получения' : 'Редактировать'}</div>
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">Название *</label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Самовывоз — кафе Правда"
+              className="bg-white/5 border-white/10 text-white placeholder-white/20 text-sm" />
+          </div>
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">Адрес</label>
+            <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+              placeholder="ул. Ленина, д. 1"
+              className="bg-white/5 border-white/10 text-white placeholder-white/20 text-sm" />
+          </div>
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">График работы</label>
+            <Input value={form.schedule} onChange={e => setForm(f => ({ ...f, schedule: e.target.value }))}
+              placeholder="Пн–Пт: 10:00–19:00"
+              className="bg-white/5 border-white/10 text-white placeholder-white/20 text-sm" />
+          </div>
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">Порядок сортировки</label>
+            <Input value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))}
+              placeholder="1"
+              className="bg-white/5 border-white/10 text-white placeholder-white/20 text-sm w-24" />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700 text-white text-sm">
+              {saving ? 'Сохранение...' : 'Сохранить'}
             </Button>
-            <Button onClick={() => setOpen(false)} variant="ghost" size="sm" className="text-white/30 text-xs h-7">×</Button>
+            <Button onClick={() => setEditId(null)} variant="ghost" className="text-white/40 text-sm">Отмена</Button>
           </div>
         </div>
       )}
+
+      {/* Список */}
+      {options.length === 0 ? (
+        <div className="text-center py-12 text-white/20 text-sm">Нет способов доставки</div>
+      ) : options.map(o => (
+        <div key={o.id} className={`bg-white/3 border rounded-xl p-4 transition-all ${o.is_active ? 'border-white/8' : 'border-white/4 opacity-50'}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm text-white">{o.name}</div>
+              {o.address && <div className="text-white/50 text-xs mt-1 flex items-center gap-1"><Icon name="MapPin" size={11} />{o.address}</div>}
+              {o.schedule && <div className="text-white/40 text-xs mt-0.5 flex items-center gap-1"><Icon name="Clock" size={11} />{o.schedule}</div>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => handleToggle(o)} className={`text-xs px-2 py-1 rounded-lg border transition-colors ${o.is_active ? 'border-green-500/30 text-green-400' : 'border-white/10 text-white/30 hover:text-white/50'}`}>
+                {o.is_active ? 'Активен' : 'Скрыт'}
+              </button>
+              <button onClick={() => startEdit(o)} className="text-white/30 hover:text-white transition-colors p-1">
+                <Icon name="Pencil" size={14} />
+              </button>
+              <button onClick={() => handleDelete(o.id)} disabled={deleting === o.id} className="text-red-400/40 hover:text-red-400 transition-colors p-1">
+                <Icon name="Trash2" size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

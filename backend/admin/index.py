@@ -1,19 +1,23 @@
 """
 Кабинет модератора Распивошной.
-GET  /?action=orders             — все заказы с фильтром
+GET  /?action=orders             — все заказы с фильтром (nick, product, status, delivery)
 GET  /?action=payments           — неподтверждённые платежи
 GET  /?action=debts              — все активные долги
 GET  /?action=archived_orders    — архивные заказы
 GET  /?action=admin_products     — список товаров для редактирования (admin)
-POST / {action:confirm_payment}  — подтвердить платёж
-POST / {action:set_status}       — групповая смена статуса
-POST / {action:add_debt}         — добавить долг вручную
-POST / {action:resolve_debt}     — закрыть долг
-POST / {action:archive_order}    — архивировать один заказ
-POST / {action:archive_orders}   — групповая архивация
-POST / {action:unarchive_orders} — разархивация
-POST / {action:update_product}   — обновить товар (цена, bottle_ml, booked_ml, name, brand)
-POST / {action:import_products}  — импорт из Excel: [{id?,name,brand,price_per_ml,bottle_ml,...}]
+POST / {action:confirm_payment}         — подтвердить платёж
+POST / {action:set_status}              — групповая смена статуса
+POST / {action:add_debt}                — добавить долг вручную
+POST / {action:resolve_debt}            — закрыть долг
+POST / {action:archive_order}           — архивировать один заказ
+POST / {action:archive_orders}          — групповая архивация
+POST / {action:unarchive_orders}        — разархивация
+POST / {action:update_product}          — обновить товар
+POST / {action:import_products}         — импорт из Excel
+POST / {action:get_delivery_options}    — список вариантов доставки
+POST / {action:create_delivery_option}  — добавить вариант
+POST / {action:update_delivery_option}  — обновить вариант
+POST / {action:delete_delivery_option}  — удалить вариант
 """
 import json
 import os
@@ -95,6 +99,10 @@ def handler(event: dict, context) -> dict:
             if status_filter:
                 conditions.append("o.status = %s")
                 values.append(status_filter)
+            delivery_filter = (params.get('delivery') or '').strip().lower()
+            if delivery_filter:
+                conditions.append("LOWER(COALESCE(dopt.name, '')) LIKE %s")
+                values.append(f'%{delivery_filter}%')
             if conditions:
                 query += " AND " + " AND ".join(conditions)
             query += " ORDER BY o.created_at DESC"
@@ -609,5 +617,58 @@ def handler(event: dict, context) -> dict:
                 'id': r[0], 'name': r[1], 'description': r[2], 'address': r[3],
                 'schedule': r[4], 'is_active': r[5], 'sort_order': r[6],
             } for r in rows])}
+
+        if action == 'create_delivery_option':
+            name = (body.get('name') or '').strip()
+            if not name:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Название обязательно'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO delivery_options (name, description, address, schedule, sort_order, is_active) VALUES (%s, %s, %s, %s, %s, TRUE) RETURNING id",
+                (name, body.get('description'), body.get('address'), body.get('schedule'), int(body.get('sort_order') or 0))
+            )
+            new_id = cur.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'id': new_id})}
+
+        if action == 'update_delivery_option':
+            opt_id = body.get('id')
+            if not opt_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            fields, values = [], []
+            for field in ('name', 'description', 'address', 'schedule'):
+                if field in body:
+                    fields.append(f"{field} = %s")
+                    values.append(body[field])
+            if 'sort_order' in body:
+                fields.append("sort_order = %s")
+                values.append(int(body['sort_order'] or 0))
+            if 'is_active' in body:
+                fields.append("is_active = %s")
+                values.append(bool(body['is_active']))
+            if not fields:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Нет данных'})}
+            values.append(int(opt_id))
+            cur.execute(f"UPDATE delivery_options SET {', '.join(fields)} WHERE id = %s", values)
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'delete_delivery_option':
+            opt_id = body.get('id')
+            if not opt_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("UPDATE orders SET delivery_option_id = NULL WHERE delivery_option_id = %s", (int(opt_id),))
+            cur.execute("DELETE FROM delivery_options WHERE id = %s", (int(opt_id),))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}

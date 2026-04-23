@@ -69,11 +69,12 @@ export const api = {
   },
 
   admin: {
-    orders: (filters: { nick?: string; product?: string; status?: string }) => {
+    orders: (filters: { nick?: string; product?: string; status?: string; delivery?: string }) => {
       const p = new URLSearchParams({ action: 'orders' })
       if (filters.nick) p.set('nick', filters.nick)
       if (filters.product) p.set('product', filters.product)
       if (filters.status) p.set('status', filters.status)
+      if (filters.delivery) p.set('delivery', filters.delivery)
       return get(`${ADMIN_URL}/?${p.toString()}`)
     },
     setStatus: (order_ids: number[], status: string) =>
@@ -116,10 +117,14 @@ export const api = {
     updateUser: (data: Record<string, unknown>) => post(`${ADMIN_URL}/`, { action: 'update_user', ...data }),
     blockUser: (user_id: number, is_blocked: boolean, reason?: string) =>
       post(`${ADMIN_URL}/`, { action: 'block_user', user_id, is_blocked, reason }),
-    editDelivery: (order_id: number, delivery_option_id: number | null, delivery_comment?: string) =>
-      post(`${ADMIN_URL}/`, { action: 'edit_delivery', order_id, delivery_option_id, delivery_comment }),
     getDeliveryOptions: () =>
       post(`${ADMIN_URL}/`, { action: 'get_delivery_options' }),
+    createDeliveryOption: (data: { name: string; description?: string | null; address?: string | null; schedule?: string | null; sort_order?: number }) =>
+      post(`${ADMIN_URL}/`, { action: 'create_delivery_option', ...data }),
+    updateDeliveryOption: (id: number, data: Record<string, unknown>) =>
+      post(`${ADMIN_URL}/`, { action: 'update_delivery_option', id, ...data }),
+    deleteDeliveryOption: (id: number) =>
+      post(`${ADMIN_URL}/`, { action: 'delete_delivery_option', id }),
   },
 
   messages: {
