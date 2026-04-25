@@ -101,12 +101,101 @@ export default function HeroBackground() {
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+            <filter id="bottleGlow" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="6" result="blur1" />
+              <feGaussianBlur stdDeviation="14" result="blur2" />
+              <feMerge>
+                <feMergeNode in="blur2" />
+                <feMergeNode in="blur1" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="bottleGlowSoft" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="20" result="softBlur" />
+              <feMerge>
+                <feMergeNode in="softBlur" />
+              </feMerge>
+            </filter>
+            <linearGradient id="bottleBody" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(249,115,22,0.0)" />
+              <stop offset="30%" stopColor="rgba(251,146,60,0.7)" />
+              <stop offset="50%" stopColor="rgba(255,200,120,0.9)" />
+              <stop offset="70%" stopColor="rgba(251,146,60,0.7)" />
+              <stop offset="100%" stopColor="rgba(249,115,22,0.0)" />
+            </linearGradient>
+            <linearGradient id="bottleNeck" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(249,115,22,0.0)" />
+              <stop offset="25%" stopColor="rgba(251,146,60,0.6)" />
+              <stop offset="50%" stopColor="rgba(255,200,120,0.85)" />
+              <stop offset="75%" stopColor="rgba(251,146,60,0.6)" />
+              <stop offset="100%" stopColor="rgba(249,115,22,0.0)" />
+            </linearGradient>
+            <linearGradient id="bottleSprayHalo" cx="50%" cy="50%" r="50%" id="sprayHalo">
+              <stop offset="0%" stopColor="rgba(251,146,60,0.35)" />
+              <stop offset="100%" stopColor="rgba(249,115,22,0)" />
+            </linearGradient>
+            <radialGradient id="sprayHalo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(251,146,60,0.3)" />
+              <stop offset="60%" stopColor="rgba(249,115,22,0.1)" />
+              <stop offset="100%" stopColor="rgba(249,115,22,0)" />
+            </radialGradient>
           </defs>
 
           <g>
             <ellipse cx="300" cy="350" rx="400" ry="200" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.6" />
             <ellipse cx="350" cy="320" rx="500" ry="250" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.4" />
             <ellipse cx="400" cy="300" rx="600" ry="300" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.2" />
+
+            {/* Neon perfume bottle — source of waves, bottom-left corner */}
+            {/* Soft halo glow behind bottle */}
+            <ellipse cx="50" cy="705" rx="70" ry="55" fill="url(#sprayHalo)" filter="url(#bottleGlowSoft)" opacity="0.8">
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite" />
+            </ellipse>
+
+            <g filter="url(#bottleGlow)" opacity="0.92">
+              {/* Bottle body */}
+              <rect x="14" y="660" width="46" height="54" rx="5" ry="5"
+                stroke="url(#bottleBody)" strokeWidth="1.5" fill="none" />
+              {/* Body inner highlight line */}
+              <line x1="28" y1="664" x2="28" y2="710" stroke="rgba(255,200,120,0.25)" strokeWidth="0.6" />
+              {/* Shoulder transition */}
+              <path d="M14 660 Q14 652 20 649 L54 649 Q60 652 60 660"
+                stroke="url(#bottleNeck)" strokeWidth="1.2" fill="none" />
+              {/* Neck */}
+              <rect x="26" y="630" width="22" height="20" rx="2" ry="2"
+                stroke="url(#bottleNeck)" strokeWidth="1.2" fill="none" />
+              {/* Cap / atomizer head */}
+              <rect x="22" y="618" width="30" height="13" rx="3" ry="3"
+                stroke="url(#bottleNeck)" strokeWidth="1.4" fill="none" />
+              {/* Nozzle tip pointing right — spray origin */}
+              <line x1="52" y1="624" x2="68" y2="624"
+                stroke="rgba(255,200,120,0.9)" strokeWidth="1.4" />
+              <circle cx="68" cy="624" r="2"
+                fill="rgba(255,200,120,0.95)" />
+              {/* Spray dot burst from nozzle */}
+              <circle cx="68" cy="624" r="4" fill="none"
+                stroke="rgba(251,146,60,0.5)" strokeWidth="0.8">
+                <animate attributeName="r" values="3;9;3" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="68" cy="624" r="7" fill="none"
+                stroke="rgba(249,115,22,0.3)" strokeWidth="0.6">
+                <animate attributeName="r" values="6;16;6" dur="2s" begin="0.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" begin="0.4s" repeatCount="indefinite" />
+              </circle>
+              {/* Label detail on bottle body */}
+              <rect x="20" y="673" width="34" height="22" rx="2" ry="2"
+                stroke="rgba(251,146,60,0.3)" strokeWidth="0.7" fill="none" />
+              {/* Bottom base line */}
+              <line x1="14" y1="714" x2="60" y2="714"
+                stroke="rgba(255,200,120,0.4)" strokeWidth="0.8" />
+            </g>
+
+            {/* Pulsing outline glow on bottle body — breathing effect */}
+            <rect x="14" y="660" width="46" height="54" rx="5" ry="5"
+              stroke="rgba(251,146,60,0.4)" strokeWidth="3" fill="none" filter="url(#neonGlow)">
+              <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite" />
+            </rect>
 
             {/* Thread 1 */}
             <path id="thread1" d="M50 720 Q200 590 350 540 Q500 490 650 520 Q800 550 950 460 Q1100 370 1200 340" stroke="url(#threadFade1)" strokeWidth="0.8" fill="none" opacity="0.8" />
