@@ -14,6 +14,8 @@ import Admin from "./pages/Admin";
 import HowItWorks from "./pages/HowItWorks";
 import Forum from "./pages/Forum";
 import ForumTopic from "./pages/ForumTopic";
+import Offer from "./pages/Offer";
+import Rules from "./pages/Rules";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/forum" element={<Forum />} />
             <Route path="/forum/:id" element={<ForumTopic />} />
+            <Route path="/offer" element={<Offer />} />
+            <Route path="/rules" element={<Rules />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
