@@ -141,6 +141,10 @@ export default function Catalog() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold">Каталог ароматов</h1>
           <p className="text-white/50 text-sm mt-1">Оригинальный парфюм — от 1 мл</p>
+          <div className="mt-3 flex items-start gap-2 text-white/40 text-xs bg-white/3 border border-white/8 rounded-xl px-4 py-2.5 max-w-xl">
+            <Icon name="Info" size={13} className="shrink-0 mt-0.5 text-white/30" />
+            <span>На карточке аромата есть шкала заполнения — она показывает, сколько мл уже забронировали покупатели. Ароматы с высоким заполнением уйдут в распив в ближайшее время. Сортируйте по заполнению, чтобы найти их быстро.</span>
+          </div>
         </div>
 
         {/* Фильтры — два ряда */}

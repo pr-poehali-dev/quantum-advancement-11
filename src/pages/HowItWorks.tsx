@@ -44,6 +44,28 @@ export default function HowItWorks() {
           </p>
         </div>
 
+        {/* Почему выгодно */}
+        <section>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">Почему это выгодно и удобно</h2>
+          <p className="text-white/60 leading-relaxed mb-6">
+            Вы получаете строго оригинальный аромат в том объёме, который нужен именно вам: можно тестировать новинки и менять парфюм чаще, не переплачивая за большие флаконы.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="text-orange-400 font-semibold mb-2">Распив</div>
+              <p className="text-white/60 text-sm leading-relaxed">
+                Флакон дорогого аромата делим между участниками. Заказывайте любое количество миллилитров — от пробника до нескольких десятков мл.
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="text-orange-400 font-semibold mb-2">Совместные закупки</div>
+              <p className="text-white/60 text-sm leading-relaxed">
+                Несколько человек собирают заказы, чтобы выкупить парфюм по оптовой цене. Чем спокойнее планирование, тем приятнее цена за миллилитр.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Оформление заказа */}
         <section>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -56,7 +78,7 @@ export default function HowItWorks() {
               <Link to="/register" className="text-orange-400 hover:underline">регистрацию</Link>{' '}
               на главной странице. После чего можно перейти в{' '}
               <Link to="/catalog" className="text-orange-400 hover:underline">каталог</Link>,
-              выбрать нужный парфюм и на странице аромата указать желаемый объём в мл. Каждый парфюм будет оформлен отдельным заказом по умолчанию.
+              выбрать нужный парфюм и на странице аромата указать желаемый объём в мл. Каждый парфюм будет оформлен отдельным заказом по умолчанию. Все ваши заказы хранятся в личном кабинете.
             </p>
             <p className="flex gap-2">
               <Icon name="Info" size={16} className="text-blue-400 shrink-0 mt-0.5" />
@@ -118,43 +140,10 @@ export default function HowItWorks() {
           </div>
         </section>
 
-        {/* Шкала на карточке */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center font-bold">3</span>
-            Шкала на карточке и новинки
-          </h2>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-white/70 leading-relaxed space-y-3">
-            <p>
-              Для удобства в каталоге на карточке аромата размещена шкала, которая показывает, сколько мл уже забронировали покупатели. Таким образом вы можете видеть, какие ароматы уйдут в распив в ближайшее время, а какие пока собираются. Данные ароматы можно отсортировать в каталоге.
-            </p>
-            <p>
-              Кроме того, в наших мессенджерах и на форуме мы анонсируем актуальные подборки ароматов к сезону — такие флаконы обычно собираются быстрее.
-            </p>
-          </div>
-        </section>
-
-        {/* Личный кабинет */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center font-bold">4</span>
-            Личный кабинет
-          </h2>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-white/70 leading-relaxed space-y-3">
-            <p>
-              В личном кабинете вы не только можете следить за статусами заказов, но и отправить сообщение организатору с запросом на конкретный аромат.
-            </p>
-            <p>
-              Обсудить ароматы, предложить что-то интересное к распиву, узнать о новинках можно на нашем{' '}
-              <a href="https://t.me/+QgiLIa1gFRY4Y2Iy" target="_blank" rel="noreferrer" className="text-orange-400 hover:underline">форуме</a>.
-            </p>
-          </div>
-        </section>
-
         {/* Сроки */}
         <section>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center font-bold">5</span>
+            <span className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 text-sm flex items-center justify-center font-bold">3</span>
             Сроки выкупа и когда придёт заказ
           </h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-white/70 leading-relaxed space-y-3">
