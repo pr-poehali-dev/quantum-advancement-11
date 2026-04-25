@@ -1,6 +1,6 @@
 export default function HeroBackground() {
   // Bottle: large, left-bottom corner, mostly off-screen left
-  const BX = -20   // bottle center X — left half off-screen, right side visible
+  const BX = 62    // bottle center X — 60% visible on left side of screen
   const BY = 660   // bottle center Y (mid-body)
   const S  = 1.45  // scale factor for bottle size
   // Wave origin: from right side of bottle at mid-body level
