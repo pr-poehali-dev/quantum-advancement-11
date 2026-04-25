@@ -1,10 +1,11 @@
 export default function HeroBackground() {
-  // Bottle center visible on screen, left edge slightly cropped
-  const BX = 130  // bottle center X — right half clearly visible
-  const BY = 660  // bottle center Y (mid-body)
-  // Wave origin: behind the bottle center — waves burst from behind it
-  const OX = 130  // same as BX
-  const OY = 720  // bottom area of bottle, waves flow diagonally up-right
+  // Bottle: large, left-bottom corner, mostly off-screen left
+  const BX = -20   // bottle center X — left half off-screen, right side visible
+  const BY = 660   // bottle center Y (mid-body)
+  const S  = 1.45  // scale factor for bottle size
+  // Wave origin: from right side of bottle at mid-body level
+  const OX = BX + Math.round(72 * S)  // right edge of bottle body
+  const OY = 600                        // mid-body height
 
   return (
     <div className="absolute inset-0 bg-black pointer-events-none">
@@ -358,60 +359,81 @@ export default function HeroBackground() {
             <animateMotion dur="4.0s" repeatCount="indefinite"><mpath href="#thread36" /></animateMotion>
           </circle>
 
-          {/* === NEON PERFUME BOTTLE — rendered on top of waves === */}
-          <ellipse cx={BX} cy={BY + 30} rx="105" ry="140" fill="url(#bottleHalo)" filter="url(#haloFilter)" opacity="0.9">
-            <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" repeatCount="indefinite" />
-          </ellipse>
-          <ellipse cx={BX} cy="590" rx="58" ry="42" fill="url(#capHalo)" filter="url(#haloFilter)" opacity="0.7">
-            <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.8s" repeatCount="indefinite" />
-          </ellipse>
+          {/* === NEON PERFUME BOTTLE — scaled ×S, left-bottom corner === */}
+          {/* Coordinates: bw=body half-width, bt=body top Y, bb=body bottom Y */}
+          {(() => {
+            const bw  = Math.round(72  * S)   // body half-width  ~104
+            const bh  = Math.round(160 * S)   // body height       ~232
+            const bt  = 550                    // body top Y
+            const bb  = bt + bh               // body bottom Y     ~782
+            const nw  = Math.round(22  * S)   // neck half-width   ~32
+            const nh  = Math.round(37  * S)   // neck height       ~54
+            const nt  = bt - nh               // neck top Y        ~496
+            const shH = Math.round(18  * S)   // shoulder height   ~26
+            const cw  = Math.round(48  * S)   // cap half-width    ~70
+            const ch  = Math.round(50  * S)   // cap height        ~73
+            const ct  = nt - ch               // cap top Y         ~423
+            const tipH = Math.round(10 * S)   // cap tip height    ~15
+            const tipT = ct - tipH            // tip top Y         ~408
+            return (
+              <>
+                {/* Halo glow */}
+                <ellipse cx={BX} cy={bt + bh * 0.4} rx={bw + 30} ry={bh * 0.55} fill="url(#bottleHalo)" filter="url(#haloFilter)" opacity="0.9">
+                  <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" repeatCount="indefinite" />
+                </ellipse>
+                <ellipse cx={BX} cy={ct + ch * 0.5} rx={cw + 10} ry={Math.round(42 * S)} fill="url(#capHalo)" filter="url(#haloFilter)" opacity="0.7">
+                  <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.8s" repeatCount="indefinite" />
+                </ellipse>
 
-          <g filter="url(#bottleGlow)">
-            {/* ── BODY ── */}
-            <rect x={BX - 72} y="630" width="144" height="160" rx="4" ry="4" fill="url(#bodyGrad)" />
-            <rect x={BX - 72} y="630" width="144" height="160" rx="4" ry="4" stroke="url(#strokeGrad)" strokeWidth="2" fill="none" />
-            <line x1={BX - 72} y1="640" x2={BX - 62} y2="630" stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
-            <line x1={BX + 62} y1="630" x2={BX + 72} y2="640" stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
-            <line x1={BX - 72} y1="780" x2={BX - 62} y2="790" stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
-            <line x1={BX + 62} y1="790" x2={BX + 72} y2="780" stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
-            <line x1={BX - 52} y1="634" x2={BX - 52} y2="786" stroke="rgba(255,180,80,0.18)" strokeWidth="1.2" />
-            <line x1={BX - 20} y1="632" x2={BX - 20} y2="788" stroke="rgba(255,180,80,0.12)" strokeWidth="0.8" />
-            <line x1={BX + 20} y1="632" x2={BX + 20} y2="788" stroke="rgba(255,180,80,0.08)" strokeWidth="0.6" />
-            <line x1={BX + 52} y1="634" x2={BX + 52} y2="786" stroke="rgba(255,200,100,0.22)" strokeWidth="1.4" />
-            <line x1={BX + 70} y1="642" x2={BX + 70} y2="778" stroke="rgba(255,220,140,0.55)" strokeWidth="1.5" />
-            <line x1={BX - 60} y1="700" x2={BX + 60} y2="700" stroke="rgba(251,146,60,0.2)" strokeWidth="0.8" />
-            <line x1={BX - 60} y1="760" x2={BX + 60} y2="760" stroke="rgba(251,146,60,0.15)" strokeWidth="0.8" />
-            <rect x={BX - 50} y="706" width="100" height="48" rx="1" ry="1" stroke="rgba(251,146,60,0.25)" strokeWidth="0.7" fill="none" />
-            <line x1={BX - 72} y1="790" x2={BX + 72} y2="790" stroke="rgba(255,200,100,0.6)" strokeWidth="2.5" />
-            <line x1={BX - 60} y1="793" x2={BX + 60} y2="793" stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
-            {/* ── SHOULDER ── */}
-            <path d={`M ${BX - 72} 630 L ${BX - 36} 614 L ${BX + 36} 614 L ${BX + 72} 630`} stroke="url(#strokeGrad)" strokeWidth="1.6" fill="url(#bodyGrad)" />
-            <line x1={BX - 36} y1="614" x2={BX + 36} y2="614" stroke="rgba(255,200,100,0.55)" strokeWidth="1.2" />
-            {/* ── NECK ── */}
-            <rect x={BX - 22} y="578" width="44" height="37" rx="2" ry="2" fill="rgba(249,115,22,0.07)" stroke="url(#strokeGrad)" strokeWidth="1.5" />
-            <line x1={BX - 12} y1="580" x2={BX - 12} y2="613" stroke="rgba(255,180,80,0.2)" strokeWidth="0.8" />
-            <line x1={BX + 12} y1="580" x2={BX + 12} y2="613" stroke="rgba(255,200,120,0.25)" strokeWidth="0.8" />
-            <rect x={BX - 26} y="610" width="52" height="8" rx="1" fill="rgba(249,115,22,0.1)" stroke="rgba(255,180,80,0.7)" strokeWidth="1.2" />
-            {/* ── CAP ── */}
-            <rect x={BX - 48} y="530" width="96" height="50" rx="3" ry="3" fill="rgba(249,115,22,0.1)" stroke="url(#strokeGrad)" strokeWidth="2" />
-            <line x1={BX - 46} y1="532" x2={BX + 46} y2="532" stroke="rgba(255,220,140,0.7)" strokeWidth="1.5" />
-            <line x1={BX - 46} y1="578" x2={BX + 46} y2="578" stroke="rgba(255,180,80,0.5)" strokeWidth="1" />
-            <line x1={BX - 48} y1="540" x2={BX - 38} y2="530" stroke="rgba(251,146,60,0.6)" strokeWidth="1" />
-            <line x1={BX + 38} y1="530" x2={BX + 48} y2="540" stroke="rgba(251,146,60,0.6)" strokeWidth="1" />
-            <line x1={BX - 28} y1="533" x2={BX - 28} y2="576" stroke="rgba(255,180,80,0.2)" strokeWidth="0.8" />
-            <line x1={BX + 28} y1="533" x2={BX + 28} y2="576" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
-            <line x1={BX + 46} y1="538" x2={BX + 46} y2="572" stroke="rgba(255,220,140,0.6)" strokeWidth="1.2" />
-            <path d={`M ${BX - 48} 530 L ${BX - 42} 522 L ${BX + 42} 522 L ${BX + 48} 530`} stroke="rgba(255,200,100,0.5)" strokeWidth="1.2" fill="rgba(249,115,22,0.06)" />
-            <line x1={BX - 42} y1="522" x2={BX + 42} y2="522" stroke="rgba(255,220,140,0.6)" strokeWidth="1" />
-          </g>
+                <g filter="url(#bottleGlow)">
+                  {/* ── BODY ── */}
+                  <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" fill="url(#bodyGrad)" />
+                  <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" stroke="url(#strokeGrad)" strokeWidth="2.5" fill="none" />
+                  <line x1={BX - bw} y1={bt + 14} x2={BX - bw + 14} y2={bt} stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
+                  <line x1={BX + bw - 14} y1={bt} x2={BX + bw} y2={bt + 14} stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
+                  <line x1={BX - bw} y1={bb - 14} x2={BX - bw + 14} y2={bb} stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
+                  <line x1={BX + bw - 14} y1={bb} x2={BX + bw} y2={bb - 14} stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
+                  <line x1={BX - Math.round(52 * S)} y1={bt + 6} x2={BX - Math.round(52 * S)} y2={bb - 6} stroke="rgba(255,180,80,0.18)" strokeWidth="1.5" />
+                  <line x1={BX - Math.round(20 * S)} y1={bt + 4} x2={BX - Math.round(20 * S)} y2={bb - 4} stroke="rgba(255,180,80,0.12)" strokeWidth="0.9" />
+                  <line x1={BX + Math.round(20 * S)} y1={bt + 4} x2={BX + Math.round(20 * S)} y2={bb - 4} stroke="rgba(255,180,80,0.08)" strokeWidth="0.7" />
+                  <line x1={BX + Math.round(52 * S)} y1={bt + 6} x2={BX + Math.round(52 * S)} y2={bb - 6} stroke="rgba(255,200,100,0.22)" strokeWidth="1.6" />
+                  <line x1={BX + Math.round(70 * S)} y1={bt + 14} x2={BX + Math.round(70 * S)} y2={bb - 14} stroke="rgba(255,220,140,0.55)" strokeWidth="1.8" />
+                  <line x1={BX - Math.round(60 * S)} y1={bt + Math.round(70 * S)} x2={BX + Math.round(60 * S)} y2={bt + Math.round(70 * S)} stroke="rgba(251,146,60,0.2)" strokeWidth="0.9" />
+                  <line x1={BX - Math.round(60 * S)} y1={bt + Math.round(130 * S)} x2={BX + Math.round(60 * S)} y2={bt + Math.round(130 * S)} stroke="rgba(251,146,60,0.15)" strokeWidth="0.9" />
+                  <rect x={BX - Math.round(50 * S)} y={bt + Math.round(76 * S)} width={Math.round(100 * S)} height={Math.round(48 * S)} rx="1" ry="1" stroke="rgba(251,146,60,0.25)" strokeWidth="0.8" fill="none" />
+                  <line x1={BX - bw} y1={bb + 2} x2={BX + bw} y2={bb + 2} stroke="rgba(255,200,100,0.6)" strokeWidth="3" />
+                  {/* ── SHOULDER ── */}
+                  <path d={`M ${BX - bw} ${bt} L ${BX - Math.round(36 * S)} ${bt - shH} L ${BX + Math.round(36 * S)} ${bt - shH} L ${BX + bw} ${bt}`} stroke="url(#strokeGrad)" strokeWidth="2" fill="url(#bodyGrad)" />
+                  <line x1={BX - Math.round(36 * S)} y1={bt - shH} x2={BX + Math.round(36 * S)} y2={bt - shH} stroke="rgba(255,200,100,0.55)" strokeWidth="1.4" />
+                  {/* ── NECK ── */}
+                  <rect x={BX - nw} y={nt} width={nw * 2} height={nh} rx="2" ry="2" fill="rgba(249,115,22,0.07)" stroke="url(#strokeGrad)" strokeWidth="1.8" />
+                  <line x1={BX - Math.round(12 * S)} y1={nt + 2} x2={BX - Math.round(12 * S)} y2={nt + nh - 2} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
+                  <line x1={BX + Math.round(12 * S)} y1={nt + 2} x2={BX + Math.round(12 * S)} y2={nt + nh - 2} stroke="rgba(255,200,120,0.25)" strokeWidth="0.9" />
+                  <rect x={BX - Math.round(26 * S)} y={nt + nh - 10} width={Math.round(52 * S)} height="12" rx="1" fill="rgba(249,115,22,0.1)" stroke="rgba(255,180,80,0.7)" strokeWidth="1.4" />
+                  {/* ── CAP ── */}
+                  <rect x={BX - cw} y={ct} width={cw * 2} height={ch} rx="4" ry="4" fill="rgba(249,115,22,0.1)" stroke="url(#strokeGrad)" strokeWidth="2.5" />
+                  <line x1={BX - cw + 2} y1={ct + 4} x2={BX + cw - 2} y2={ct + 4} stroke="rgba(255,220,140,0.7)" strokeWidth="1.8" />
+                  <line x1={BX - cw + 2} y1={ct + ch - 4} x2={BX + cw - 2} y2={ct + ch - 4} stroke="rgba(255,180,80,0.5)" strokeWidth="1.2" />
+                  <line x1={BX - cw} y1={ct + 14} x2={BX - cw + 14} y2={ct} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
+                  <line x1={BX + cw - 14} y1={ct} x2={BX + cw} y2={ct + 14} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
+                  <line x1={BX - Math.round(28 * S)} y1={ct + 4} x2={BX - Math.round(28 * S)} y2={ct + ch - 4} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
+                  <line x1={BX + Math.round(28 * S)} y1={ct + 4} x2={BX + Math.round(28 * S)} y2={ct + ch - 4} stroke="rgba(255,200,120,0.3)" strokeWidth="1.1" />
+                  <line x1={BX + cw - 2} y1={ct + 8} x2={BX + cw - 2} y2={ct + ch - 8} stroke="rgba(255,220,140,0.6)" strokeWidth="1.4" />
+                  {/* ── CAP TIP ── */}
+                  <path d={`M ${BX - cw} ${ct} L ${BX - Math.round(42 * S)} ${tipT} L ${BX + Math.round(42 * S)} ${tipT} L ${BX + cw} ${ct}`} stroke="rgba(255,200,100,0.5)" strokeWidth="1.4" fill="rgba(249,115,22,0.06)" />
+                  <line x1={BX - Math.round(42 * S)} y1={tipT} x2={BX + Math.round(42 * S)} y2={tipT} stroke="rgba(255,220,140,0.6)" strokeWidth="1.2" />
+                </g>
 
-          {/* Pulsing neon outline */}
-          <rect x={BX - 72} y="630" width="144" height="160" rx="4" ry="4" stroke="rgba(249,115,22,0.6)" strokeWidth="3.5" fill="none" filter="url(#neonGlow)">
-            <animate attributeName="opacity" values="0.25;0.75;0.25" dur="2.8s" repeatCount="indefinite" />
-          </rect>
-          <rect x={BX - 48} y="530" width="96" height="50" rx="3" ry="3" stroke="rgba(255,160,50,0.5)" strokeWidth="3" fill="none" filter="url(#neonGlow)">
-            <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.8s" repeatCount="indefinite" />
-          </rect>
+                {/* Pulsing neon outline */}
+                <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" stroke="rgba(249,115,22,0.6)" strokeWidth="4" fill="none" filter="url(#neonGlow)">
+                  <animate attributeName="opacity" values="0.25;0.75;0.25" dur="2.8s" repeatCount="indefinite" />
+                </rect>
+                <rect x={BX - cw} y={ct} width={cw * 2} height={ch} rx="4" ry="4" stroke="rgba(255,160,50,0.5)" strokeWidth="3.5" fill="none" filter="url(#neonGlow)">
+                  <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.8s" repeatCount="indefinite" />
+                </rect>
+              </>
+            )
+          })()}
 
         </svg>
       </div>
