@@ -366,17 +366,17 @@ export default function Cabinet() {
                         </div>
                         {paySelected.size > 0 && (
                           <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-                            <div className="text-sm font-medium">Отметить оплату</div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-white/50">Итого к оплате:</span>
+                              <span className="font-bold text-orange-300">{selectedPayTotal.toFixed(0)} ₽</span>
+                            </div>
                             {paymentDetails && (
                               <div className="bg-orange-500/8 border border-orange-500/20 rounded-lg px-3 py-2">
                                 <div className="text-white/40 text-xs mb-1">Реквизиты для оплаты:</div>
                                 <div className="text-white/90 text-sm whitespace-pre-wrap">{paymentDetails}</div>
                               </div>
                             )}
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-white/50">Итого к оплате:</span>
-                              <span className="font-bold text-orange-300">{selectedPayTotal.toFixed(0)} ₽</span>
-                            </div>
+                            <div className="text-sm font-medium pt-1">Отметить оплату</div>
                             <div>
                               <label className="text-white/40 text-xs mb-1 block">Дата и время платежа *</label>
                               <input type="datetime-local" value={payDateTime} onChange={e => setPayDateTime(e.target.value)}
