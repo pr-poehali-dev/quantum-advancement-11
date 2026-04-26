@@ -277,7 +277,7 @@ export default function Cabinet() {
         {/* ═══ ГЛАВНЫЕ ВКЛАДКИ ═══ */}
         <div className="flex border-b border-white/10 mb-6 gap-1">
           {([
-            { id: 'orders' as MainTab, label: 'Заказы', badge: orders.filter(o => o.status !== 'declined').length },
+            { id: 'orders' as MainTab, label: 'Заказы', badge: (newOrders.length + awaitingPayment.length + waitingOrders.length + deliveryOrders.length) || undefined },
             { id: 'debts' as MainTab, label: 'Долги', badge: activeDebts.length || undefined },
             { id: 'messages' as MainTab, label: 'Сообщения', badge: mainTab === 'messages' ? undefined : (unreadCount || undefined) },
           ]).map(t => (
