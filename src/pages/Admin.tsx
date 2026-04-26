@@ -1090,8 +1090,6 @@ export default function Admin() {
         )}
         </>}{/* конец ordersSubTab === 'active' */}
         </>}{/* конец tab === 'orders' */}
-
-        {tab === 'delivery' && <DeliveryTab />}
       </div>
     </div>
   )
