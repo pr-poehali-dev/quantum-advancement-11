@@ -32,6 +32,7 @@ interface Order {
   delivery_option_name: string | null
   delivery_address: string | null
   delivery_schedule: string | null
+  pickup_batch: number | null
 }
 
 interface DeliveryOption {
@@ -640,6 +641,9 @@ function OrderCard({ order: o, children }: { order: Order; children?: React.Reac
               <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[o.status] || 'bg-white/10 text-white/50'}`}>
                 {STATUS_LABEL[o.status] || o.status}
               </span>
+              {o.status === 'delivery' && o.pickup_batch && (
+                <div className="text-orange-400 text-xs font-semibold mt-1">Выкуп №{o.pickup_batch}</div>
+              )}
             </div>
           </div>
           {o.delivery_option_name && (

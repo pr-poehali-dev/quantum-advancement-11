@@ -80,8 +80,8 @@ export const api = {
       if (filters.delivery) p.set('delivery', filters.delivery)
       return get(`${ADMIN_URL}/?${p.toString()}`)
     },
-    setStatus: (order_ids: number[], status: string) =>
-      post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status }),
+    setStatus: (order_ids: number[], status: string, pickup_batch?: number) =>
+      post(`${ADMIN_URL}/`, { action: 'set_status', order_ids, status, ...(pickup_batch ? { pickup_batch } : {}) }),
     confirmPayment: (order_id: number, confirmed_amount: number, debt_note?: string) =>
       post(`${ADMIN_URL}/`, { action: 'confirm_payment', order_id, confirmed_amount, debt_note }),
     payments: () =>

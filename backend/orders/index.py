@@ -94,7 +94,8 @@ def handler(event: dict, context) -> dict:
                           o.status, o.payment_confirmed, o.pickup_point, o.created_at,
                           a.name as atomizer_name, o.payment_amount, o.payment_date, o.payment_note, p.id as product_id,
                           o.delivery_option_id, o.delivery_comment,
-                          dopt.name as delivery_option_name, dopt.address as delivery_address, dopt.schedule as delivery_schedule
+                          dopt.name as delivery_option_name, dopt.address as delivery_address, dopt.schedule as delivery_schedule,
+                          o.pickup_batch
                    FROM orders o
                    JOIN products p ON o.product_id = p.id
                    LEFT JOIN atomizers a ON o.atomizer_id = a.id
@@ -121,6 +122,7 @@ def handler(event: dict, context) -> dict:
                     'delivery_option_name': r[19],
                     'delivery_address': r[20],
                     'delivery_schedule': r[21],
+                    'pickup_batch': r[22],
                 })
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(orders)}
 

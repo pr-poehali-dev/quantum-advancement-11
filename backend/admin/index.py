@@ -82,7 +82,7 @@ def handler(event: dict, context) -> dict:
                        o.payment_note, a.name, p.id,
                        o.delivery_option_id, o.delivery_comment,
                        dopt.name, dopt.address, dopt.schedule,
-                       u.phone, u.customer_code
+                       u.phone, u.customer_code, o.pickup_batch
                 FROM orders o
                 JOIN users u ON o.user_id = u.id
                 JOIN products p ON o.product_id = p.id
@@ -120,7 +120,7 @@ def handler(event: dict, context) -> dict:
                 'atomizer_name': r[14], 'product_id': r[15],
                 'delivery_option_id': r[16], 'delivery_comment': r[17],
                 'delivery_option_name': r[18], 'delivery_address': r[19], 'delivery_schedule': r[20],
-                'phone': r[21], 'customer_code': r[22],
+                'phone': r[21], 'customer_code': r[22], 'pickup_batch': r[23],
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
                 'orders': orders,
@@ -596,15 +596,22 @@ def handler(event: dict, context) -> dict:
         if action == 'set_status':
             order_ids = body.get('order_ids', [])
             new_status = body.get('status', '')
+            pickup_batch = body.get('pickup_batch')
             if not order_ids or new_status not in ALLOWED_STATUSES:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_ids и корректный status'})}
             conn = get_conn()
             cur = conn.cursor()
             placeholders = ','.join(['%s'] * len(order_ids))
-            cur.execute(
-                f"UPDATE orders SET status = %s, updated_at = NOW() WHERE id IN ({placeholders}) AND is_archived = FALSE",
-                [new_status] + list(order_ids)
-            )
+            if new_status == 'delivery' and pickup_batch:
+                cur.execute(
+                    f"UPDATE orders SET status = %s, pickup_batch = %s, updated_at = NOW() WHERE id IN ({placeholders}) AND is_archived = FALSE",
+                    [new_status, int(pickup_batch)] + list(order_ids)
+                )
+            else:
+                cur.execute(
+                    f"UPDATE orders SET status = %s, updated_at = NOW() WHERE id IN ({placeholders}) AND is_archived = FALSE",
+                    [new_status] + list(order_ids)
+                )
             updated = cur.rowcount
             # При переходе в delivery или declined — сбрасываем забронированные мл
             if new_status in ('delivery', 'declined'):

@@ -34,6 +34,7 @@ interface AdminOrder {
   delivery_comment: string | null
   phone: string | null
   customer_code: string | null
+  pickup_batch: number | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -108,12 +109,14 @@ export default function Admin() {
   const [filterProduct, setFilterProduct] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDelivery, setFilterDelivery] = useState('')
+  const [filterBatch, setFilterBatch] = useState('')
   const [deliveryOptionsList, setDeliveryOptionsList] = useState<{id: number; name: string}[]>([])
   const [sortField, setSortField] = useState<string>('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
+  const [bulkBatch, setBulkBatch] = useState('')
   const [applying, setApplying] = useState(false)
   const [archiving, setArchiving] = useState(false)
 
@@ -248,11 +251,13 @@ export default function Admin() {
 
   const handleBulkStatus = async () => {
     if (!bulkStatus || selected.size === 0) return
+    if (bulkStatus === 'delivery' && !bulkBatch) { toast.error('Укажите номер выкупа'); return }
     setApplying(true)
-    const res = await api.admin.setStatus(Array.from(selected), bulkStatus)
+    const res = await api.admin.setStatus(Array.from(selected), bulkStatus, bulkStatus === 'delivery' ? Number(bulkBatch) : undefined)
     setApplying(false)
     if (res.error) { toast.error(res.error); return }
     toast.success(`Статус обновлён у ${res.updated} заказ(ов)`)
+    setBulkBatch('')
     load()
   }
 
@@ -810,10 +815,20 @@ export default function Admin() {
               ))}
             </select>
           </div>
+          <div className="min-w-[110px]">
+            <label className="text-white/40 text-xs mb-1 block">Выкуп №</label>
+            <Input
+              type="number"
+              value={filterBatch}
+              onChange={e => setFilterBatch(e.target.value)}
+              placeholder="номер"
+              className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm"
+            />
+          </div>
           <Button onClick={load} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
             {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
           </Button>
-          <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery('') }}
+          <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery(''); setFilterBatch('') }}
             className="text-white/30 hover:text-white h-9 text-sm">
             Сбросить
           </Button>
@@ -840,7 +855,7 @@ export default function Admin() {
           <div className="flex items-center gap-2 ml-auto">
             <select
               value={bulkStatus}
-              onChange={e => setBulkStatus(e.target.value)}
+              onChange={e => { setBulkStatus(e.target.value); setBulkBatch('') }}
               disabled={selected.size === 0}
               className="bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-8 appearance-none disabled:opacity-40"
             >
@@ -849,6 +864,16 @@ export default function Admin() {
                 <option key={s} value={s} className="bg-zinc-900">{STATUS_LABEL[s]}</option>
               ))}
             </select>
+            {bulkStatus === 'delivery' && (
+              <input
+                type="number"
+                min="1"
+                value={bulkBatch}
+                onChange={e => setBulkBatch(e.target.value)}
+                placeholder="№ выкупа"
+                className="bg-white/10 border border-orange-500/50 text-white text-sm rounded-md px-3 h-8 w-28 placeholder:text-white/30"
+              />
+            )}
             <Button
               onClick={handleBulkStatus}
               disabled={applying || !bulkStatus || selected.size === 0}
@@ -880,7 +905,7 @@ export default function Admin() {
                   map[o.nickname].count++
                 }
                 const buyers = Object.values(map).sort((a, b) => a.nickname.localeCompare(b.nickname, 'ru'))
-                const filters = [filterNick && ('ник: '+filterNick), filterProduct && ('товар: '+filterProduct), filterStatus && ('статус: '+STATUS_LABEL[filterStatus]), filterDelivery && ('доставка: '+filterDelivery)].filter(Boolean).join(' · ') || 'все'
+                const filters = [filterNick && ('ник: '+filterNick), filterProduct && ('товар: '+filterProduct), filterStatus && ('статус: '+STATUS_LABEL[filterStatus]), filterDelivery && ('доставка: '+filterDelivery), filterBatch && ('выкуп: №'+filterBatch)].filter(Boolean).join(' · ') || 'все'
                 const rows = buyers.map((b, i) =>
                   '<tr><td>'+(i+1)+'</td><td>'+b.nickname+'</td><td style="font-family:monospace;font-weight:bold;color:#c05000">'+b.customer_code+'</td><td>'+b.phone+'</td><td>'+b.count+'</td><td style="width:40px">&nbsp;</td></tr>'
                 ).join('')
@@ -908,7 +933,10 @@ export default function Admin() {
 
         {/* Таблица */}
         {(() => {
-          const sorted = [...orders].sort((a, b) => {
+          const filteredOrders = filterBatch
+            ? orders.filter(o => o.pickup_batch === Number(filterBatch))
+            : orders
+          const sorted = [...filteredOrders].sort((a, b) => {
             const av = (a as Record<string, unknown>)[sortField]
             const bv = (b as Record<string, unknown>)[sortField]
             const cmp = typeof av === 'number' && typeof bv === 'number'
@@ -945,6 +973,7 @@ export default function Admin() {
                 <SortTh field="volume_ml" className="text-right">Мл</SortTh>
                 <SortTh field="delivery_option_name" className="text-left">Адрес</SortTh>
                 <SortTh field="total_price" className="text-right">Сумма</SortTh>
+                <SortTh field="pickup_batch" className="text-center">Выкуп</SortTh>
                 <th className="px-3 py-3 text-left text-white/40 font-medium">Статус</th>
               </tr>
             </thead>
@@ -1010,6 +1039,12 @@ export default function Admin() {
                           {order.payment_amount} ₽
                         </div>
                       )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {order.pickup_batch
+                        ? <span className="text-orange-400 font-mono font-semibold text-sm">№{order.pickup_batch}</span>
+                        : <span className="text-white/20 text-xs">—</span>
+                      }
                     </td>
                     <td className="px-3 py-3">
                       <StatusCell order={order} onChanged={load} />
@@ -1736,9 +1771,16 @@ function ArchiveOrderBtn({ orderId, onDone }: { orderId: number; onDone: () => v
 function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState('')
+  const [batchInput, setBatchInput] = useState('')
 
   const handleChange = async (newStatus: string) => {
     if (newStatus === order.status) { setEditing(false); return }
+    if (newStatus === 'delivery') {
+      setPendingStatus(newStatus)
+      setBatchInput('')
+      return
+    }
     setSaving(true)
     const res = await api.admin.setStatus([order.id], newStatus)
     setSaving(false)
@@ -1747,7 +1789,37 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
     onChanged()
   }
 
+  const confirmDelivery = async () => {
+    if (!batchInput) return
+    setSaving(true)
+    const res = await api.admin.setStatus([order.id], 'delivery', Number(batchInput))
+    setSaving(false)
+    setPendingStatus('')
+    setEditing(false)
+    if (res.error) { toast.error(res.error); return }
+    onChanged()
+  }
+
   if (saving) return <Icon name="Loader2" size={14} className="animate-spin text-white/40" />
+
+  if (pendingStatus === 'delivery') {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          type="number"
+          min="1"
+          value={batchInput}
+          onChange={e => setBatchInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') confirmDelivery(); if (e.key === 'Escape') { setPendingStatus(''); setEditing(false) } }}
+          placeholder="№ выкупа"
+          className="bg-zinc-800 border border-orange-500/50 text-white text-xs rounded-md px-2 h-7 w-20"
+        />
+        <button onClick={confirmDelivery} className="text-orange-400 hover:text-orange-300 text-xs px-1">✓</button>
+        <button onClick={() => { setPendingStatus(''); setEditing(false) }} className="text-white/30 hover:text-white/60 text-xs px-1">✕</button>
+      </div>
+    )
+  }
 
   if (editing) {
     return (
@@ -1772,6 +1844,7 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
       className={`text-xs px-2 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${STATUS_COLOR[order.status] ?? 'bg-white/10 text-white/50'}`}
     >
       {STATUS_LABEL[order.status] ?? order.status}
+      {order.status === 'delivery' && order.pickup_batch ? <span className="ml-1 opacity-60">#{order.pickup_batch}</span> : null}
     </button>
   )
 }
