@@ -33,6 +33,7 @@ interface AdminOrder {
   delivery_schedule: string | null
   delivery_comment: string | null
   phone: string | null
+  customer_code: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -872,30 +873,29 @@ export default function Admin() {
             <Button
               onClick={() => {
                 const printOrders = selected.size > 0 ? orders.filter(o => selected.has(o.id)) : orders
-                const buyers = Object.values(
-                  printOrders.reduce<Record<string, { nickname: string; phone: string; count: number }>>((acc, o) => {
-                    if (!acc[o.nickname]) acc[o.nickname] = { nickname: o.nickname, phone: o.phone || '—', count: 0 }
-                    acc[o.nickname].count++
-                    return acc
-                  }, {})
-                ).sort((a, b) => a.nickname.localeCompare(b.nickname, 'ru'))
+                type BE = { nickname: string; phone: string; customer_code: string; count: number }
+                const map: Record<string, BE> = {}
+                for (const o of printOrders) {
+                  if (!map[o.nickname]) map[o.nickname] = { nickname: o.nickname, phone: o.phone || '—', customer_code: o.customer_code || '—', count: 0 }
+                  map[o.nickname].count++
+                }
+                const buyers = Object.values(map).sort((a, b) => a.nickname.localeCompare(b.nickname, 'ru'))
+                const filters = [filterNick && ('ник: '+filterNick), filterProduct && ('товар: '+filterProduct), filterStatus && ('статус: '+STATUS_LABEL[filterStatus]), filterDelivery && ('доставка: '+filterDelivery)].filter(Boolean).join(' · ') || 'все'
+                const rows = buyers.map((b, i) =>
+                  '<tr><td>'+(i+1)+'</td><td>'+b.nickname+'</td><td style="font-family:monospace;font-weight:bold;color:#c05000">'+b.customer_code+'</td><td>'+b.phone+'</td><td>'+b.count+'</td><td style="width:40px">&nbsp;</td></tr>'
+                ).join('')
+                const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Список покупателей</title>'
+                  +'<style>body{font-family:Arial,sans-serif;padding:20px;color:#000}h2{margin-bottom:4px}p{margin-bottom:12px;color:#666;font-size:13px}table{border-collapse:collapse;width:100%}th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}td{padding:8px 12px;border:1px solid #ccc;font-size:13px}tr:nth-child(even){background:#fafafa}@media print{button{display:none}}</style>'
+                  +'</head><body>'
+                  +'<button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>'
+                  +'<h2>Список покупателей</h2>'
+                  +'<p>Фильтры: '+filters+' · всего покупателей: '+buyers.length+'</p>'
+                  +'<table><thead><tr><th>№</th><th>Ник</th><th>Номер клиента</th><th>Телефон</th><th>Заказов</th><th>✓</th></tr></thead><tbody>'
+                  +rows
+                  +'</tbody></table></body></html>'
                 const win = window.open('', '_blank')
                 if (!win) return
-                win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Список покупателей</title><style>
-                  body{font-family:Arial,sans-serif;padding:20px;color:#000}
-                  h2{margin-bottom:4px}p{margin-bottom:12px;color:#666;font-size:13px}
-                  table{border-collapse:collapse;width:100%}
-                  th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}
-                  td{padding:8px 12px;border:1px solid #ccc;font-size:13px}
-                  tr:nth-child(even){background:#fafafa}
-                  @media print{button{display:none}}
-                </style></head><body>
-                <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>
-                <h2>Список покупателей</h2>
-                <p>Фильтры: ${[filterNick && 'ник: '+filterNick, filterProduct && 'товар: '+filterProduct, filterStatus && 'статус: '+STATUS_LABEL[filterStatus], filterDelivery && 'доставка: '+filterDelivery].filter(Boolean).join(' · ') || 'все'} · всего покупателей: ${buyers.length}</p>
-                <table><thead><tr><th>№</th><th>Ник</th><th>Телефон</th><th>Заказов</th></tr></thead><tbody>
-                ${buyers.map((b, i) => `<tr><td>${i+1}</td><td>${b.nickname}</td><td>${b.phone}</td><td>${b.count}</td></tr>`).join('')}
-                </tbody></table></body></html>`)
+                win.document.write(html)
                 win.document.close()
               }}
               className="bg-white/10 hover:bg-white/20 text-white h-8 text-xs px-4 border border-white/15"
