@@ -96,7 +96,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings'>('orders')
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'archive'>('active')
   const [adminUnread, setAdminUnread] = useState(0)
 
@@ -423,6 +423,12 @@ export default function Admin() {
           >
             Форум
           </button>
+          <button
+            onClick={() => setTab('settings')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'settings' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Настройки
+          </button>
         </div>
 
         {tab === 'payments' && (
@@ -666,6 +672,10 @@ export default function Admin() {
         {tab === 'forum' && <AdminForumTab />}
 
         {tab === 'messages' && <MessagesTab />}
+
+        {tab === 'delivery' && <DeliveryTab />}
+
+        {tab === 'settings' && <SettingsTab />}
 
         {tab === 'orders' && <>
         {/* Подвкладки: Активные / Архив */}
@@ -2260,6 +2270,46 @@ function AdminForumTab() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function SettingsTab() {
+  const [value, setValue] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api.settings.get('payment_details').then(res => {
+      setLoading(false)
+      if (!res.error) setValue(res.value || '')
+    })
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    const res = await api.settings.set('payment_details', value)
+    setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('Реквизиты сохранены')
+  }
+
+  if (loading) return <div className="py-12 text-center text-white/30"><Icon name="Loader2" size={24} className="animate-spin mx-auto" /></div>
+
+  return (
+    <div className="max-w-lg space-y-4">
+      <div className="text-white/60 text-sm font-medium">Реквизиты для оплаты</div>
+      <div className="text-white/30 text-xs">Отображается покупателям при отметке оплаты. Можно указать номер карты, СБП, другие реквизиты.</div>
+      <textarea
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        rows={5}
+        placeholder={"Например:\nСбербанк 4276 1234 5678 9012\nПо СБП: +7 900 000-00-00"}
+        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
+      />
+      <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white text-sm">
+        {saving ? 'Сохранение...' : 'Сохранить'}
+      </Button>
     </div>
   )
 }

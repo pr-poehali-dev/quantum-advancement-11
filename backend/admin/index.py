@@ -351,6 +351,17 @@ def handler(event: dict, context) -> dict:
                 'schedule': r[4], 'is_active': r[5], 'sort_order': r[6],
             } for r in rows])}
 
+        if action == 'get_setting':
+            key = (params.get('key') or '').strip()
+            if not key:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите key'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT value FROM settings WHERE key = %s", (key,))
+            row = cur.fetchone()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'key': key, 'value': row[0] if row else ''})}
+
         return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
 
     if method == 'POST':
@@ -831,6 +842,21 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor()
             cur.execute("UPDATE orders SET delivery_option_id = NULL WHERE delivery_option_id = %s", (int(opt_id),))
             cur.execute("DELETE FROM delivery_options WHERE id = %s", (int(opt_id),))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'set_setting':
+            key = (body.get('key') or '').strip()
+            value = body.get('value', '')
+            if not key:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите key'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO settings (key, value, updated_at) VALUES (%s, %s, NOW()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()",
+                (key, str(value))
+            )
             conn.commit()
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}

@@ -86,6 +86,17 @@ def handler(event: dict, context) -> dict:
                 'id': r[0], 'name': r[1], 'description': r[2], 'address': r[3], 'schedule': r[4],
             } for r in rows])}
 
+        if action == 'get_setting':
+            key = (params.get('key') or '').strip()
+            if not key:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите key'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT value FROM settings WHERE key = %s", (key,))
+            row = cur.fetchone()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'key': key, 'value': row[0] if row else ''})}
+
         if action == 'my':
             conn = get_conn()
             cur = conn.cursor()

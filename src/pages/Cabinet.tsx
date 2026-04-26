@@ -98,6 +98,9 @@ export default function Cabinet() {
   const [deliveryComment, setDeliveryComment] = useState('')
   const [deliverySaving, setDeliverySaving] = useState(false)
 
+  // реквизиты
+  const [paymentDetails, setPaymentDetails] = useState('')
+
   // долги
   const [debtRequestId, setDebtRequestId] = useState<number | null>(null)
   const [debtRequestType, setDebtRequestType] = useState<'refund' | 'credit'>('credit')
@@ -112,10 +115,12 @@ export default function Cabinet() {
       api.orders.my(),
       api.orders.myDebts(),
       api.orders.deliveryOptions(),
-    ]).then(([ord, dbt, dlv]) => {
+      api.settings.get('payment_details'),
+    ]).then(([ord, dbt, dlv, settings]) => {
       setOrders(Array.isArray(ord) ? ord : [])
       setDebts(Array.isArray(dbt) ? dbt : [])
       setDeliveryOptions(Array.isArray(dlv) ? dlv : [])
+      if (settings && !settings.error) setPaymentDetails(settings.value || '')
       setLoading(false)
     })
   }, [])
@@ -196,7 +201,7 @@ export default function Cabinet() {
   const awaitingPayment  = orders.filter(o => o.status === 'awaiting_payment')
   const waitingOrders    = orders.filter(o => o.status === 'waiting')
   const deliveryOrders   = orders.filter(o => o.status === 'delivery')
-  const transitOrders    = [...waitingOrders, ...deliveryOrders]
+  const transitOrders    = waitingOrders
   const paymentTotal     = awaitingPayment.reduce((s, o) => s + o.total_price, 0)
   const selectedPayTotal = awaitingPayment.filter(o => paySelected.has(o.id)).reduce((s, o) => s + o.total_price, 0)
   const activeDebts      = debts.filter(d => !d.resolved)
@@ -319,6 +324,7 @@ export default function Cabinet() {
                   <div>
                     {awaitingPayment.length === 0 ? <Empty text="Нет заказов к оплате" /> : (
                       <>
+                        <div className="text-white/50 text-xs mb-3">Чтобы произвести оплату, отметьте нужные позиции</div>
                         <div className="flex items-center justify-between mb-3">
                           <button onClick={togglePayAll} className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
@@ -361,6 +367,12 @@ export default function Cabinet() {
                         {paySelected.size > 0 && (
                           <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
                             <div className="text-sm font-medium">Отметить оплату</div>
+                            {paymentDetails && (
+                              <div className="bg-orange-500/8 border border-orange-500/20 rounded-lg px-3 py-2">
+                                <div className="text-white/40 text-xs mb-1">Реквизиты для оплаты:</div>
+                                <div className="text-white/90 text-sm whitespace-pre-wrap">{paymentDetails}</div>
+                              </div>
+                            )}
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-white/50">Итого к оплате:</span>
                               <span className="font-bold text-orange-300">{selectedPayTotal.toFixed(0)} ₽</span>
@@ -388,7 +400,7 @@ export default function Cabinet() {
                 {/* — В пути — */}
                 {orderTab === 'transit' && (
                   <div>
-                    {waitingOrders.length === 0 && deliveryOrders.length === 0 ? <Empty text="Нет заказов в пути" /> : (
+                    {waitingOrders.length === 0 ? <Empty text="Нет заказов в пути" /> : (
                       <div className="space-y-4">
 
                         {/* ── Ожидаются ── */}
@@ -496,20 +508,7 @@ export default function Cabinet() {
                           </>
                         )}
 
-                        {/* ── Раздача ── */}
-                        {deliveryOrders.length > 0 && (
-                          <>
-                            <div className="text-xs text-white/40 uppercase tracking-wider">Раздача</div>
-                            {deliveryOrders.map(o => (
-                              <OrderCard key={o.id} order={o}>
-                                <button onClick={() => handleArchive(o.id)}
-                                  className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
-                                  <Icon name="Archive" size={12} /> В архив
-                                </button>
-                              </OrderCard>
-                            ))}
-                          </>
-                        )}
+
                       </div>
                     )}
                   </div>

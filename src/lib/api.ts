@@ -171,4 +171,9 @@ export const api = {
     markRead: (user_id: number) => post(`${MESSAGES_URL}/`, { action: 'mark_read', user_id }),
     broadcast: (user_ids: number[], body: string) => post(`${MESSAGES_URL}/`, { action: 'broadcast', user_ids, body }),
   },
+
+  settings: {
+    get: (key: string) => fetch(`${ORDERS_URL}/?action=get_setting&key=${encodeURIComponent(key)}`).then(r => r.json()),
+    set: (key: string, value: string) => post(`${ADMIN_URL}/`, { action: 'set_setting', key, value }),
+  },
 }
