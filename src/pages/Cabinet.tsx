@@ -225,7 +225,7 @@ export default function Cabinet() {
     { id: 'payment',  label: 'К оплате',            badge: awaitingPayment.length || undefined },
     { id: 'transit',  label: 'В пути',              badge: transitOrders.length || undefined },
     { id: 'ready',    label: 'Готов к получению',   badge: deliveryOrders.length || undefined },
-    { id: 'received', label: 'Полученные' },
+    { id: 'received', label: 'Архив' },
   ]
 
   return (
