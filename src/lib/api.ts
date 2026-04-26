@@ -69,6 +69,8 @@ export const api = {
       post(`${ORDERS_URL}/`, { action: 'set_delivery', ...data }),
     debtRequest: (data: { debt_id: number; request_type: 'refund' | 'credit'; card?: string }) =>
       post(`${ORDERS_URL}/`, { action: 'debt_request', ...data }),
+    markReceived: (order_id: number) =>
+      post(`${ORDERS_URL}/`, { action: 'mark_received', order_id }),
   },
 
   admin: {

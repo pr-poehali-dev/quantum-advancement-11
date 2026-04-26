@@ -33,6 +33,8 @@ interface Order {
   delivery_address: string | null
   delivery_schedule: string | null
   pickup_batch: number | null
+  is_archived: boolean
+  client_received: boolean
 }
 
 interface DeliveryOption {
@@ -69,7 +71,7 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 type MainTab = 'orders' | 'debts' | 'messages'
-type OrderTab = 'new' | 'payment' | 'transit' | 'ready'
+type OrderTab = 'new' | 'payment' | 'transit' | 'ready' | 'received'
 
 export default function Cabinet() {
   const { user, logout } = useAuth()
@@ -150,6 +152,12 @@ export default function Cabinet() {
     toast.success('Убрано в архив'); load()
   }
 
+  const handleMarkReceived = async (id: number) => {
+    const r = await api.orders.markReceived(id)
+    if (r.error) { toast.error(r.error); return }
+    toast.success('Отмечено как полученное'); load()
+  }
+
   const togglePayOrder = (id: number) => {
     setPaySelected(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
   }
@@ -197,10 +205,11 @@ export default function Cabinet() {
   }
 
   // Группировка заказов
-  const newOrders        = orders.filter(o => ['accepted', 'fixed'].includes(o.status))
-  const awaitingPayment  = orders.filter(o => o.status === 'awaiting_payment')
-  const waitingOrders    = orders.filter(o => o.status === 'waiting')
-  const deliveryOrders   = orders.filter(o => o.status === 'delivery')
+  const newOrders        = orders.filter(o => ['accepted', 'fixed'].includes(o.status) && !o.is_archived)
+  const awaitingPayment  = orders.filter(o => o.status === 'awaiting_payment' && !o.is_archived)
+  const waitingOrders    = orders.filter(o => o.status === 'waiting' && !o.is_archived)
+  const deliveryOrders   = orders.filter(o => o.status === 'delivery' && !o.client_received)
+  const receivedOrders   = orders.filter(o => o.client_received)
   const transitOrders    = waitingOrders
   const paymentTotal     = awaitingPayment.reduce((s, o) => s + o.total_price, 0)
   const selectedPayTotal = awaitingPayment.filter(o => paySelected.has(o.id)).reduce((s, o) => s + o.total_price, 0)
@@ -212,10 +221,11 @@ export default function Cabinet() {
   if (!user) return null
 
   const orderTabs: { id: OrderTab; label: string; badge?: number }[] = [
-    { id: 'new',     label: 'Новые',             badge: newOrders.length || undefined },
-    { id: 'payment', label: 'К оплате',           badge: awaitingPayment.length || undefined },
-    { id: 'transit', label: 'В пути',             badge: transitOrders.length || undefined },
-    { id: 'ready',   label: 'Готов к получению',  badge: deliveryOrders.length || undefined },
+    { id: 'new',      label: 'Новые',              badge: newOrders.length || undefined },
+    { id: 'payment',  label: 'К оплате',            badge: awaitingPayment.length || undefined },
+    { id: 'transit',  label: 'В пути',              badge: transitOrders.length || undefined },
+    { id: 'ready',    label: 'Готов к получению',   badge: deliveryOrders.length || undefined },
+    { id: 'received', label: 'Полученные' },
   ]
 
   return (
@@ -520,11 +530,22 @@ export default function Cabinet() {
                     {deliveryOrders.length === 0 ? <Empty text="Нет заказов готовых к получению" /> : (
                       deliveryOrders.map(o => (
                         <OrderCard key={o.id} order={o}>
-                          <button onClick={() => handleArchive(o.id)}
-                            className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
-                            <Icon name="Archive" size={12} /> В архив
+                          <button onClick={() => handleMarkReceived(o.id)}
+                            className="text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-1 font-medium">
+                            <Icon name="CheckCircle" size={12} /> Получено
                           </button>
                         </OrderCard>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* — Полученные — */}
+                {orderTab === 'received' && (
+                  <div className="space-y-3">
+                    {receivedOrders.length === 0 ? <Empty text="Нет полученных заказов" icon="CheckCircle" /> : (
+                      receivedOrders.map(o => (
+                        <OrderCard key={o.id} order={o} />
                       ))
                     )}
                   </div>

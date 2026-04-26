@@ -108,12 +108,12 @@ def handler(event: dict, context) -> dict:
                           a.name as atomizer_name, o.payment_amount, o.payment_date, o.payment_note, p.id as product_id,
                           o.delivery_option_id, o.delivery_comment,
                           dopt.name as delivery_option_name, dopt.address as delivery_address, dopt.schedule as delivery_schedule,
-                          o.pickup_batch
+                          o.pickup_batch, o.is_archived, o.client_received
                    FROM orders o
                    JOIN products p ON o.product_id = p.id
                    LEFT JOIN atomizers a ON o.atomizer_id = a.id
                    LEFT JOIN delivery_options dopt ON o.delivery_option_id = dopt.id
-                   WHERE o.user_id = %s AND o.is_archived = FALSE
+                   WHERE o.user_id = %s AND (o.is_archived = FALSE OR (o.is_archived = TRUE AND o.status = 'delivery' AND o.client_received = FALSE))
                    ORDER BY o.created_at DESC""",
                 (user['id'],)
             )
@@ -136,6 +136,8 @@ def handler(event: dict, context) -> dict:
                     'delivery_address': r[20],
                     'delivery_schedule': r[21],
                     'pickup_batch': r[22],
+                    'is_archived': r[23],
+                    'client_received': r[24],
                 })
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps(orders)}
 
@@ -163,6 +165,23 @@ def handler(event: dict, context) -> dict:
     if method == 'POST':
         body = json.loads(event.get('body') or '{}')
         action = body.get('action', 'place')
+
+        if action == 'mark_received':
+            order_id = body.get('order_id')
+            if not order_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE orders SET client_received = TRUE, client_received_at = NOW() WHERE id = %s AND user_id = %s AND status = 'delivery' RETURNING id",
+                (int(order_id), user['id'])
+            )
+            row = cur.fetchone()
+            conn.commit()
+            conn.close()
+            if not row:
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Заказ не найден'})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
         if action == 'place':
             product_id = body.get('product_id')
