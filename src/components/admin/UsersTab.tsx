@@ -18,6 +18,7 @@ interface AdminUser {
   admin_tags: string[]
   order_count: number
   total_spent: number
+  customer_code: string | null
 }
 
 interface Message {
@@ -192,6 +193,9 @@ export default function UsersTab() {
                 <td className="px-3 py-3">
                   <div className="font-medium text-white/90">@{u.nickname}</div>
                   <div className="text-white/35 text-xs">{u.email} · {u.phone}</div>
+                  {u.customer_code && (
+                    <div className="text-orange-400/70 text-xs font-mono mt-0.5">{u.customer_code}</div>
+                  )}
                   {u.admin_note && <div className="text-yellow-400/60 text-xs mt-0.5 italic">📝 {u.admin_note}</div>}
                 </td>
                 <td className="px-3 py-3 text-center">

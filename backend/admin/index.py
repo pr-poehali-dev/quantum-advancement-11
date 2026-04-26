@@ -316,7 +316,8 @@ def handler(event: dict, context) -> dict:
                 SELECT u.id, u.nickname, u.email, u.phone, u.role, u.created_at,
                        u.is_blocked, u.blocked_reason, u.admin_note, u.admin_tags,
                        COUNT(DISTINCT o.id) as order_count,
-                       COALESCE(SUM(CASE WHEN o.is_archived = FALSE AND o.status != 'declined' THEN o.total_price ELSE 0 END), 0) as total_spent
+                       COALESCE(SUM(CASE WHEN o.is_archived = FALSE AND o.status != 'declined' THEN o.total_price ELSE 0 END), 0) as total_spent,
+                       u.customer_code
                 FROM users u
                 LEFT JOIN orders o ON o.user_id = u.id
                 WHERE 1=1
@@ -335,6 +336,7 @@ def handler(event: dict, context) -> dict:
                 'is_blocked': r[6], 'blocked_reason': r[7],
                 'admin_note': r[8], 'admin_tags': list(r[9]) if r[9] else [],
                 'order_count': int(r[10]), 'total_spent': float(r[11]),
+                'customer_code': r[12],
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'users': users, 'count': len(users)})}
 
