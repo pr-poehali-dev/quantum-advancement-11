@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
 import MessagesChat from '@/components/MessagesChat'
+import CustomerIdCard from '@/components/CustomerIdCard'
 
 interface Order {
   id: number
@@ -227,13 +228,16 @@ export default function Cabinet() {
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8">
         {/* Профиль */}
         <div className="mb-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 font-bold text-lg">
+          <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 font-bold text-lg shrink-0">
             {user.nickname[0].toUpperCase()}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="font-semibold text-lg">@{user.nickname}</div>
             <div className="text-white/40 text-sm">{user.email}</div>
           </div>
+          {user.customer_code && (
+            <CustomerIdCard nickname={user.nickname} customerCode={user.customer_code} />
+          )}
         </div>
 
         {/* Баннеры */}

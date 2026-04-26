@@ -4,7 +4,7 @@ POST / body={action:register,...} — регистрация
 POST / body={action:login,...}    — вход
 POST / body={action:logout}       — выход
 GET  /?action=me                  — текущий пользователь
-v3
+v4
 """
 import json
 import os
@@ -29,12 +29,14 @@ def get_token_user(headers: dict):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
-        "SELECT u.id, u.nickname, u.email, u.phone, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
+        "SELECT u.id, u.nickname, u.email, u.phone, u.role, u.customer_code FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = %s AND s.expires_at > NOW()",
         (token,)
     )
     row = cur.fetchone()
     conn.close()
-    return {'id': row[0], 'nickname': row[1], 'email': row[2], 'phone': row[3], 'role': row[4]} if row else None
+    if not row:
+        return None
+    return {'id': row[0], 'nickname': row[1], 'email': row[2], 'phone': row[3], 'role': row[4], 'customer_code': row[5]}
 
 
 CORS = {
@@ -86,6 +88,8 @@ def handler(event: dict, context) -> dict:
                 (nickname, email, phone, hash_password(password))
             )
             user_id, role = cur.fetchone()
+            customer_code = 'AR-' + str(user_id).zfill(5)
+            cur.execute("UPDATE users SET customer_code = %s WHERE id = %s", (customer_code, user_id))
             token = secrets.token_hex(32)
             expires = datetime.now() + timedelta(days=30)
             cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (token, user_id, expires))
@@ -93,7 +97,7 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
                 'token': token,
-                'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role}
+                'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role, 'customer_code': customer_code}
             })}
 
         if action == 'login':
@@ -101,12 +105,15 @@ def handler(event: dict, context) -> dict:
             password = body.get('password') or ''
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("SELECT id, nickname, email, phone, role FROM users WHERE email = %s AND password_hash = %s", (email, hash_password(password)))
+            cur.execute("SELECT id, nickname, email, phone, role, customer_code FROM users WHERE email = %s AND password_hash = %s", (email, hash_password(password)))
             row = cur.fetchone()
             if not row:
                 conn.close()
                 return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Неверный email или пароль'})}
-            user_id, nickname, email, phone, role = row
+            user_id, nickname, email, phone, role, customer_code = row
+            if not customer_code:
+                customer_code = 'AR-' + str(user_id).zfill(5)
+                cur.execute("UPDATE users SET customer_code = %s WHERE id = %s", (customer_code, user_id))
             token = secrets.token_hex(32)
             expires = datetime.now() + timedelta(days=30)
             cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (token, user_id, expires))
@@ -114,7 +121,7 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
                 'token': token,
-                'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role}
+                'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role, 'customer_code': customer_code}
             })}
 
         if action == 'logout':
