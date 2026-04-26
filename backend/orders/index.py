@@ -113,7 +113,7 @@ def handler(event: dict, context) -> dict:
                    JOIN products p ON o.product_id = p.id
                    LEFT JOIN atomizers a ON o.atomizer_id = a.id
                    LEFT JOIN delivery_options dopt ON o.delivery_option_id = dopt.id
-                   WHERE o.user_id = %s AND (o.is_archived = FALSE OR (o.is_archived = TRUE AND o.status = 'delivery' AND o.client_received = FALSE))
+                   WHERE o.user_id = %s
                    ORDER BY o.created_at DESC""",
                 (user['id'],)
             )

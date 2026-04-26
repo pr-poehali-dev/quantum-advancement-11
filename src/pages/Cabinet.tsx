@@ -531,8 +531,8 @@ export default function Cabinet() {
                       deliveryOrders.map(o => (
                         <OrderCard key={o.id} order={o}>
                           <button onClick={() => handleMarkReceived(o.id)}
-                            className="text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-1 font-medium">
-                            <Icon name="CheckCircle" size={12} /> Получено
+                            className="mt-1 w-full flex items-center justify-center gap-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 hover:border-green-500/50 text-green-400 text-xs font-medium px-3 py-2 rounded-lg transition-all">
+                            <Icon name="PackageCheck" size={14} /> Нажмите, когда заберёте заказ
                           </button>
                         </OrderCard>
                       ))
