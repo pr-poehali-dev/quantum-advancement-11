@@ -29,6 +29,7 @@ interface AdminOrder {
   delivery_schedule: string | null
   delivery_comment: string | null
   phone: string | null
+  customer_code: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -422,8 +423,8 @@ export default function AdminOrdersTab({
             onClick={() => {
               const printOrders = selected.size > 0 ? orders.filter(o => selected.has(o.id)) : orders
               const buyers = Object.values(
-                printOrders.reduce<Record<string, { nickname: string; phone: string; count: number }>>((acc, o) => {
-                  if (!acc[o.nickname]) acc[o.nickname] = { nickname: o.nickname, phone: o.phone || '—', count: 0 }
+                printOrders.reduce<Record<string, { nickname: string; phone: string; customer_code: string; count: number }>>((acc, o) => {
+                  if (!acc[o.nickname]) acc[o.nickname] = { nickname: o.nickname, phone: o.phone || '—', customer_code: o.customer_code || '—', count: 0 }
                   acc[o.nickname].count++
                   return acc
                 }, {})
@@ -437,13 +438,14 @@ export default function AdminOrdersTab({
                 th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}
                 td{padding:8px 12px;border:1px solid #ccc;font-size:13px}
                 tr:nth-child(even){background:#fafafa}
+                .code{font-family:monospace;font-weight:bold;color:#c05000;font-size:14px}
                 @media print{button{display:none}}
               </style></head><body>
               <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>
               <h2>Список покупателей</h2>
               <p>Фильтры: ${[filterNick && 'ник: '+filterNick, filterProduct && 'товар: '+filterProduct, filterStatus && 'статус: '+STATUS_LABEL[filterStatus], filterDelivery && 'доставка: '+filterDelivery].filter(Boolean).join(' · ') || 'все'} · всего покупателей: ${buyers.length}</p>
-              <table><thead><tr><th>№</th><th>Ник</th><th>Телефон</th><th>Заказов</th></tr></thead><tbody>
-              ${buyers.map((b, i) => `<tr><td>${i+1}</td><td>${b.nickname}</td><td>${b.phone}</td><td>${b.count}</td></tr>`).join('')}
+              <table><thead><tr><th>№</th><th>Ник</th><th>Номер клиента</th><th>Телефон</th><th>Заказов</th><th>✓</th></tr></thead><tbody>
+              ${buyers.map((b, i) => `<tr><td>${i+1}</td><td>${b.nickname}</td><td class="code">${b.customer_code}</td><td>${b.phone}</td><td>${b.count}</td><td style="width:40px">&nbsp;</td></tr>`).join('')}
               </tbody></table></body></html>`)
               win.document.close()
             }}

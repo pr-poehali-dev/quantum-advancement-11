@@ -82,7 +82,7 @@ def handler(event: dict, context) -> dict:
                        o.payment_note, a.name, p.id,
                        o.delivery_option_id, o.delivery_comment,
                        dopt.name, dopt.address, dopt.schedule,
-                       u.phone
+                       u.phone, u.customer_code
                 FROM orders o
                 JOIN users u ON o.user_id = u.id
                 JOIN products p ON o.product_id = p.id
@@ -120,7 +120,7 @@ def handler(event: dict, context) -> dict:
                 'atomizer_name': r[14], 'product_id': r[15],
                 'delivery_option_id': r[16], 'delivery_comment': r[17],
                 'delivery_option_name': r[18], 'delivery_address': r[19], 'delivery_schedule': r[20],
-                'phone': r[21],
+                'phone': r[21], 'customer_code': r[22],
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
                 'orders': orders,
