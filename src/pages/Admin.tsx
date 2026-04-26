@@ -344,10 +344,10 @@ export default function Admin() {
         <div className="flex items-center gap-3">
           <span className="text-orange-400/70 text-xs hidden sm:block">Модератор</span>
           <Link to="/cabinet">
-            <Button variant="outline" size="sm" className="border-white/20 text-white/50 hover:bg-white/10 text-xs">Кабинет</Button>
+            <Button size="sm" className="bg-zinc-700 hover:bg-zinc-600 text-white border border-white/10 text-xs">Кабинет</Button>
           </Link>
           <Link to="/catalog">
-            <Button variant="ghost" size="sm" className="text-white/40 hover:text-white text-xs">Каталог</Button>
+            <Button size="sm" className="bg-zinc-700 hover:bg-zinc-600 text-white border border-white/10 text-xs">Каталог</Button>
           </Link>
         </div>
       </header>
@@ -898,7 +898,7 @@ export default function Admin() {
                 win.document.write(html)
                 win.document.close()
               }}
-              className="bg-white/10 hover:bg-white/20 text-white h-8 text-xs px-4 border border-white/15"
+              className="bg-zinc-700 hover:bg-zinc-600 text-white h-8 text-xs px-4 border border-white/10"
               title="Список покупателей для печати"
             >
               <Icon name="Printer" size={13} className="mr-1.5" /> Список
