@@ -30,6 +30,7 @@ interface AdminOrder {
   delivery_comment: string | null
   phone: string | null
   customer_code: string | null
+  pickup_batch: number | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -77,9 +78,16 @@ function ArchiveOrderBtn({ orderId, onDone }: { orderId: number; onDone: () => v
 function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState('')
+  const [batchInput, setBatchInput] = useState('')
 
   const handleChange = async (newStatus: string) => {
     if (newStatus === order.status) { setEditing(false); return }
+    if (newStatus === 'delivery') {
+      setPendingStatus(newStatus)
+      setBatchInput('')
+      return
+    }
     setSaving(true)
     const res = await api.admin.setStatus([order.id], newStatus)
     setSaving(false)
@@ -88,7 +96,37 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
     onChanged()
   }
 
+  const confirmDelivery = async () => {
+    if (!batchInput) return
+    setSaving(true)
+    const res = await api.admin.setStatus([order.id], 'delivery', Number(batchInput))
+    setSaving(false)
+    setPendingStatus('')
+    setEditing(false)
+    if (res.error) { toast.error(res.error); return }
+    onChanged()
+  }
+
   if (saving) return <Icon name="Loader2" size={14} className="animate-spin text-white/40" />
+
+  if (pendingStatus === 'delivery') {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          type="number"
+          min="1"
+          value={batchInput}
+          onChange={e => setBatchInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') confirmDelivery(); if (e.key === 'Escape') { setPendingStatus(''); setEditing(false) } }}
+          placeholder="№ выкупа"
+          className="bg-zinc-800 border border-orange-500/50 text-white text-xs rounded-md px-2 h-7 w-20"
+        />
+        <button onClick={confirmDelivery} className="text-orange-400 hover:text-orange-300 text-xs px-1">✓</button>
+        <button onClick={() => { setPendingStatus(''); setEditing(false) }} className="text-white/30 hover:text-white/60 text-xs px-1">✕</button>
+      </div>
+    )
+  }
 
   if (editing) {
     return (
@@ -113,6 +151,7 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
       className={`text-xs px-2 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${STATUS_COLOR[order.status] ?? 'bg-white/10 text-white/50'}`}
     >
       {STATUS_LABEL[order.status] ?? order.status}
+      {order.status === 'delivery' && order.pickup_batch ? <span className="ml-1 opacity-60">#{order.pickup_batch}</span> : null}
     </button>
   )
 }
@@ -130,15 +169,19 @@ interface AdminOrdersTabProps {
   setFilterStatus: (v: string) => void
   filterDelivery: string
   setFilterDelivery: (v: string) => void
+  filterBatch: string
+  setFilterBatch: (v: string) => void
   deliveryOptionsList: { id: number; name: string }[]
   sortField: string
   setSortField: (v: string) => void
   sortDir: 'asc' | 'desc'
   setSortDir: (v: 'asc' | 'desc') => void
   selected: Set<number>
-  setSelected: (v: Set<number>) => void
+  setSelected: React.Dispatch<React.SetStateAction<Set<number>>>
   bulkStatus: string
   setBulkStatus: (v: string) => void
+  bulkBatch: string
+  setBulkBatch: (v: string) => void
   applying: boolean
   archiving: boolean
   ordersSubTab: 'active' | 'archive'
@@ -150,7 +193,7 @@ interface AdminOrdersTabProps {
   archiveFilterProduct: string
   setArchiveFilterProduct: (v: string) => void
   archiveSelected: Set<number>
-  setArchiveSelected: (v: Set<number>) => void
+  setArchiveSelected: React.Dispatch<React.SetStateAction<Set<number>>>
   unarchiving: boolean
   onLoad: () => void
   onLoadArchive: () => void
@@ -163,9 +206,10 @@ export default function AdminOrdersTab({
   orders, totalSum, totalMl, loading,
   filterNick, setFilterNick, filterProduct, setFilterProduct,
   filterStatus, setFilterStatus, filterDelivery, setFilterDelivery,
+  filterBatch, setFilterBatch,
   deliveryOptionsList,
   sortField, setSortField, sortDir, setSortDir,
-  selected, setSelected, bulkStatus, setBulkStatus,
+  selected, setSelected, bulkStatus, setBulkStatus, bulkBatch, setBulkBatch,
   applying, archiving,
   ordersSubTab, setOrdersSubTab,
   archivedOrders, archiveLoading,
@@ -191,7 +235,11 @@ export default function AdminOrdersTab({
     }
   }
 
-  const sorted = [...orders].sort((a, b) => {
+  const filteredOrders = filterBatch
+    ? orders.filter(o => o.pickup_batch === Number(filterBatch))
+    : orders
+
+  const sorted = [...filteredOrders].sort((a, b) => {
     const av = (a as Record<string, unknown>)[sortField]
     const bv = (b as Record<string, unknown>)[sortField]
     const cmp = typeof av === 'number' && typeof bv === 'number'
@@ -359,10 +407,20 @@ export default function AdminOrdersTab({
             ))}
           </select>
         </div>
+        <div className="min-w-[110px]">
+          <label className="text-white/40 text-xs mb-1 block">Выкуп №</label>
+          <Input
+            type="number"
+            value={filterBatch}
+            onChange={e => setFilterBatch(e.target.value)}
+            placeholder="номер"
+            className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm"
+          />
+        </div>
         <Button onClick={onLoad} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
           {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
         </Button>
-        <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery('') }}
+        <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery(''); setFilterBatch('') }}
           className="text-white/30 hover:text-white h-9 text-sm">
           Сбросить
         </Button>
@@ -389,7 +447,7 @@ export default function AdminOrdersTab({
         <div className="flex items-center gap-2 ml-auto">
           <select
             value={bulkStatus}
-            onChange={e => setBulkStatus(e.target.value)}
+            onChange={e => { setBulkStatus(e.target.value); setBulkBatch('') }}
             disabled={selected.size === 0}
             className="bg-white/10 border border-white/20 text-white text-sm rounded-md px-3 h-8 appearance-none disabled:opacity-40"
           >
@@ -398,6 +456,16 @@ export default function AdminOrdersTab({
               <option key={s} value={s} className="bg-zinc-900">{STATUS_LABEL[s]}</option>
             ))}
           </select>
+          {bulkStatus === 'delivery' && (
+            <input
+              type="number"
+              min="1"
+              value={bulkBatch}
+              onChange={e => setBulkBatch(e.target.value)}
+              placeholder="№ выкупа"
+              className="bg-white/10 border border-orange-500/50 text-white text-sm rounded-md px-3 h-8 w-28 placeholder:text-white/30"
+            />
+          )}
           <Button
             onClick={onBulkStatus}
             disabled={applying || !bulkStatus || selected.size === 0}
@@ -429,25 +497,25 @@ export default function AdminOrdersTab({
                 map[o.nickname].count++
               }
               const buyers = Object.values(map).sort((a, b) => a.nickname.localeCompare(b.nickname, 'ru'))
-              const filters = [filterNick && ('ник: ' + filterNick), filterProduct && ('товар: ' + filterProduct), filterStatus && ('статус: ' + STATUS_LABEL[filterStatus]), filterDelivery && ('доставка: ' + filterDelivery)].filter(Boolean).join(' · ') || 'все'
+              const filters = [filterNick && ('ник: '+filterNick), filterProduct && ('товар: '+filterProduct), filterStatus && ('статус: '+STATUS_LABEL[filterStatus]), filterDelivery && ('доставка: '+filterDelivery), filterBatch && ('выкуп: №'+filterBatch)].filter(Boolean).join(' · ') || 'все'
               const rows = buyers.map((b, i) =>
-                '<tr><td>' + (i+1) + '</td><td>' + b.nickname + '</td><td style="font-family:monospace;font-weight:bold;color:#c05000;font-size:14px">' + b.customer_code + '</td><td>' + b.phone + '</td><td>' + b.count + '</td><td style="width:40px">&nbsp;</td></tr>'
+                '<tr><td>'+(i+1)+'</td><td>'+b.nickname+'</td><td style="font-family:monospace;font-weight:bold;color:#c05000">'+b.customer_code+'</td><td>'+b.phone+'</td><td>'+b.count+'</td><td style="width:40px">&nbsp;</td></tr>'
               ).join('')
               const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Список покупателей</title>'
-                + '<style>body{font-family:Arial,sans-serif;padding:20px;color:#000}h2{margin-bottom:4px}p{margin-bottom:12px;color:#666;font-size:13px}table{border-collapse:collapse;width:100%}th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}td{padding:8px 12px;border:1px solid #ccc;font-size:13px}tr:nth-child(even){background:#fafafa}@media print{button{display:none}}</style>'
-                + '</head><body>'
-                + '<button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>'
-                + '<h2>Список покупателей</h2>'
-                + '<p>Фильтры: ' + filters + ' · всего покупателей: ' + buyers.length + '</p>'
-                + '<table><thead><tr><th>№</th><th>Ник</th><th>Номер клиента</th><th>Телефон</th><th>Заказов</th><th>✓</th></tr></thead><tbody>'
-                + rows
-                + '</tbody></table></body></html>'
+                +'<style>body{font-family:Arial,sans-serif;padding:20px;color:#000}h2{margin-bottom:4px}p{margin-bottom:12px;color:#666;font-size:13px}table{border-collapse:collapse;width:100%}th{background:#f0f0f0;padding:8px 12px;text-align:left;border:1px solid #ccc;font-size:13px}td{padding:8px 12px;border:1px solid #ccc;font-size:13px}tr:nth-child(even){background:#fafafa}@media print{button{display:none}}</style>'
+                +'</head><body>'
+                +'<button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;cursor:pointer">Печать</button>'
+                +'<h2>Список покупателей</h2>'
+                +'<p>Фильтры: '+filters+' · всего покупателей: '+buyers.length+'</p>'
+                +'<table><thead><tr><th>№</th><th>Ник</th><th>Номер клиента</th><th>Телефон</th><th>Заказов</th><th>✓</th></tr></thead><tbody>'
+                +rows
+                +'</tbody></table></body></html>'
               const win = window.open('', '_blank')
               if (!win) return
               win.document.write(html)
               win.document.close()
             }}
-            className="bg-white/10 hover:bg-white/20 text-white h-8 text-xs px-4 border border-white/15"
+            className="bg-zinc-700 hover:bg-zinc-600 text-white h-8 text-xs px-4 border border-white/10"
             title="Список покупателей для печати"
           >
             <Icon name="Printer" size={13} className="mr-1.5" /> Список
@@ -475,19 +543,20 @@ export default function AdminOrdersTab({
               <SortTh field="volume_ml" className="text-right">Мл</SortTh>
               <SortTh field="delivery_option_name" className="text-left">Адрес</SortTh>
               <SortTh field="total_price" className="text-right">Сумма</SortTh>
+              <SortTh field="pickup_batch" className="text-center">Выкуп</SortTh>
               <th className="px-3 py-3 text-left text-white/40 font-medium">Статус</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-3 py-12 text-center text-white/30">
+                <td colSpan={10} className="px-3 py-12 text-center text-white/30">
                   <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-12 text-center text-white/30">
+                <td colSpan={10} className="px-3 py-12 text-center text-white/30">
                   Заказов не найдено
                 </td>
               </tr>
@@ -540,6 +609,12 @@ export default function AdminOrdersTab({
                         {order.payment_amount} ₽
                       </div>
                     )}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    {order.pickup_batch
+                      ? <span className="text-orange-400 font-mono font-semibold text-sm">№{order.pickup_batch}</span>
+                      : <span className="text-white/20 text-xs">—</span>
+                    }
                   </td>
                   <td className="px-3 py-3">
                     <StatusCell order={order} onChanged={onLoad} />
