@@ -1,11 +1,33 @@
 export default function HeroBackground() {
-  // Bottle: large, left-bottom corner, mostly off-screen left
-  const BX = 62    // bottle center X — 60% visible on left side of screen
-  const BY = 660   // bottle center Y (mid-body)
-  const S  = 1.45  // scale factor for bottle size
-  // Wave origin: from right side of bottle at mid-body level
-  const OX = BX + Math.round(72 * S)  // right edge of bottle body
-  const OY = 600                        // mid-body height
+  // Bottle: positioned so only cap+neck visible at bottom-left
+  // The bottle body goes below the screen edge
+  // BX = bottle center X (left side), BotY = bottom of visible area (below screen)
+  const BX = 110   // bottle center X
+  const S  = 1.6   // scale factor
+
+  // Bottle parts dimensions
+  const bw  = Math.round(72  * S)   // body half-width
+  const bh  = Math.round(160 * S)   // body height
+  const nw  = Math.round(22  * S)   // neck half-width
+  const nh  = Math.round(37  * S)   // neck height
+  const shH = Math.round(18  * S)   // shoulder height
+  const cw  = Math.round(48  * S)   // cap half-width
+  const ch  = Math.round(50  * S)   // cap height
+  const tipH = Math.round(10 * S)   // cap tip height
+
+  // Position bottle so body is below screen, cap+neck visible at bottom
+  // viewBox height = 800. We want cap top at ~680, body disappearing below 800
+  const capTop  = 680              // cap top Y — near bottom of screen
+  const capBot  = capTop + ch      // cap bottom
+  const tipTop  = capTop - tipH    // tip top Y (above cap)
+  const neckTop = capBot           // neck starts where cap ends
+  const neckBot = neckTop + nh
+  const shTop   = neckBot          // shoulder starts
+  const bodyTop = shTop + shH      // body starts — will go below screen edge
+
+  // Spray origin: right side of cap tip (pulsverizer nozzle)
+  const OX = BX + Math.round(42 * S) + 8   // tip right edge + small offset
+  const OY = tipTop + tipH * 0.5             // mid-height of tip
 
   return (
     <div className="absolute inset-0 bg-black pointer-events-none">
@@ -56,18 +78,18 @@ export default function HeroBackground() {
               <feMerge><feMergeNode in="noisyBlur" /></feMerge>
             </filter>
 
-            {/* Thread gradients — fade from bottle origin */}
-            <linearGradient id="threadFade1" x1="0%" y1="0%" x2="100%" y2="0%">
+            {/* Thread gradients — diagonal, fade towards right */}
+            <linearGradient id="threadFade1" x1="0%" y1="100%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(249,115,22,0.9)" />
               <stop offset="50%" stopColor="rgba(251,146,60,0.6)" />
               <stop offset="100%" stopColor="rgba(249,115,22,0)" />
             </linearGradient>
-            <linearGradient id="threadFade2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="threadFade2" x1="0%" y1="100%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(251,146,60,0.8)" />
               <stop offset="55%" stopColor="rgba(249,115,22,0.5)" />
               <stop offset="100%" stopColor="rgba(234,88,12,0)" />
             </linearGradient>
-            <linearGradient id="threadFade3" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="threadFade3" x1="0%" y1="100%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(234,88,12,0.85)" />
               <stop offset="60%" stopColor="rgba(251,146,60,0.4)" />
               <stop offset="100%" stopColor="rgba(249,115,22,0)" />
@@ -102,7 +124,7 @@ export default function HeroBackground() {
               <feGaussianBlur stdDeviation="22" />
             </filter>
 
-            {/* Bottle body gradient — left edge darker, right highlight */}
+            {/* Bottle body gradient */}
             <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(249,115,22,0.05)" />
               <stop offset="18%" stopColor="rgba(249,115,22,0.12)" />
@@ -110,7 +132,6 @@ export default function HeroBackground() {
               <stop offset="72%" stopColor="rgba(255,180,80,0.18)" />
               <stop offset="100%" stopColor="rgba(249,115,22,0.06)" />
             </linearGradient>
-            {/* Bottle stroke — neon orange edge glow */}
             <linearGradient id="strokeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(249,115,22,0.4)" />
               <stop offset="30%" stopColor="rgba(251,146,60,0.9)" />
@@ -136,304 +157,129 @@ export default function HeroBackground() {
 
           {/* === BACKGROUND GLOW === */}
           <g>
-            <ellipse cx="300" cy="350" rx="400" ry="200" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.6" />
-            <ellipse cx="350" cy="320" rx="500" ry="250" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.4" />
-            <ellipse cx="400" cy="300" rx="600" ry="300" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.2" />
+            <ellipse cx="500" cy="350" rx="500" ry="300" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.6" />
+            <ellipse cx="550" cy="300" rx="600" ry="350" fill="url(#heroTextBg)" filter="url(#heroTextBlur)" opacity="0.4" />
           </g>
 
-          {/* === WAVES — original diagonal flow, origin behind bottle === */}
+          {/* === WAVES — from nozzle tip, going up-right diagonally === */}
 
-          {/* Thread 1 */}
-          <path id="thread1" d={`M${OX} ${OY} Q350 590 500 540 Q650 490 800 520 Q950 550 1100 460 Q1200 400 1300 340`} stroke="url(#threadFade1)" strokeWidth="0.8" fill="none" opacity="0.8" />
+          {/* Thread 1 — top stream */}
+          <path id="thread1" d={`M${OX} ${OY} Q${OX+100} ${OY-80} ${OX+280} ${OY-180} Q${OX+460} ${OY-270} ${OX+650} ${OY-310} Q${OX+820} ${OY-340} 1350 ${OY-400}`} stroke="url(#threadFade1)" strokeWidth="0.8" fill="none" opacity="0.8" />
           <circle r="2" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
             <animateMotion dur="4s" repeatCount="indefinite"><mpath href="#thread1" /></animateMotion>
           </circle>
 
           {/* Thread 2 */}
-          <path id="thread2" d={`M${OX} ${OY} Q370 610 530 570 Q690 530 840 560 Q990 590 1140 500 Q1260 430 1350 370`} stroke="url(#threadFade2)" strokeWidth="1.5" fill="none" opacity="0.7" />
+          <path id="thread2" d={`M${OX} ${OY} Q${OX+110} ${OY-60} ${OX+300} ${OY-150} Q${OX+490} ${OY-230} ${OX+680} ${OY-265} Q${OX+860} ${OY-290} 1370 ${OY-340}`} stroke="url(#threadFade2)" strokeWidth="1.5" fill="none" opacity="0.7" />
           <circle r="3" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
             <animateMotion dur="5s" repeatCount="indefinite"><mpath href="#thread2" /></animateMotion>
           </circle>
 
           {/* Thread 3 */}
-          <path id="thread3" d={`M${OX} ${OY} Q330 580 470 530 Q610 480 750 510 Q890 540 1040 450 Q1160 375 1250 330`} stroke="url(#threadFade3)" strokeWidth="1.2" fill="none" opacity="0.8" />
-          <circle r="2.5" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
+          <path id="thread3" d={`M${OX} ${OY} Q${OX+90} ${OY-95} ${OX+260} ${OY-200} Q${OX+440} ${OY-295} ${OX+630} ${OY-340} Q${OX+800} ${OY-375} 1330 ${OY-450}`} stroke="url(#threadFade3)" strokeWidth="1.1" fill="none" opacity="0.75" />
+          <circle r="2.5" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
             <animateMotion dur="4.5s" repeatCount="indefinite"><mpath href="#thread3" /></animateMotion>
           </circle>
 
           {/* Thread 4 */}
-          <path id="thread4" d={`M${OX} ${OY} Q390 630 560 590 Q730 550 880 580 Q1030 610 1180 520 Q1300 445 1400 390`} stroke="url(#threadFade1)" strokeWidth="0.6" fill="none" opacity="0.6" />
-          <circle r="1.5" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
+          <path id="thread4" d={`M${OX} ${OY} Q${OX+120} ${OY-40} ${OX+320} ${OY-110} Q${OX+510} ${OY-175} ${OX+710} ${OY-210} Q${OX+890} ${OY-240} 1380 ${OY-280}`} stroke="url(#threadFade1)" strokeWidth="1.3" fill="none" opacity="0.65" />
+          <circle r="2" fill="url(#neonPulse1)" opacity="0.9" filter="url(#neonGlow)">
             <animateMotion dur="5.5s" repeatCount="indefinite"><mpath href="#thread4" /></animateMotion>
           </circle>
 
           {/* Thread 5 */}
-          <path id="thread5" d={`M${OX} ${OY} Q360 600 510 555 Q660 510 800 535 Q940 565 1090 475 Q1210 405 1330 355`} stroke="url(#threadFade2)" strokeWidth="1.0" fill="none" opacity="0.7" />
-          <circle r="2.2" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.2s" repeatCount="indefinite"><mpath href="#thread5" /></animateMotion>
+          <path id="thread5" d={`M${OX} ${OY} Q${OX+85} ${OY-110} ${OX+240} ${OY-215} Q${OX+420} ${OY-315} ${OX+600} ${OY-365} Q${OX+780} ${OY-405} 1310 ${OY-480}`} stroke="url(#threadFade2)" strokeWidth="0.7" fill="none" opacity="0.6" />
+          <circle r="1.8" fill="url(#neonPulse2)" opacity="0.85" filter="url(#neonGlow)">
+            <animateMotion dur="4.8s" repeatCount="indefinite"><mpath href="#thread5" /></animateMotion>
           </circle>
 
           {/* Thread 6 */}
-          <path id="thread6" d={`M${OX} ${OY} Q410 640 580 610 Q750 580 900 610 Q1050 640 1200 555 Q1320 485 1450 420`} stroke="url(#threadFade3)" strokeWidth="1.3" fill="none" opacity="0.6" />
-          <circle r="2.8" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.2s" repeatCount="indefinite"><mpath href="#thread6" /></animateMotion>
+          <path id="thread6" d={`M${OX} ${OY} Q${OX+130} ${OY-20} ${OX+340} ${OY-75} Q${OX+540} ${OY-130} ${OX+740} ${OY-165} Q${OX+920} ${OY-195} 1390 ${OY-230}`} stroke="url(#threadFade3)" strokeWidth="1.0" fill="none" opacity="0.55" />
+          <circle r="2.2" fill="url(#neonPulse3)" opacity="0.8" filter="url(#neonGlow)">
+            <animateMotion dur="6s" repeatCount="indefinite"><mpath href="#thread6" /></animateMotion>
           </circle>
 
           {/* Thread 7 */}
-          <path id="thread7" d={`M${OX} ${OY} Q340 585 480 535 Q620 485 760 515 Q900 545 1050 455 Q1180 370 1300 335`} stroke="url(#threadFade1)" strokeWidth="0.9" fill="none" opacity="0.8" />
-          <circle r="2" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.8s" repeatCount="indefinite"><mpath href="#thread7" /></animateMotion>
+          <path id="thread7" d={`M${OX} ${OY} Q${OX+95} ${OY-125} ${OX+255} ${OY-235} Q${OX+435} ${OY-340} ${OX+615} ${OY-390} Q${OX+795} ${OY-430} 1320 ${OY-510}`} stroke="url(#threadFade1)" strokeWidth="0.6" fill="none" opacity="0.5" />
+          <circle r="1.6" fill="url(#neonPulse1)" opacity="0.75" filter="url(#neonGlow)">
+            <animateMotion dur="5.2s" repeatCount="indefinite"><mpath href="#thread7" /></animateMotion>
           </circle>
 
           {/* Thread 8 */}
-          <path id="thread8" d={`M${OX} ${OY} Q380 620 540 575 Q700 530 850 560 Q1000 590 1150 500 Q1270 430 1380 380`} stroke="url(#threadFade2)" strokeWidth="1.4" fill="none" opacity="0.7" />
-          <circle r="3" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.8s" repeatCount="indefinite"><mpath href="#thread8" /></animateMotion>
+          <path id="thread8" d={`M${OX} ${OY} Q${OX+115} ${OY-50} ${OX+310} ${OY-130} Q${OX+500} ${OY-205} ${OX+695} ${OY-240} Q${OX+875} ${OY-268} 1375 ${OY-310}`} stroke="url(#threadFade2)" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <circle r="2.4" fill="url(#neonPulse2)" opacity="0.85" filter="url(#neonGlow)">
+            <animateMotion dur="4.3s" repeatCount="indefinite"><mpath href="#thread8" /></animateMotion>
           </circle>
 
-          {/* Thread 9 */}
-          <path id="thread9" d={`M${OX} ${OY} Q320 575 455 525 Q590 475 730 505 Q870 535 1010 445 Q1140 360 1240 325`} stroke="url(#threadFade3)" strokeWidth="0.5" fill="none" opacity="0.6" />
-          <circle r="1.2" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="6s" repeatCount="indefinite"><mpath href="#thread9" /></animateMotion>
+          {/* Thread 9 — thin top accent */}
+          <path id="thread9" d={`M${OX} ${OY} Q${OX+80} ${OY-140} ${OX+230} ${OY-250} Q${OX+410} ${OY-360} ${OX+590} ${OY-415} Q${OX+770} ${OY-460} 1300 ${OY-540}`} stroke="url(#threadFade3)" strokeWidth="0.5" fill="none" opacity="0.45" />
+          <circle r="1.5" fill="url(#neonPulse3)" opacity="0.7" filter="url(#neonGlow)">
+            <animateMotion dur="5.8s" repeatCount="indefinite"><mpath href="#thread9" /></animateMotion>
           </circle>
 
           {/* Thread 10 */}
-          <path id="thread10" d={`M${OX} ${OY} Q400 635 565 595 Q730 555 875 585 Q1020 615 1165 525 Q1285 455 1370 400`} stroke="url(#threadFade1)" strokeWidth="1.1" fill="none" opacity="0.8" />
-          <circle r="2.5" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.3s" repeatCount="indefinite"><mpath href="#thread10" /></animateMotion>
+          <path id="thread10" d={`M${OX} ${OY} Q${OX+105} ${OY-30} ${OX+290} ${OY-95} Q${OX+480} ${OY-155} ${OX+670} ${OY-188} Q${OX+855} ${OY-218} 1365 ${OY-258}`} stroke="url(#threadFade1)" strokeWidth="0.9" fill="none" opacity="0.5" />
+          <circle r="1.9" fill="url(#neonPulse1)" opacity="0.75" filter="url(#neonGlow)">
+            <animateMotion dur="6.3s" repeatCount="indefinite"><mpath href="#thread10" /></animateMotion>
           </circle>
 
           {/* Thread 11 */}
-          <path id="thread11" d={`M${OX} ${OY} Q355 598 495 552 Q635 508 775 535 Q915 565 1055 478 Q1175 400 1295 360`} stroke="url(#threadFade2)" strokeWidth="0.4" fill="none" opacity="0.5" />
-          <circle r="1" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.7s" repeatCount="indefinite"><mpath href="#thread11" /></animateMotion>
+          <path id="thread11" d={`M${OX} ${OY} Q${OX+88} ${OY-70} ${OX+245} ${OY-165} Q${OX+425} ${OY-255} ${OX+605} ${OY-298} Q${OX+785} ${OY-332} 1315 ${OY-390}`} stroke="url(#threadFade2)" strokeWidth="0.7" fill="none" opacity="0.55" />
+          <circle r="2.1" fill="url(#neonPulse2)" opacity="0.8" filter="url(#neonGlow)">
+            <animateMotion dur="4.7s" repeatCount="indefinite"><mpath href="#thread11" /></animateMotion>
           </circle>
 
-          {/* Thread 12 */}
-          <path id="thread12" d={`M${OX} ${OY} Q425 650 600 615 Q775 580 920 610 Q1065 640 1210 560 Q1330 495 1440 445`} stroke="url(#threadFade3)" strokeWidth="1.5" fill="none" opacity="0.7" />
-          <circle r="3.2" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.7s" repeatCount="indefinite"><mpath href="#thread12" /></animateMotion>
+          {/* Thread 12 — widest spread bottom */}
+          <path id="thread12" d={`M${OX} ${OY} Q${OX+135} ${OY-5} ${OX+360} ${OY-55} Q${OX+560} ${OY-105} ${OX+760} ${OY-138} Q${OX+940} ${OY-165} 1395 ${OY-200}`} stroke="url(#threadFade3)" strokeWidth="1.4" fill="none" opacity="0.5" />
+          <circle r="2.3" fill="url(#neonPulse3)" opacity="0.75" filter="url(#neonGlow)">
+            <animateMotion dur="5.6s" repeatCount="indefinite"><mpath href="#thread12" /></animateMotion>
           </circle>
 
-          {/* Thread 13 */}
-          <path id="thread13" d={`M${OX} ${OY} Q345 588 482 540 Q620 492 758 520 Q896 550 1036 462 Q1158 382 1268 345`} stroke="url(#threadFade1)" strokeWidth="0.7" fill="none" opacity="0.6" />
-          <circle r="1.8" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.3s" repeatCount="indefinite"><mpath href="#thread13" /></animateMotion>
-          </circle>
+          {/* === BOTTLE — only cap+neck visible, body goes below screen === */}
+          <g filter="url(#bottleGlow)">
+            {/* ── CAP TIP (pulsverizer nozzle) ── */}
+            <path d={`M ${BX - cw} ${capTop} L ${BX - Math.round(42 * S)} ${tipTop} L ${BX + Math.round(42 * S)} ${tipTop} L ${BX + cw} ${capTop}`} stroke="rgba(255,200,100,0.5)" strokeWidth="1.4" fill="rgba(249,115,22,0.06)" />
+            <line x1={BX - Math.round(42 * S)} y1={tipTop} x2={BX + Math.round(42 * S)} y2={tipTop} stroke="rgba(255,220,140,0.6)" strokeWidth="1.2" />
 
-          {/* Thread 14 */}
-          <path id="thread14" d={`M${OX} ${OY} Q365 607 520 565 Q675 525 815 555 Q955 585 1100 498 Q1218 425 1325 385`} stroke="url(#threadFade2)" strokeWidth="1.0" fill="none" opacity="0.8" />
-          <circle r="2.3" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.9s" repeatCount="indefinite"><mpath href="#thread14" /></animateMotion>
-          </circle>
+            {/* ── CAP ── */}
+            <rect x={BX - cw} y={capTop} width={cw * 2} height={ch} rx="4" ry="4" fill="rgba(249,115,22,0.1)" stroke="url(#strokeGrad)" strokeWidth="2.5" />
+            <line x1={BX - cw + 2} y1={capTop + 4} x2={BX + cw - 2} y2={capTop + 4} stroke="rgba(255,220,140,0.7)" strokeWidth="1.8" />
+            <line x1={BX - cw + 2} y1={capBot - 4} x2={BX + cw - 2} y2={capBot - 4} stroke="rgba(255,180,80,0.5)" strokeWidth="1.2" />
+            <line x1={BX - cw} y1={capTop + 14} x2={BX - cw + 14} y2={capTop} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
+            <line x1={BX + cw - 14} y1={capTop} x2={BX + cw} y2={capTop + 14} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
+            <line x1={BX - Math.round(28 * S)} y1={capTop + 4} x2={BX - Math.round(28 * S)} y2={capBot - 4} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
+            <line x1={BX + Math.round(28 * S)} y1={capTop + 4} x2={BX + Math.round(28 * S)} y2={capBot - 4} stroke="rgba(255,200,120,0.3)" strokeWidth="1.1" />
+            <line x1={BX + cw - 2} y1={capTop + 8} x2={BX + cw - 2} y2={capBot - 8} stroke="rgba(255,220,140,0.6)" strokeWidth="1.4" />
 
-          {/* Thread 15 */}
-          <path id="thread15" d={`M${OX} ${OY} Q310 572 442 522 Q574 472 714 502 Q854 532 994 442 Q1120 358 1220 320`} stroke="url(#threadFade3)" strokeWidth="0.3" fill="none" opacity="0.4" />
-          <circle r="0.8" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="6.2s" repeatCount="indefinite"><mpath href="#thread15" /></animateMotion>
-          </circle>
+            {/* ── NECK ── */}
+            <rect x={BX - nw} y={neckTop} width={nw * 2} height={nh} rx="2" ry="2" fill="rgba(249,115,22,0.07)" stroke="url(#strokeGrad)" strokeWidth="1.8" />
+            <line x1={BX - Math.round(12 * S)} y1={neckTop + 2} x2={BX - Math.round(12 * S)} y2={neckBot - 2} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
+            <line x1={BX + Math.round(12 * S)} y1={neckTop + 2} x2={BX + Math.round(12 * S)} y2={neckBot - 2} stroke="rgba(255,200,120,0.25)" strokeWidth="0.9" />
+            <rect x={BX - Math.round(26 * S)} y={neckBot - 10} width={Math.round(52 * S)} height="12" rx="1" fill="rgba(249,115,22,0.1)" stroke="rgba(255,180,80,0.7)" strokeWidth="1.4" />
 
-          {/* Thread 16 */}
-          <path id="thread16" d={`M${OX} ${OY} Q435 657 610 625 Q785 595 928 625 Q1072 655 1218 575 Q1338 510 1448 462`} stroke="url(#threadFade1)" strokeWidth="1.5" fill="none" opacity="0.9" />
-          <circle r="3.2" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.1s" repeatCount="indefinite"><mpath href="#thread16" /></animateMotion>
-          </circle>
+            {/* ── SHOULDER (partially visible) ── */}
+            <path d={`M ${BX - bw} ${bodyTop} L ${BX - Math.round(36 * S)} ${shTop} L ${BX + Math.round(36 * S)} ${shTop} L ${BX + bw} ${bodyTop}`} stroke="url(#strokeGrad)" strokeWidth="2" fill="url(#bodyGrad)" />
+            <line x1={BX - Math.round(36 * S)} y1={shTop} x2={BX + Math.round(36 * S)} y2={shTop} stroke="rgba(255,200,100,0.55)" strokeWidth="1.4" />
 
-          {/* Thread 17 */}
-          <path id="thread17" d={`M${OX} ${OY} Q350 580 500 510 Q650 440 800 450 Q950 460 1100 390 Q1200 340 1300 300`} stroke="url(#threadFade2)" strokeWidth="0.8" fill="none" opacity="0.6" />
-          <circle r="1.8" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.1s" repeatCount="indefinite"><mpath href="#thread17" /></animateMotion>
-          </circle>
+            {/* ── BODY TOP — fades into bottom edge ── */}
+            <rect x={BX - bw} y={bodyTop} width={bw * 2} height={bh} rx="5" ry="5" fill="url(#bodyGrad)" />
+            <rect x={BX - bw} y={bodyTop} width={bw * 2} height={bh} rx="5" ry="5" stroke="url(#strokeGrad)" strokeWidth="2.5" fill="none" />
+            <line x1={BX + Math.round(70 * S)} y1={bodyTop + 14} x2={BX + Math.round(70 * S)} y2={bodyTop + Math.round(50 * S)} stroke="rgba(255,220,140,0.4)" strokeWidth="1.6" />
+          </g>
 
-          {/* Thread 18 */}
-          <path id="thread18" d={`M${OX} ${OY} Q370 615 525 578 Q680 542 822 568 Q965 596 1108 508 Q1228 438 1342 392`} stroke="url(#threadFade3)" strokeWidth="1.2" fill="none" opacity="0.7" />
-          <circle r="2.6" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.6s" repeatCount="indefinite"><mpath href="#thread18" /></animateMotion>
-          </circle>
+          {/* Pulsing neon outline — cap */}
+          <rect x={BX - cw} y={capTop} width={cw * 2} height={ch} rx="4" ry="4" stroke="rgba(255,160,50,0.5)" strokeWidth="3.5" fill="none" filter="url(#neonGlow)">
+            <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.8s" repeatCount="indefinite" />
+          </rect>
+          {/* Pulsing neon outline — tip */}
+          <path d={`M ${BX - cw} ${capTop} L ${BX - Math.round(42 * S)} ${tipTop} L ${BX + Math.round(42 * S)} ${tipTop} L ${BX + cw} ${capTop}`} stroke="rgba(249,115,22,0.5)" strokeWidth="3" fill="none" filter="url(#neonGlow)">
+            <animate attributeName="opacity" values="0.25;0.7;0.25" dur="2.8s" repeatCount="indefinite" />
+          </path>
 
-          {/* Thread 19 */}
-          <path id="thread19" d={`M${OX} ${OY} Q336 582 468 534 Q600 486 740 514 Q880 542 1020 454 Q1142 372 1248 338`} stroke="url(#threadFade1)" strokeWidth="0.6" fill="none" opacity="0.5" />
-          <circle r="1.4" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.4s" repeatCount="indefinite"><mpath href="#thread19" /></animateMotion>
-          </circle>
-
-          {/* Thread 20 */}
-          <path id="thread20" d={`M${OX} ${OY} Q445 664 622 634 Q800 606 942 636 Q1084 666 1228 588 Q1348 525 1456 478`} stroke="url(#threadFade2)" strokeWidth="1.4" fill="none" opacity="0.8" />
-          <circle r="3" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.4s" repeatCount="indefinite"><mpath href="#thread20" /></animateMotion>
-          </circle>
-
-          {/* Thread 21 */}
-          <path id="thread21" d={`M${OX} ${OY} Q325 568 455 518 Q585 468 725 498 Q865 528 1005 440 Q1128 358 1232 322`} stroke="url(#threadFade3)" strokeWidth="0.5" fill="none" opacity="0.5" />
-          <circle r="1.2" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.9s" repeatCount="indefinite"><mpath href="#thread21" /></animateMotion>
-          </circle>
-
-          {/* Thread 22 */}
-          <path id="thread22" d={`M${OX} ${OY} Q388 625 548 586 Q708 548 850 576 Q992 606 1138 518 Q1258 448 1365 402`} stroke="url(#threadFade1)" strokeWidth="1.1" fill="none" opacity="0.7" />
-          <circle r="2.5" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.8s" repeatCount="indefinite"><mpath href="#thread22" /></animateMotion>
-          </circle>
-
-          {/* Thread 23 */}
-          <path id="thread23" d={`M${OX} ${OY} Q352 593 490 546 Q628 500 768 528 Q908 558 1048 468 Q1168 385 1278 350`} stroke="url(#threadFade2)" strokeWidth="0.9" fill="none" opacity="0.6" />
-          <circle r="2.1" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.2s" repeatCount="indefinite"><mpath href="#thread23" /></animateMotion>
-          </circle>
-
-          {/* Thread 24 */}
-          <path id="thread24" d={`M${OX} ${OY} Q415 645 588 608 Q762 572 904 600 Q1046 630 1192 548 Q1312 480 1420 435`} stroke="url(#threadFade3)" strokeWidth="1.3" fill="none" opacity="0.8" />
-          <circle r="2.9" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.2s" repeatCount="indefinite"><mpath href="#thread24" /></animateMotion>
-          </circle>
-
-          {/* Thread 25 */}
-          <path id="thread25" d={`M${OX} ${OY} Q343 586 478 538 Q614 492 754 520 Q894 550 1034 462 Q1154 380 1260 346`} stroke="url(#threadFade1)" strokeWidth="0.7" fill="none" opacity="0.5" />
-          <circle r="1.6" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.6s" repeatCount="indefinite"><mpath href="#thread25" /></animateMotion>
-          </circle>
-
-          {/* Thread 26 */}
-          <path id="thread26" d={`M${OX} ${OY} Q455 670 634 642 Q814 616 956 646 Q1098 676 1244 598 Q1362 535 1468 490`} stroke="url(#threadFade2)" strokeWidth="1.0" fill="none" opacity="0.7" />
-          <circle r="2.4" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.7s" repeatCount="indefinite"><mpath href="#thread26" /></animateMotion>
-          </circle>
-
-          {/* Thread 27 */}
-          <path id="thread27" d={`M${OX} ${OY} Q362 602 505 558 Q648 515 788 542 Q928 570 1068 480 Q1188 398 1298 362`} stroke="url(#threadFade3)" strokeWidth="0.4" fill="none" opacity="0.4" />
-          <circle r="1" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="6.1s" repeatCount="indefinite"><mpath href="#thread27" /></animateMotion>
-          </circle>
-
-          {/* Thread 28 */}
-          <path id="thread28" d={`M${OX} ${OY} Q404 638 572 600 Q740 564 882 592 Q1024 622 1170 534 Q1290 465 1398 420`} stroke="url(#threadFade1)" strokeWidth="1.5" fill="none" opacity="0.9" />
-          <circle r="3.1" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.3s" repeatCount="indefinite"><mpath href="#thread28" /></animateMotion>
-          </circle>
-
-          {/* Thread 29 */}
-          <path id="thread29" d={`M${OX} ${OY} Q334 577 465 528 Q596 480 736 508 Q876 538 1016 450 Q1136 368 1244 334`} stroke="url(#threadFade2)" strokeWidth="0.8" fill="none" opacity="0.6" />
-          <circle r="2" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.3s" repeatCount="indefinite"><mpath href="#thread29" /></animateMotion>
-          </circle>
-
-          {/* Thread 30 */}
-          <path id="thread30" d={`M${OX} ${OY} Q466 678 648 652 Q830 628 972 658 Q1114 688 1260 612 Q1378 550 1482 506`} stroke="url(#threadFade3)" strokeWidth="1.2" fill="none" opacity="0.8" />
-          <circle r="2.7" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.5s" repeatCount="indefinite"><mpath href="#thread30" /></animateMotion>
-          </circle>
-
-          {/* Thread 31 */}
-          <path id="thread31" d={`M${OX} ${OY} Q375 612 522 568 Q670 526 810 552 Q950 580 1090 492 Q1210 412 1318 376`} stroke="url(#threadFade1)" strokeWidth="0.6" fill="none" opacity="0.5" />
-          <circle r="1.5" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.8s" repeatCount="indefinite"><mpath href="#thread31" /></animateMotion>
-          </circle>
-
-          {/* Thread 32 */}
-          <path id="thread32" d={`M${OX} ${OY} Q393 630 556 592 Q720 556 862 584 Q1004 614 1150 526 Q1270 458 1378 414`} stroke="url(#threadFade2)" strokeWidth="1.4" fill="none" opacity="0.8" />
-          <circle r="3" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.1s" repeatCount="indefinite"><mpath href="#thread32" /></animateMotion>
-          </circle>
-
-          {/* Thread 33 */}
-          <path id="thread33" d={`M${OX} ${OY} Q360 596 504 550 Q648 506 788 532 Q928 560 1068 472 Q1188 390 1296 356`} stroke="url(#threadFade3)" strokeWidth="0.9" fill="none" opacity="0.6" />
-          <circle r="2.1" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="5.1s" repeatCount="indefinite"><mpath href="#thread33" /></animateMotion>
-          </circle>
-
-          {/* Thread 34 */}
-          <path id="thread34" d={`M${OX} ${OY} Q476 685 660 660 Q844 638 986 668 Q1128 698 1274 624 Q1392 562 1494 520`} stroke="url(#threadFade1)" strokeWidth="1.1" fill="none" opacity="0.7" />
-          <circle r="2.6" fill="url(#neonPulse3)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.9s" repeatCount="indefinite"><mpath href="#thread34" /></animateMotion>
-          </circle>
-
-          {/* Thread 35 */}
-          <path id="thread35" d={`M${OX} ${OY} Q347 583 480 536 Q614 490 754 518 Q894 548 1034 460 Q1154 378 1258 344`} stroke="url(#threadFade2)" strokeWidth="0.3" fill="none" opacity="0.4" />
-          <circle r="0.8" fill="url(#neonPulse1)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="6.3s" repeatCount="indefinite"><mpath href="#thread35" /></animateMotion>
-          </circle>
-
-          {/* Thread 36 */}
-          <path id="thread36" d={`M${OX} ${OY} Q460 674 642 648 Q824 624 966 652 Q1108 682 1254 606 Q1372 546 1476 502`} stroke="url(#threadFade3)" strokeWidth="1.5" fill="none" opacity="0.9" />
-          <circle r="3.2" fill="url(#neonPulse2)" opacity="1" filter="url(#neonGlow)">
-            <animateMotion dur="4.0s" repeatCount="indefinite"><mpath href="#thread36" /></animateMotion>
-          </circle>
-
-          {/* === NEON PERFUME BOTTLE — scaled ×S, left-bottom corner === */}
-          {/* Coordinates: bw=body half-width, bt=body top Y, bb=body bottom Y */}
-          {(() => {
-            const bw  = Math.round(72  * S)   // body half-width  ~104
-            const bh  = Math.round(160 * S)   // body height       ~232
-            const bt  = 550                    // body top Y
-            const bb  = bt + bh               // body bottom Y     ~782
-            const nw  = Math.round(22  * S)   // neck half-width   ~32
-            const nh  = Math.round(37  * S)   // neck height       ~54
-            const nt  = bt - nh               // neck top Y        ~496
-            const shH = Math.round(18  * S)   // shoulder height   ~26
-            const cw  = Math.round(48  * S)   // cap half-width    ~70
-            const ch  = Math.round(50  * S)   // cap height        ~73
-            const ct  = nt - ch               // cap top Y         ~423
-            const tipH = Math.round(10 * S)   // cap tip height    ~15
-            const tipT = ct - tipH            // tip top Y         ~408
-            return (
-              <>
-                {/* Halo glow */}
-                <ellipse cx={BX} cy={bt + bh * 0.4} rx={bw + 30} ry={bh * 0.55} fill="url(#bottleHalo)" filter="url(#haloFilter)" opacity="0.9">
-                  <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" repeatCount="indefinite" />
-                </ellipse>
-                <ellipse cx={BX} cy={ct + ch * 0.5} rx={cw + 10} ry={Math.round(42 * S)} fill="url(#capHalo)" filter="url(#haloFilter)" opacity="0.7">
-                  <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.8s" repeatCount="indefinite" />
-                </ellipse>
-
-                <g filter="url(#bottleGlow)">
-                  {/* ── BODY ── */}
-                  <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" fill="url(#bodyGrad)" />
-                  <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" stroke="url(#strokeGrad)" strokeWidth="2.5" fill="none" />
-                  <line x1={BX - bw} y1={bt + 14} x2={BX - bw + 14} y2={bt} stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
-                  <line x1={BX + bw - 14} y1={bt} x2={BX + bw} y2={bt + 14} stroke="rgba(251,146,60,0.5)" strokeWidth="1" />
-                  <line x1={BX - bw} y1={bb - 14} x2={BX - bw + 14} y2={bb} stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
-                  <line x1={BX + bw - 14} y1={bb} x2={BX + bw} y2={bb - 14} stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
-                  <line x1={BX - Math.round(52 * S)} y1={bt + 6} x2={BX - Math.round(52 * S)} y2={bb - 6} stroke="rgba(255,180,80,0.18)" strokeWidth="1.5" />
-                  <line x1={BX - Math.round(20 * S)} y1={bt + 4} x2={BX - Math.round(20 * S)} y2={bb - 4} stroke="rgba(255,180,80,0.12)" strokeWidth="0.9" />
-                  <line x1={BX + Math.round(20 * S)} y1={bt + 4} x2={BX + Math.round(20 * S)} y2={bb - 4} stroke="rgba(255,180,80,0.08)" strokeWidth="0.7" />
-                  <line x1={BX + Math.round(52 * S)} y1={bt + 6} x2={BX + Math.round(52 * S)} y2={bb - 6} stroke="rgba(255,200,100,0.22)" strokeWidth="1.6" />
-                  <line x1={BX + Math.round(70 * S)} y1={bt + 14} x2={BX + Math.round(70 * S)} y2={bb - 14} stroke="rgba(255,220,140,0.55)" strokeWidth="1.8" />
-                  <line x1={BX - Math.round(60 * S)} y1={bt + Math.round(70 * S)} x2={BX + Math.round(60 * S)} y2={bt + Math.round(70 * S)} stroke="rgba(251,146,60,0.2)" strokeWidth="0.9" />
-                  <line x1={BX - Math.round(60 * S)} y1={bt + Math.round(130 * S)} x2={BX + Math.round(60 * S)} y2={bt + Math.round(130 * S)} stroke="rgba(251,146,60,0.15)" strokeWidth="0.9" />
-                  <rect x={BX - Math.round(50 * S)} y={bt + Math.round(76 * S)} width={Math.round(100 * S)} height={Math.round(48 * S)} rx="1" ry="1" stroke="rgba(251,146,60,0.25)" strokeWidth="0.8" fill="none" />
-                  <line x1={BX - bw} y1={bb + 2} x2={BX + bw} y2={bb + 2} stroke="rgba(255,200,100,0.6)" strokeWidth="3" />
-                  {/* ── SHOULDER ── */}
-                  <path d={`M ${BX - bw} ${bt} L ${BX - Math.round(36 * S)} ${bt - shH} L ${BX + Math.round(36 * S)} ${bt - shH} L ${BX + bw} ${bt}`} stroke="url(#strokeGrad)" strokeWidth="2" fill="url(#bodyGrad)" />
-                  <line x1={BX - Math.round(36 * S)} y1={bt - shH} x2={BX + Math.round(36 * S)} y2={bt - shH} stroke="rgba(255,200,100,0.55)" strokeWidth="1.4" />
-                  {/* ── NECK ── */}
-                  <rect x={BX - nw} y={nt} width={nw * 2} height={nh} rx="2" ry="2" fill="rgba(249,115,22,0.07)" stroke="url(#strokeGrad)" strokeWidth="1.8" />
-                  <line x1={BX - Math.round(12 * S)} y1={nt + 2} x2={BX - Math.round(12 * S)} y2={nt + nh - 2} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
-                  <line x1={BX + Math.round(12 * S)} y1={nt + 2} x2={BX + Math.round(12 * S)} y2={nt + nh - 2} stroke="rgba(255,200,120,0.25)" strokeWidth="0.9" />
-                  <rect x={BX - Math.round(26 * S)} y={nt + nh - 10} width={Math.round(52 * S)} height="12" rx="1" fill="rgba(249,115,22,0.1)" stroke="rgba(255,180,80,0.7)" strokeWidth="1.4" />
-                  {/* ── CAP ── */}
-                  <rect x={BX - cw} y={ct} width={cw * 2} height={ch} rx="4" ry="4" fill="rgba(249,115,22,0.1)" stroke="url(#strokeGrad)" strokeWidth="2.5" />
-                  <line x1={BX - cw + 2} y1={ct + 4} x2={BX + cw - 2} y2={ct + 4} stroke="rgba(255,220,140,0.7)" strokeWidth="1.8" />
-                  <line x1={BX - cw + 2} y1={ct + ch - 4} x2={BX + cw - 2} y2={ct + ch - 4} stroke="rgba(255,180,80,0.5)" strokeWidth="1.2" />
-                  <line x1={BX - cw} y1={ct + 14} x2={BX - cw + 14} y2={ct} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
-                  <line x1={BX + cw - 14} y1={ct} x2={BX + cw} y2={ct + 14} stroke="rgba(251,146,60,0.6)" strokeWidth="1.2" />
-                  <line x1={BX - Math.round(28 * S)} y1={ct + 4} x2={BX - Math.round(28 * S)} y2={ct + ch - 4} stroke="rgba(255,180,80,0.2)" strokeWidth="0.9" />
-                  <line x1={BX + Math.round(28 * S)} y1={ct + 4} x2={BX + Math.round(28 * S)} y2={ct + ch - 4} stroke="rgba(255,200,120,0.3)" strokeWidth="1.1" />
-                  <line x1={BX + cw - 2} y1={ct + 8} x2={BX + cw - 2} y2={ct + ch - 8} stroke="rgba(255,220,140,0.6)" strokeWidth="1.4" />
-                  {/* ── CAP TIP ── */}
-                  <path d={`M ${BX - cw} ${ct} L ${BX - Math.round(42 * S)} ${tipT} L ${BX + Math.round(42 * S)} ${tipT} L ${BX + cw} ${ct}`} stroke="rgba(255,200,100,0.5)" strokeWidth="1.4" fill="rgba(249,115,22,0.06)" />
-                  <line x1={BX - Math.round(42 * S)} y1={tipT} x2={BX + Math.round(42 * S)} y2={tipT} stroke="rgba(255,220,140,0.6)" strokeWidth="1.2" />
-                </g>
-
-                {/* Pulsing neon outline */}
-                <rect x={BX - bw} y={bt} width={bw * 2} height={bh} rx="5" ry="5" stroke="rgba(249,115,22,0.6)" strokeWidth="4" fill="none" filter="url(#neonGlow)">
-                  <animate attributeName="opacity" values="0.25;0.75;0.25" dur="2.8s" repeatCount="indefinite" />
-                </rect>
-                <rect x={BX - cw} y={ct} width={cw * 2} height={ch} rx="4" ry="4" stroke="rgba(255,160,50,0.5)" strokeWidth="3.5" fill="none" filter="url(#neonGlow)">
-                  <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.8s" repeatCount="indefinite" />
-                </rect>
-              </>
-            )
-          })()}
+          {/* Halo glow around cap area */}
+          <ellipse cx={BX} cy={capTop + ch * 0.5} rx={cw + 20} ry={ch * 0.7} fill="url(#capHalo)" filter="url(#haloFilter)" opacity="0.7">
+            <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.8s" repeatCount="indefinite" />
+          </ellipse>
 
         </svg>
       </div>
