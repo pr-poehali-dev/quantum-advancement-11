@@ -28,9 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!getToken()) { setLoading(false); return }
     api.auth.me().then(res => {
       if (res.user) setUser(res.user)
-      else clearToken()
+      else if (res.error) clearToken()
       setLoading(false)
-    }).catch(() => { clearToken(); setLoading(false) })
+    }).catch(() => {
+      // сетевая ошибка — не разлогиниваем, токен может быть валидным
+      setLoading(false)
+    })
   }, [])
 
   const login = async (email: string, password: string) => {
