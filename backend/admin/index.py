@@ -633,16 +633,17 @@ def handler(event: dict, context) -> dict:
                     ) WHERE id IN (SELECT DISTINCT product_id FROM orders WHERE id IN ({placeholders}))""",
                     list(order_ids) + list(order_ids)
                 )
-            # Собираем telegram_id пользователей для уведомлений
+            # Собираем данные для уведомлений ДО commit
             cur.execute(
-                f"""SELECT DISTINCT u.telegram_id, o.id, p.name, p.brand, o.volume_ml
+                f"""SELECT u.telegram_id, o.id, p.name, p.brand, o.volume_ml
                     FROM orders o
                     JOIN users u ON o.user_id = u.id
                     JOIN products p ON o.product_id = p.id
-                    WHERE o.id IN ({placeholders}) AND u.telegram_id IS NOT NULL""",
+                    WHERE o.id IN ({placeholders}) AND u.telegram_id IS NOT NULL AND u.telegram_id != ''""",
                 list(order_ids)
             )
             notify_rows = cur.fetchall()
+            print(f"[notify] status={new_status} order_ids={order_ids} notify_rows={notify_rows}")
             conn.commit()
             conn.close()
             # Отправляем уведомления через бот
@@ -656,22 +657,23 @@ def handler(event: dict, context) -> dict:
             }
             status_label = STATUS_LABELS.get(new_status, new_status)
             bot_url = os.environ.get('TELEGRAM_BOT_URL', '')
-            if bot_url and notify_rows:
-                for row in notify_rows:
-                    tg_id, order_id, product_name, brand, volume_ml = row
-                    text = (
-                        f"<b>Обновление заказа #{order_id}</b>\n\n"
-                        f"<b>{brand} — {product_name}</b>, {volume_ml} мл\n\n"
-                        f"Новый статус: {status_label}"
+            print(f"[notify] bot_url={bool(bot_url)} rows_count={len(notify_rows)}")
+            for row in notify_rows:
+                tg_id, order_id, product_name, brand, volume_ml = row
+                text = (
+                    f"<b>Обновление заказа #{order_id}</b>\n\n"
+                    f"<b>{brand} — {product_name}</b>, {volume_ml} мл\n\n"
+                    f"Новый статус: {status_label}"
+                )
+                try:
+                    resp = requests.post(
+                        f"{bot_url}?action=send",
+                        json={"chat_id": tg_id, "text": text, "parse_mode": "HTML"},
+                        timeout=5
                     )
-                    try:
-                        requests.post(
-                            f"{bot_url}?action=send",
-                            json={"chat_id": tg_id, "text": text, "parse_mode": "HTML"},
-                            timeout=5
-                        )
-                    except Exception as e:
-                        print(f"Telegram notify error: {e}")
+                    print(f"[notify] sent to {tg_id}, status={resp.status_code}, body={resp.text[:200]}")
+                except Exception as e:
+                    print(f"[notify] error sending to {tg_id}: {e}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': updated})}
 
         if action == 'update_product':
