@@ -87,6 +87,7 @@ export default function Admin() {
   const [prodFilterName, setProdFilterName] = useState('')
   const [prodFilterBrand, setProdFilterBrand] = useState('')
   const [prodFilterMinBooked, setProdFilterMinBooked] = useState('')
+  const [prodFilterCategory, setProdFilterCategory] = useState('')
   const [prodSort, setProdSort] = useState('created_at')
   const [prodSortDir, setProdSortDir] = useState<'asc' | 'desc'>('desc')
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null)
@@ -391,6 +392,7 @@ export default function Admin() {
             prodFilterName={prodFilterName} setProdFilterName={setProdFilterName}
             prodFilterBrand={prodFilterBrand} setProdFilterBrand={setProdFilterBrand}
             prodFilterMinBooked={prodFilterMinBooked} setProdFilterMinBooked={setProdFilterMinBooked}
+            prodFilterCategory={prodFilterCategory} setProdFilterCategory={setProdFilterCategory}
             prodSort={prodSort}
             prodSortDir={prodSortDir}
             editingCell={editingCell} setEditingCell={setEditingCell}

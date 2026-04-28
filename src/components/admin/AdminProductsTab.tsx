@@ -17,6 +17,8 @@ interface AdminProductsTabProps {
   setProdFilterBrand: (v: string) => void
   prodFilterMinBooked: string
   setProdFilterMinBooked: (v: string) => void
+  prodFilterCategory: string
+  setProdFilterCategory: (v: string) => void
   prodSort: string
   prodSortDir: 'asc' | 'desc'
   editingCell: { id: number; field: string } | null
@@ -38,6 +40,7 @@ export default function AdminProductsTab({
   prodFilterName, setProdFilterName,
   prodFilterBrand, setProdFilterBrand,
   prodFilterMinBooked, setProdFilterMinBooked,
+  prodFilterCategory, setProdFilterCategory,
   prodSort, prodSortDir,
   editingCell, setEditingCell, editValue, setEditValue, savingCell,
   importing, setImporting, setProducts,
@@ -98,10 +101,19 @@ export default function AdminProductsTab({
             placeholder="0" type="number"
             className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
         </div>
+        <div className="w-[130px]">
+          <label className="text-white/40 text-xs mb-1 block">Раздел</label>
+          <select value={prodFilterCategory} onChange={e => setProdFilterCategory(e.target.value)}
+            className="w-full bg-white/5 border border-white/15 text-white h-9 text-sm rounded-md px-2 outline-none">
+            <option value="">Все</option>
+            <option value="decant">Отливанты</option>
+            <option value="bottle">Флаконы</option>
+          </select>
+        </div>
         <Button onClick={onLoadProducts} disabled={productsLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
           {productsLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
         </Button>
-        <Button variant="ghost" onClick={() => { setProdFilterName(''); setProdFilterBrand(''); setProdFilterMinBooked('') }}
+        <Button variant="ghost" onClick={() => { setProdFilterName(''); setProdFilterBrand(''); setProdFilterMinBooked(''); setProdFilterCategory('') }}
           className="text-white/30 hover:text-white h-9 text-sm">
           Сбросить
         </Button>
@@ -160,6 +172,7 @@ export default function AdminProductsTab({
             )}
             {!productsLoading && products
               .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
+              .filter(p => !prodFilterCategory || p.category === prodFilterCategory)
               .map(p => {
                 const free = p.bottle_ml - p.booked_ml
                 const fillPct = p.bottle_ml ? Math.round(p.booked_ml / p.bottle_ml * 100) : 0
