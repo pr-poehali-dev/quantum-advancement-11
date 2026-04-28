@@ -58,6 +58,25 @@ export default function ProductPage() {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Product & { concentration: string; category: string }>>({})
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.error('Файл слишком большой (макс. 5 МБ)'); return }
+    setUploadingImage(true)
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      const b64 = ev.target?.result as string
+      const res = await api.upload.image(b64, file.name)
+      setUploadingImage(false)
+      if (res.error) { toast.error(res.error); return }
+      setEditForm(f => ({ ...f, image_url: res.url }))
+      toast.success('Фото загружено')
+    }
+    reader.readAsDataURL(file)
+  }
 
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator'
 
@@ -155,16 +174,29 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
 
           {/* Изображение */}
-          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-orange-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center relative">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-orange-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center relative group">
+            {(editing ? editForm.image_url : product.image_url) ? (
+              <img src={(editing ? editForm.image_url : product.image_url) || ''} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <div className="text-8xl">{isBottle ? '🫙' : '🌸'}</div>
             )}
-            {isBottle && (
+            {isBottle && !editing && (
               <div className="absolute top-4 left-4 bg-purple-500/80 text-white text-xs font-semibold px-3 py-1 rounded-full">
                 Полноразмерный флакон
               </div>
+            )}
+            {isAdmin && editing && (
+              <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                {uploadingImage ? (
+                  <Icon name="Loader2" size={32} className="animate-spin text-white" />
+                ) : (
+                  <>
+                    <Icon name="Camera" size={32} className="text-white mb-2" />
+                    <span className="text-white text-sm font-medium">Сменить фото</span>
+                  </>
+                )}
+              </label>
             )}
           </div>
 
@@ -238,9 +270,18 @@ export default function ProductPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-white/40 text-xs mb-1 block">URL изображения</label>
-                  <Input value={editForm.image_url || ''} onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))}
-                    className="bg-white/10 border-white/20 text-white" placeholder="https://..." />
+                  <label className="text-white/40 text-xs mb-1 block">Изображение</label>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 px-3 h-10 rounded-md bg-white/10 border border-white/20 text-white/60 hover:text-white text-sm cursor-pointer transition-colors shrink-0">
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                      {uploadingImage
+                        ? <Icon name="Loader2" size={14} className="animate-spin" />
+                        : <Icon name="Upload" size={14} />}
+                      Загрузить
+                    </label>
+                    <Input value={editForm.image_url || ''} onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))}
+                      className="bg-white/10 border-white/20 text-white text-xs" placeholder="или вставьте URL..." />
+                  </div>
                 </div>
               </div>
             ) : (

@@ -3,6 +3,7 @@ const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a13
 const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
 const ADMIN_URL = 'https://functions.poehali.dev/029f6170-ce3b-4284-acff-07d6c3c33519'
 const MESSAGES_URL = 'https://functions.poehali.dev/1f46aa84-5bd4-48b5-b35f-5d08262ca926'
+const UPLOAD_URL = 'https://functions.poehali.dev/36f88e84-c34f-400b-8284-08df325608a6'
 
 export const getToken = () => localStorage.getItem('auth_token') || ''
 export const setToken = (t: string) => localStorage.setItem('auth_token', t)
@@ -174,6 +175,11 @@ export const api = {
       post(`${CATALOG_URL}/`, { action: 'delete_comment', comment_id }),
     setTopicProducts: (topic_id: number, product_ids: number[]) =>
       post(`${CATALOG_URL}/`, { action: 'set_topic_products', topic_id, product_ids }),
+  },
+
+  upload: {
+    image: (image_b64: string, filename: string) =>
+      post(`${UPLOAD_URL}/`, { image_b64, filename }),
   },
 
   messages: {
