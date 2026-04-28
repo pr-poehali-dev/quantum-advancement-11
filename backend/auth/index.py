@@ -88,12 +88,12 @@ def handler(event: dict, context) -> dict:
                     "INSERT INTO users (nickname, email, phone, password_hash) VALUES (%s, %s, %s, %s) RETURNING id, role",
                     (nickname, email, phone, hash_password(password))
                 )
-            except psycopg2.errors.UniqueViolation:
+            except Exception as e:
                 conn.close()
-                return {'statusCode': 409, 'headers': CORS, 'body': json.dumps({'error': 'Ник, email или телефон уже заняты'})}
-            except psycopg2.IntegrityError:
-                conn.close()
-                return {'statusCode': 409, 'headers': CORS, 'body': json.dumps({'error': 'Ник, email или телефон уже заняты'})}
+                err_str = str(e).lower()
+                if 'unique' in err_str or 'duplicate' in err_str or 'already exists' in err_str:
+                    return {'statusCode': 409, 'headers': CORS, 'body': json.dumps({'error': 'Ник, email или телефон уже заняты'})}
+                return {'statusCode': 500, 'headers': CORS, 'body': json.dumps({'error': f'Ошибка регистрации: {str(e)[:100]}'})}
             user_id, role = cur.fetchone()
             customer_code = 'AR-' + str(user_id).zfill(5)
             cur.execute("UPDATE users SET customer_code = %s WHERE id = %s", (customer_code, user_id))
