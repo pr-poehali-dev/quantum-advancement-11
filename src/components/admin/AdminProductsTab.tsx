@@ -68,11 +68,20 @@ export default function AdminProductsTab({
         image_url: r['image_url'] || r['фото'] || r['Фото'] || null,
         category: r['category'] || r['категория'] || r['Категория'] || r['раздел'] || r['Раздел'] || undefined,
       }))
-      const res = await api.admin.importProducts(items)
+      // Отправляем чанками по 50 строк чтобы не превышать лимит тела запроса
+      const CHUNK = 50
+      let totalCreated = 0, totalUpdated = 0, totalSkipped = 0
+      for (let i = 0; i < items.length; i += CHUNK) {
+        const chunk = items.slice(i, i + CHUNK)
+        const res = await api.admin.importProducts(chunk)
+        if (res.error) { setImporting(false); toast.error(res.error); return }
+        totalCreated += res.created || 0
+        totalUpdated += res.updated || 0
+        totalSkipped += res.skipped || 0
+      }
       setImporting(false)
-      if (res.error) { toast.error(res.error); return }
-      let msg = `Создано: ${res.created}, обновлено: ${res.updated}`
-      if (res.skipped > 0) msg += `. Пропущено: ${res.skipped} (нет имени, бренда или цены)`
+      let msg = `Создано: ${totalCreated}, обновлено: ${totalUpdated}`
+      if (totalSkipped > 0) msg += `. Пропущено: ${totalSkipped} (нет имени, бренда или цены)`
       toast.success(msg, { duration: 6000 })
       onLoadProducts()
     } catch {
