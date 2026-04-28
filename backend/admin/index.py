@@ -938,19 +938,17 @@ def handler(event: dict, context) -> dict:
             conn = get_conn()
             cur = conn.cursor()
             uid = int(uid)
-            print(f"[delete_user] deleting uid={uid}")
-            for tbl in ('sessions', 'messages', 'orders', 'debts', 'forum_comments', 'forum_topics'):
-                try:
-                    cur.execute(f"DELETE FROM {tbl} WHERE user_id = %s", (uid,))
-                except Exception as e:
-                    print(f"[delete_user] skip {tbl}: {e}")
-                    conn.rollback()
-                    conn = get_conn()
-                    cur = conn.cursor()
+            cur.execute("DELETE FROM sessions WHERE user_id = %s", (uid,))
+            cur.execute("DELETE FROM refresh_tokens WHERE user_id = %s", (uid,))
+            cur.execute("DELETE FROM telegram_link_codes WHERE user_id = %s", (uid,))
+            cur.execute("DELETE FROM messages WHERE from_user_id = %s OR to_user_id = %s", (uid, uid))
+            cur.execute("DELETE FROM debts WHERE user_id = %s", (uid,))
+            cur.execute("DELETE FROM forum_comments WHERE author_id = %s", (uid,))
+            cur.execute("DELETE FROM forum_topics WHERE author_id = %s", (uid,))
+            cur.execute("DELETE FROM orders WHERE user_id = %s", (uid,))
             cur.execute("DELETE FROM users WHERE id = %s", (uid,))
             conn.commit()
             conn.close()
-            print(f"[delete_user] done uid={uid}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
