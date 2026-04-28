@@ -22,6 +22,7 @@ POST / {action:delete_delivery_option}  — удалить вариант
 import json
 import os
 import psycopg2
+import requests
 
 
 def get_conn():
@@ -656,7 +657,6 @@ def handler(event: dict, context) -> dict:
             status_label = STATUS_LABELS.get(new_status, new_status)
             bot_url = os.environ.get('TELEGRAM_BOT_URL', '')
             if bot_url and notify_rows:
-                import requests as req
                 for row in notify_rows:
                     tg_id, order_id, product_name, brand, volume_ml = row
                     text = (
@@ -665,7 +665,7 @@ def handler(event: dict, context) -> dict:
                         f"Новый статус: {status_label}"
                     )
                     try:
-                        req.post(
+                        requests.post(
                             f"{bot_url}?action=send",
                             json={"chat_id": tg_id, "text": text, "parse_mode": "HTML"},
                             timeout=5
