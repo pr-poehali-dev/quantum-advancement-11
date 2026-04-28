@@ -74,7 +74,7 @@ type MainTab = 'orders' | 'debts' | 'messages'
 type OrderTab = 'new' | 'payment' | 'transit' | 'ready' | 'received'
 
 export default function Cabinet() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [debts, setDebts] = useState<ClientDebt[]>([])
@@ -113,7 +113,7 @@ export default function Cabinet() {
   const [debtCard, setDebtCard] = useState('')
   const [debtSaving, setDebtSaving] = useState(false)
 
-  useEffect(() => { if (!user) navigate('/login') }, [user, navigate])
+  useEffect(() => { if (!authLoading && !user) navigate('/login') }, [user, authLoading, navigate])
 
   const load = useCallback(() => {
     setLoading(true)

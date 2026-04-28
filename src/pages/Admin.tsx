@@ -42,7 +42,7 @@ interface AdminOrder {
 type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string; supplier_id: string }
 
 export default function Admin() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings' | 'broadcast'>('orders')
@@ -96,9 +96,10 @@ export default function Admin() {
   const [importing, setImporting] = useState(false)
 
   useEffect(() => {
+    if (authLoading) return
     if (!user) { navigate('/login'); return }
     if (user.role !== 'admin' && user.role !== 'moderator') { navigate('/'); return }
-  }, [user, navigate])
+  }, [user, authLoading, navigate])
 
   const refreshUnread = useCallback(() => {
     if (!user) return
