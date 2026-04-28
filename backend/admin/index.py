@@ -764,14 +764,33 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите items'})}
             conn = get_conn()
             cur = conn.cursor()
-            created, updated = 0, 0
-            for item in items:
-                supplier_id = str(item.get('supplier_id') or item.get('id_price') or item.get('артикул') or item.get('Артикул') or '').strip() or None
-                name = (item.get('name') or item.get('название') or item.get('Название') or '').strip()
-                brand = (item.get('brand') or item.get('бренд') or item.get('Бренд') or '').strip()
-                price_per_ml = parse_num(item.get('price_per_ml') or item.get('цена_мл') or item.get('цена') or item.get('Цена'))
-                bottle_ml = parse_num(item.get('bottle_ml') or item.get('флакон_мл') or item.get('флакон') or item.get('Флакон'))
-                if not name or not brand or price_per_ml is None or bottle_ml is None:
+            def first_val(item, *keys):
+                for k in keys:
+                    if k in item and item[k] is not None and str(item[k]).strip() != '':
+                        return item[k]
+                return None
+
+            created, updated, skipped = 0, 0, []
+            for i, item in enumerate(items):
+                supplier_id = str(first_val(item, 'supplier_id', 'id_price', 'артикул', 'Артикул') or '').strip() or None
+                name = str(first_val(item, 'name', 'название', 'Название') or '').strip()
+                brand = str(first_val(item, 'brand', 'бренд', 'Бренд') or '').strip()
+                price_per_ml = parse_num(first_val(item, 'price_per_ml', 'цена_мл', 'цена', 'Цена'))
+                bottle_ml = parse_num(first_val(item, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон'))
+                if not name and not brand:
+                    skipped.append({'row': i + 2, 'reason': 'пустая строка'})
+                    continue
+                if not name:
+                    skipped.append({'row': i + 2, 'reason': 'нет названия', 'brand': brand})
+                    continue
+                if not brand:
+                    skipped.append({'row': i + 2, 'reason': 'нет бренда', 'name': name})
+                    continue
+                if price_per_ml is None:
+                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать цену', 'name': name})
+                    continue
+                if bottle_ml is None:
+                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать объём', 'name': name})
                     continue
                 description = (item.get('description') or item.get('описание') or item.get('Описание') or '').strip()
                 image_url = item.get('image_url') or item.get('фото') or item.get('Фото') or None
@@ -807,7 +826,7 @@ def handler(event: dict, context) -> dict:
                 created += 1
             conn.commit()
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated, 'skipped': len(skipped), 'skipped_details': skipped[:20]})}
 
         if action == 'update_user':
             uid = body.get('user_id')

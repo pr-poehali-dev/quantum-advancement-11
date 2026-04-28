@@ -71,7 +71,9 @@ export default function AdminProductsTab({
       const res = await api.admin.importProducts(items)
       setImporting(false)
       if (res.error) { toast.error(res.error); return }
-      toast.success(`Создано: ${res.created}, обновлено: ${res.updated}`)
+      let msg = `Создано: ${res.created}, обновлено: ${res.updated}`
+      if (res.skipped > 0) msg += `. Пропущено: ${res.skipped} (нет имени, бренда или цены)`
+      toast.success(msg, { duration: 6000 })
       onLoadProducts()
     } catch {
       setImporting(false)
