@@ -676,6 +676,36 @@ def handler(event: dict, context) -> dict:
                     print(f"[notify] error sending to {tg_id}: {e}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': updated})}
 
+        if action == 'broadcast':
+            text = (body.get('text') or '').strip()
+            if not text:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Текст не может быть пустым'})}
+            bot_url = os.environ.get('TELEGRAM_BOT_URL', '')
+            if not bot_url:
+                return {'statusCode': 500, 'headers': CORS, 'body': json.dumps({'error': 'Бот не настроен'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL AND telegram_id != ''")
+            tg_ids = [row[0] for row in cur.fetchall()]
+            conn.close()
+            sent, failed = 0, 0
+            for tg_id in tg_ids:
+                try:
+                    resp = requests.post(
+                        f"{bot_url}?action=send",
+                        json={"chat_id": tg_id, "text": text, "parse_mode": "HTML"},
+                        timeout=5
+                    )
+                    if resp.status_code == 200 and 'success' in resp.text:
+                        sent += 1
+                    else:
+                        failed += 1
+                        print(f"[broadcast] failed {tg_id}: {resp.text[:100]}")
+                except Exception as e:
+                    failed += 1
+                    print(f"[broadcast] error {tg_id}: {e}")
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'sent': sent, 'failed': failed, 'total': len(tg_ids)})}
+
         if action == 'update_product':
             product_id = body.get('id')
             if not product_id:

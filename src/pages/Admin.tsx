@@ -45,7 +45,7 @@ export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings' | 'broadcast'>('orders')
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'archive'>('active')
   const [adminUnread, setAdminUnread] = useState(0)
 
@@ -324,6 +324,12 @@ export default function Admin() {
             Форум
           </button>
           <button
+            onClick={() => setTab('broadcast')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'broadcast' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Рассылка
+          </button>
+          <button
             onClick={() => setTab('settings')}
             className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'settings' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
           >
@@ -404,6 +410,8 @@ export default function Admin() {
 
         {tab === 'forum' && <AdminForumTab />}
 
+        {tab === 'broadcast' && <BroadcastTab />}
+
         {tab === 'settings' && <SettingsTab />}
       </div>
     </div>
@@ -446,6 +454,51 @@ function SettingsTab() {
       <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white text-sm">
         {saving ? 'Сохранение...' : 'Сохранить'}
       </Button>
+    </div>
+  )
+}
+
+function BroadcastTab() {
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ sent: number; failed: number; total: number } | null>(null)
+
+  const handleSend = async () => {
+    if (!text.trim()) { toast.error('Введите текст сообщения'); return }
+    if (!confirm(`Отправить сообщение всем пользователям с подключённым Telegram?`)) return
+    setSending(true)
+    setResult(null)
+    const res = await api.admin.broadcast(text)
+    setSending(false)
+    if (res.error) { toast.error(res.error); return }
+    setResult(res)
+    toast.success(`Отправлено: ${res.sent} из ${res.total}`)
+  }
+
+  return (
+    <div className="max-w-lg space-y-4">
+      <div>
+        <div className="text-white/60 text-sm font-medium mb-1">Рассылка через Telegram-бота</div>
+        <div className="text-white/30 text-xs">Сообщение получат все покупатели, подключившие уведомления. Поддерживается HTML: &lt;b&gt;жирный&lt;/b&gt;, &lt;i&gt;курсив&lt;/i&gt;.</div>
+      </div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        rows={6}
+        placeholder={"Например:\n<b>Новый выкуп!</b>\nДобавили свежие позиции в каталог — заходите выбирать 🌸"}
+        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
+      />
+      <div className="flex items-center gap-3">
+        <Button onClick={handleSend} disabled={sending || !text.trim()} className="bg-[#0088cc] hover:bg-[#0077b5] text-white text-sm">
+          {sending ? 'Отправляем...' : 'Отправить всем'}
+        </Button>
+        {result && (
+          <span className="text-white/40 text-xs">
+            Отправлено {result.sent} из {result.total}
+            {result.failed > 0 && `, не доставлено: ${result.failed}`}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
