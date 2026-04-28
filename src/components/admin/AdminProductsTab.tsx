@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
 
-type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string }
+type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string; supplier_id: string }
 
 interface AdminProductsTabProps {
   products: AdminProduct[]
@@ -59,7 +59,7 @@ export default function AdminProductsTab({
       const ws = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws)
       const items = rows.map(r => ({
-        id: r['id'] || r['ID'] || r['Id'] || undefined,
+        supplier_id: r['supplier_id'] || r['id_price'] || r['артикул'] || r['Артикул'] || undefined,
         name: r['name'] || r['название'] || r['Название'] || '',
         brand: r['brand'] || r['бренд'] || r['Бренд'] || '',
         price_per_ml: r['price_per_ml'] || r['цена_мл'] || r['цена'] || r['Цена'] || 0,
@@ -129,7 +129,7 @@ export default function AdminProductsTab({
 
       {/* Подсказка по формату */}
       <div className="mb-3 text-xs text-white/25 px-1">
-        Колонки Excel: <span className="text-white/40">id, name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: description, image_url, <span className="text-white/40">category</span> (значения: <span className="text-white/40">decant</span> — отливант, <span className="text-white/40">bottle</span> — флакон). Если id совпадает — обновляется цена, объём и раздел.
+        Колонки Excel: <span className="text-white/40">name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: <span className="text-white/40">supplier_id</span> (артикул поставщика — по нему обновляется товар), description, image_url, <span className="text-white/40">category</span> (<span className="text-white/40">decant</span> — отливант, <span className="text-white/40">bottle</span> — флакон).
       </div>
 
       {/* Таблица товаров */}
@@ -138,16 +138,17 @@ export default function AdminProductsTab({
           <thead>
             <tr className="border-b border-white/10 bg-white/3">
               {([
-                { key: 'id', label: 'ID', cls: 'text-left w-14' },
+                { key: 'id', label: 'ID', cls: 'text-left w-12' },
+                { key: null, label: 'Артикул', cls: 'text-left w-28' },
                 { key: 'name', label: 'Название', cls: 'text-left' },
                 { key: 'brand', label: 'Бренд', cls: 'text-left w-32' },
-                { key: null, label: 'Конц.', cls: 'text-center w-28' },
-                { key: null, label: 'Категория', cls: 'text-center w-28' },
-                { key: 'price_per_ml', label: '₽/мл', cls: 'text-center w-24' },
-                { key: 'bottle_ml', label: 'Флакон', cls: 'text-center w-24' },
-                { key: 'booked_ml', label: 'Забронир.', cls: 'text-center w-24' },
-                { key: null, label: 'Своб.', cls: 'text-center w-20' },
-                { key: null, label: 'Статус', cls: 'text-center w-20' },
+                { key: null, label: 'Конц.', cls: 'text-center w-24' },
+                { key: null, label: 'Категория', cls: 'text-center w-24' },
+                { key: 'price_per_ml', label: '₽/мл', cls: 'text-center w-20' },
+                { key: 'bottle_ml', label: 'Флакон', cls: 'text-center w-20' },
+                { key: 'booked_ml', label: 'Забронир.', cls: 'text-center w-20' },
+                { key: null, label: 'Своб.', cls: 'text-center w-16' },
+                { key: null, label: 'Статус', cls: 'text-center w-16' },
               ] as { key: string | null; label: string; cls: string }[]).map(col => (
                 <th key={col.label} className={`px-3 py-3 font-medium ${col.cls}`}>
                   {col.key ? (
@@ -163,12 +164,12 @@ export default function AdminProductsTab({
           </thead>
           <tbody>
             {productsLoading && (
-              <tr><td colSpan={10} className="py-12 text-center text-white/30">
+              <tr><td colSpan={11} className="py-12 text-center text-white/30">
                 <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
               </td></tr>
             )}
             {!productsLoading && products.length === 0 && (
-              <tr><td colSpan={10} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
+              <tr><td colSpan={11} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
             )}
             {!productsLoading && products
               .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
@@ -180,22 +181,25 @@ export default function AdminProductsTab({
                 const CAT_LABEL: Record<string, string> = { decant: 'Отливант', bottle: 'Флакон' }
                 return (
                   <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${!p.is_active ? 'opacity-40' : ''}`}>
-                    <td className="px-3 py-2.5 text-white/30 text-xs">
-                      {editingCell?.id === p.id && editingCell?.field === 'id' ? (
+                    <td className="px-3 py-2.5 text-white/25 text-xs">{p.id}</td>
+                    <td className="px-3 py-2.5 text-xs">
+                      {editingCell?.id === p.id && editingCell?.field === 'supplier_id' ? (
                         <input
                           autoFocus
-                          type="number"
+                          type="text"
                           value={editValue}
                           onChange={e => setEditValue(e.target.value)}
-                          onBlur={() => onSaveCell(p.id, 'id')}
-                          onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'id'); if (e.key === 'Escape') setEditingCell(null) }}
-                          className="w-14 bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
+                          onBlur={() => onSaveCell(p.id, 'supplier_id')}
+                          onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'supplier_id'); if (e.key === 'Escape') setEditingCell(null) }}
+                          className="w-24 bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
                         />
                       ) : (
                         <button
-                          onClick={() => onStartEdit(p.id, 'id', String(p.id))}
-                          className="text-white/30 hover:text-orange-300 transition-colors group flex items-center gap-1">
-                          {p.id}
+                          onClick={() => onStartEdit(p.id, 'supplier_id', p.supplier_id || '')}
+                          className="text-white/40 hover:text-orange-300 transition-colors group flex items-center gap-1">
+                          <span className={p.supplier_id ? 'text-white/60' : 'text-white/20 italic'}>
+                            {p.supplier_id || '—'}
+                          </span>
                           <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-orange-400" />
                         </button>
                       )}

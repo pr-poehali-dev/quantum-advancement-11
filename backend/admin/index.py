@@ -292,7 +292,8 @@ def handler(event: dict, context) -> dict:
             query = """
                 SELECT p.id, p.name, p.brand, p.price_per_ml, p.bottle_ml, p.booked_ml,
                        p.is_active, p.image_url, p.description, p.concentration, p.category,
-                       COALESCE(SUM(CASE WHEN o.status NOT IN ('declined') AND o.is_archived = FALSE THEN o.volume_ml ELSE 0 END), 0) as active_booked
+                       COALESCE(SUM(CASE WHEN o.status NOT IN ('declined') AND o.is_archived = FALSE THEN o.volume_ml ELSE 0 END), 0) as active_booked,
+                       p.supplier_id
                 FROM products p
                 LEFT JOIN orders o ON o.product_id = p.id
                 WHERE 1=1
@@ -315,7 +316,7 @@ def handler(event: dict, context) -> dict:
                 'price_per_ml': float(r[3]), 'bottle_ml': r[4], 'booked_ml': r[5],
                 'is_active': r[6], 'image_url': r[7], 'description': r[8],
                 'concentration': r[9] or 'parfum_water', 'category': r[10] or 'decant',
-                'active_booked': int(r[11]),
+                'active_booked': int(r[11]), 'supplier_id': r[12] or '',
             } for r in rows]
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': products, 'count': len(products)})}
 
@@ -723,14 +724,9 @@ def handler(event: dict, context) -> dict:
             conn = get_conn()
             cur = conn.cursor()
             fields, values = [], []
-            if 'new_id' in body:
-                new_id = int(body['new_id'])
-                cur.execute("SELECT id FROM products WHERE id = %s", (new_id,))
-                if cur.fetchone():
-                    conn.close()
-                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': f'Товар с ID {new_id} уже существует'})}
-                fields.append("id = %s")
-                values.append(new_id)
+            if 'supplier_id' in body:
+                fields.append("supplier_id = %s")
+                values.append(str(body['supplier_id']).strip() if body['supplier_id'] else None)
             for field in ('name', 'brand', 'description', 'image_url'):
                 if field in body:
                     fields.append(f"{field} = %s")
@@ -770,44 +766,43 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor()
             created, updated = 0, 0
             for item in items:
-                pid = item.get('id')
-                name = (item.get('name') or '').strip()
-                brand = (item.get('brand') or '').strip()
-                price_per_ml = parse_num(item.get('price_per_ml'))
-                bottle_ml = parse_num(item.get('bottle_ml'))
+                supplier_id = str(item.get('supplier_id') or item.get('id_price') or item.get('артикул') or item.get('Артикул') or '').strip() or None
+                name = (item.get('name') or item.get('название') or item.get('Название') or '').strip()
+                brand = (item.get('brand') or item.get('бренд') or item.get('Бренд') or '').strip()
+                price_per_ml = parse_num(item.get('price_per_ml') or item.get('цена_мл') or item.get('цена') or item.get('Цена'))
+                bottle_ml = parse_num(item.get('bottle_ml') or item.get('флакон_мл') or item.get('флакон') or item.get('Флакон'))
                 if not name or not brand or price_per_ml is None or bottle_ml is None:
                     continue
-                description = (item.get('description') or '').strip()
-                image_url = item.get('image_url') or None
+                description = (item.get('description') or item.get('описание') or item.get('Описание') or '').strip()
+                image_url = item.get('image_url') or item.get('фото') or item.get('Фото') or None
                 concentration = str(item.get('concentration') or 'parfum_water').strip()
                 if concentration not in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
                     concentration = 'parfum_water'
-                category_raw = str(item.get('category') or '').strip().lower()
+                category_raw = str(item.get('category') or item.get('категория') or item.get('Категория') or item.get('раздел') or item.get('Раздел') or '').strip().lower()
                 if category_raw in ('bottle', 'флакон'):
                     category = 'bottle'
                 else:
                     category = 'decant'
-                if pid:
-                    pid_int = parse_num(pid)
-                    if pid_int is not None:
-                        cur.execute("SELECT id FROM products WHERE id = %s", (int(pid_int),))
-                        exists = cur.fetchone()
-                        if exists:
-                            update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
-                            update_values = [float(price_per_ml), int(bottle_ml)]
-                            if item.get('category'):
-                                update_fields.append("category = %s")
-                                update_values.append(category)
-                            update_values.append(int(pid_int))
-                            cur.execute(
-                                f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
-                                update_values
-                            )
-                            updated += 1
-                            continue
+                # Ищем товар по supplier_id, если указан
+                if supplier_id:
+                    cur.execute("SELECT id FROM products WHERE supplier_id = %s", (supplier_id,))
+                    exists = cur.fetchone()
+                    if exists:
+                        update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
+                        update_values = [float(price_per_ml), int(bottle_ml)]
+                        if item.get('category') or item.get('категория') or item.get('раздел'):
+                            update_fields.append("category = %s")
+                            update_values.append(category)
+                        update_values.append(exists[0])
+                        cur.execute(
+                            f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
+                            update_values
+                        )
+                        updated += 1
+                        continue
                 cur.execute(
-                    "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category)
+                    "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category, supplier_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category, supplier_id)
                 )
                 created += 1
             conn.commit()

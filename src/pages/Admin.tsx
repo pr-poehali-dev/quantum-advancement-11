@@ -39,7 +39,7 @@ interface AdminOrder {
   pickup_batch: number | null
 }
 
-type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string }
+type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string; supplier_id: string }
 
 export default function Admin() {
   const { user } = useAuth()
@@ -230,17 +230,19 @@ export default function Admin() {
 
   const saveCell = async (id: number, field: string) => {
     setSavingCell(true)
-    const val = field === 'price_per_ml' ? parseFloat(editValue) : parseInt(editValue)
-    if (isNaN(val) || val < 0) { toast.error('Некорректное значение'); setSavingCell(false); return }
-    const payload = field === 'id' ? { id, new_id: val } : { id, [field]: val }
-    const res = await api.admin.updateProduct(payload)
+    const STRING_FIELDS = ['supplier_id', 'name', 'brand', 'description', 'image_url', 'concentration', 'category']
+    let val: string | number
+    if (STRING_FIELDS.includes(field)) {
+      val = editValue.trim()
+    } else {
+      const num = field === 'price_per_ml' ? parseFloat(editValue) : parseInt(editValue)
+      if (isNaN(num) || num < 0) { toast.error('Некорректное значение'); setSavingCell(false); return }
+      val = num
+    }
+    const res = await api.admin.updateProduct({ id, [field]: val })
     setSavingCell(false)
     if (res.error) { toast.error(res.error); return }
-    if (field === 'id') {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, id: val } : p))
-    } else {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
-    }
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
     setEditingCell(null)
   }
 
