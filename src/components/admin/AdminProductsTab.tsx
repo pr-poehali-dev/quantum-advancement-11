@@ -184,15 +184,22 @@ export default function AdminProductsTab({
                     <td className="px-3 py-2.5 text-white/25 text-xs">{p.id}</td>
                     <td className="px-3 py-2.5 text-xs">
                       {editingCell?.id === p.id && editingCell?.field === 'supplier_id' ? (
-                        <input
-                          autoFocus
-                          type="text"
-                          value={editValue}
-                          onChange={e => setEditValue(e.target.value)}
-                          onBlur={() => onSaveCell(p.id, 'supplier_id')}
-                          onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'supplier_id'); if (e.key === 'Escape') setEditingCell(null) }}
-                          className="w-24 bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
-                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'supplier_id'); if (e.key === 'Escape') setEditingCell(null) }}
+                            className="w-20 bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
+                          />
+                          <button onClick={() => onSaveCell(p.id, 'supplier_id')} disabled={savingCell} className="text-orange-400 hover:text-orange-300">
+                            <Icon name="Check" size={13} />
+                          </button>
+                          <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white">
+                            <Icon name="X" size={13} />
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => onStartEdit(p.id, 'supplier_id', p.supplier_id || '')}
