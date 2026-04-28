@@ -140,10 +140,52 @@ def handle_web_auth(chat_id: int, user: dict) -> None:
     )
 
 
-def handle_start(chat_id: int) -> None:
-    """Обработка команды /start без параметров."""
+def handle_link_code(chat_id: int, telegram_user: dict, code: str) -> None:
+    """Привязка Telegram-аккаунта к аккаунту сайта по коду."""
+    schema = get_schema()
+    telegram_id = str(telegram_user.get("id", ""))
     bot = get_bot()
-    bot.send_message(chat_id, "Привет! Используйте кнопку «Войти через Telegram» на сайте.")
+
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT user_id FROM {schema}telegram_link_codes WHERE code = %s AND expires_at > NOW()",
+            (code.upper(),)
+        )
+        row = cursor.fetchone()
+        if not row:
+            bot.send_message(chat_id, "❌ Код неверный или истёк. Сгенерируйте новый в личном кабинете.")
+            return
+        user_id = row[0]
+        cursor.execute(
+            f"UPDATE {schema}users SET telegram_id = %s WHERE id = %s",
+            (telegram_id, user_id)
+        )
+        cursor.execute(
+            f"UPDATE {schema}telegram_link_codes SET expires_at = NOW() WHERE user_id = %s",
+            (user_id,)
+        )
+        conn.commit()
+        name = telegram_user.get("first_name") or telegram_user.get("username") or "друг"
+        bot.send_message(
+            chat_id,
+            f"✅ Отлично, {name}! Telegram подключён.\n\nТеперь я буду присылать тебе уведомления об изменении статуса заказов."
+        )
+    finally:
+        conn.close()
+
+
+def handle_start(chat_id: int, telegram_user: dict, param: str = "") -> None:
+    """Обработка команды /start."""
+    if param:
+        handle_link_code(chat_id, telegram_user, param)
+        return
+    bot = get_bot()
+    bot.send_message(
+        chat_id,
+        "Привет! 👋\n\nЯ бот Распивошной. Чтобы получать уведомления о заказах — зайди в личный кабинет на сайте и нажми «Подключить Telegram»."
+    )
 
 
 def process_webhook(body: dict) -> dict:
@@ -163,10 +205,8 @@ def process_webhook(body: dict) -> dict:
     try:
         if text.startswith("/start"):
             parts = text.split(" ", 1)
-            if len(parts) > 1 and parts[1] == "web_auth":
-                handle_web_auth(chat_id, user)
-            else:
-                handle_start(chat_id)
+            param = parts[1].strip() if len(parts) > 1 else ""
+            handle_start(chat_id, user, param)
     except telebot.apihelper.ApiTelegramException as e:
         print(f"Telegram API error: {e}")
     except Exception as e:

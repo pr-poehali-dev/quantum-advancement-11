@@ -632,8 +632,46 @@ def handler(event: dict, context) -> dict:
                     ) WHERE id IN (SELECT DISTINCT product_id FROM orders WHERE id IN ({placeholders}))""",
                     list(order_ids) + list(order_ids)
                 )
+            # Собираем telegram_id пользователей для уведомлений
+            cur.execute(
+                f"""SELECT DISTINCT u.telegram_id, o.id, p.name, p.brand, o.volume_ml
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    JOIN products p ON o.product_id = p.id
+                    WHERE o.id IN ({placeholders}) AND u.telegram_id IS NOT NULL""",
+                list(order_ids)
+            )
+            notify_rows = cur.fetchall()
             conn.commit()
             conn.close()
+            # Отправляем уведомления через бот
+            STATUS_LABELS = {
+                'accepted': '✅ Принят',
+                'fixed': '📋 Зафиксирован',
+                'awaiting_payment': '💳 Ожидает оплаты',
+                'waiting': '⏳ В ожидании',
+                'delivery': '🚚 Готов к выдаче',
+                'declined': '❌ Отклонён',
+            }
+            status_label = STATUS_LABELS.get(new_status, new_status)
+            bot_url = os.environ.get('TELEGRAM_BOT_URL', '')
+            if bot_url and notify_rows:
+                import requests as req
+                for row in notify_rows:
+                    tg_id, order_id, product_name, brand, volume_ml = row
+                    text = (
+                        f"<b>Обновление заказа #{order_id}</b>\n\n"
+                        f"<b>{brand} — {product_name}</b>, {volume_ml} мл\n\n"
+                        f"Новый статус: {status_label}"
+                    )
+                    try:
+                        req.post(
+                            f"{bot_url}?action=send",
+                            json={"chat_id": tg_id, "text": text, "parse_mode": "HTML"},
+                            timeout=5
+                        )
+                    except Exception as e:
+                        print(f"Telegram notify error: {e}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'updated': updated})}
 
         if action == 'update_product':

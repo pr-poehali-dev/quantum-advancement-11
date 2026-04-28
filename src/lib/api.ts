@@ -29,6 +29,12 @@ export const api = {
       post(`${AUTH_URL}/`, { action: 'logout' }),
     me: () =>
       get(`${AUTH_URL}/?action=me`),
+    generateLinkCode: () =>
+      post(`${AUTH_URL}/`, { action: 'generate_link_code' }),
+    telegramStatus: () =>
+      post(`${AUTH_URL}/`, { action: 'telegram_status' }),
+    unlinkTelegram: () =>
+      post(`${AUTH_URL}/`, { action: 'unlink_telegram' }),
   },
 
   catalog: {

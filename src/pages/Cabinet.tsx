@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
@@ -83,6 +83,10 @@ export default function Cabinet() {
   const [mainTab, setMainTab] = useState<MainTab>('orders')
   const [orderTab, setOrderTab] = useState<OrderTab>('new')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [tgLinked, setTgLinked] = useState<boolean | null>(null)
+  const [tgCode, setTgCode] = useState('')
+  const [tgCodeLoading, setTgCodeLoading] = useState(false)
+  const tgCodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // оплата
   const [paySelected, setPaySelected] = useState<Set<number>>(new Set())
@@ -128,6 +132,30 @@ export default function Cabinet() {
   }, [])
 
   useEffect(() => { if (user) load() }, [user, load])
+
+  useEffect(() => {
+    if (!user) return
+    api.auth.telegramStatus().then(r => { if (!r.error) setTgLinked(r.linked) })
+  }, [user])
+
+  const handleGenerateTgCode = async () => {
+    setTgCodeLoading(true)
+    const r = await api.auth.generateLinkCode()
+    setTgCodeLoading(false)
+    if (r.code) {
+      setTgCode(r.code)
+      if (tgCodeTimer.current) clearTimeout(tgCodeTimer.current)
+      tgCodeTimer.current = setTimeout(() => setTgCode(''), 10 * 60 * 1000)
+    }
+  }
+
+  const handleUnlinkTg = async () => {
+    if (!confirm('Отключить Telegram-уведомления?')) return
+    await api.auth.unlinkTelegram()
+    setTgLinked(false)
+    setTgCode('')
+    toast.success('Telegram отключён')
+  }
 
   useEffect(() => {
     if (!user) return
@@ -254,6 +282,63 @@ export default function Cabinet() {
           {user.customer_code && (
             <CustomerIdCard nickname={user.nickname} customerCode={user.customer_code} />
           )}
+        </div>
+
+        {/* Telegram-уведомления */}
+        <div className="mb-6 bg-white/5 border border-white/10 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <svg className="w-5 h-5 text-[#0088cc] shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.287 5.906q-1.168.486-4.666 2.01-.567.225-.595.442c-.03.243.275.339.69.47l.175.055c.408.133.958.288 1.243.294q.39.01.868-.32 3.269-2.206 3.374-2.23c.05-.012.12-.026.166.016s.042.12.037.141c-.03.129-1.227 1.241-1.846 1.817-.193.18-.33.307-.358.336a8 8 0 0 1-.188.186c-.38.366-.664.64.015 1.088.327.216.589.393.85.571.284.194.568.387.936.629q.14.092.27.187c.331.236.63.448.997.414.214-.02.435-.22.547-.82.265-1.417.786-4.486.906-5.751a1.4 1.4 0 0 0-.013-.315.34.34 0 0 0-.114-.217.53.53 0 0 0-.31-.093c-.3.005-.763.166-2.984 1.09" />
+            </svg>
+            <span className="font-medium text-sm">Telegram-уведомления</span>
+            {tgLinked === true && (
+              <span className="ml-auto text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full">Подключён</span>
+            )}
+            {tgLinked === false && (
+              <span className="ml-auto text-xs bg-white/10 text-white/40 px-2 py-0.5 rounded-full">Не подключён</span>
+            )}
+          </div>
+
+          {tgLinked === true ? (
+            <div className="space-y-2">
+              <p className="text-white/50 text-sm">Бот будет присылать уведомления о статусах заказов.</p>
+              <button onClick={handleUnlinkTg} className="text-xs text-red-400/70 hover:text-red-400 transition-colors underline">
+                Отключить
+              </button>
+            </div>
+          ) : tgLinked === false ? (
+            <div className="space-y-3">
+              <p className="text-white/50 text-sm">Подключи бота, чтобы получать уведомления о статусах заказов.</p>
+              {!tgCode ? (
+                <Button
+                  size="sm"
+                  onClick={handleGenerateTgCode}
+                  disabled={tgCodeLoading}
+                  className="bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs"
+                >
+                  {tgCodeLoading ? 'Генерируем...' : 'Подключить Telegram'}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-white/60 text-sm">Открой бота и отправь ему этот код:</p>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-black border border-white/20 rounded-xl px-5 py-3 font-mono text-2xl font-bold tracking-[0.3em] text-orange-400 select-all">
+                      {tgCode}
+                    </div>
+                    <a
+                      href={`https://t.me/raspivoshnaya_bot?start=${tgCode}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                    >
+                      Открыть бота
+                    </a>
+                  </div>
+                  <p className="text-white/30 text-xs">Код действителен 10 минут. После привязки обнови страницу.</p>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* Баннеры */}

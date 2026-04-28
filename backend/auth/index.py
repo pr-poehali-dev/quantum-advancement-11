@@ -152,6 +152,43 @@ def handler(event: dict, context) -> dict:
                 'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role, 'customer_code': customer_code}
             })}
 
+        if action == 'generate_link_code':
+            user = get_token_user(headers)
+            if not user:
+                return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Не авторизован'})}
+            code = secrets.token_hex(4).upper()
+            expires = datetime.now() + timedelta(minutes=10)
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("UPDATE telegram_link_codes SET expires_at = NOW() WHERE user_id = %s", (user['id'],))
+            cur.execute("INSERT INTO telegram_link_codes (code, user_id, expires_at) VALUES (%s, %s, %s)", (code, user['id'], expires))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'code': code})}
+
+        if action == 'unlink_telegram':
+            user = get_token_user(headers)
+            if not user:
+                return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Не авторизован'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET telegram_id = NULL WHERE id = %s", (user['id'],))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
+        if action == 'telegram_status':
+            user = get_token_user(headers)
+            if not user:
+                return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Не авторизован'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT telegram_id FROM users WHERE id = %s", (user['id'],))
+            row = cur.fetchone()
+            conn.close()
+            linked = bool(row and row[0])
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'linked': linked})}
+
         if action == 'logout':
             token = (headers.get('X-Auth-Token') or '').strip()
             if token:
