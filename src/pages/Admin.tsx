@@ -231,10 +231,15 @@ export default function Admin() {
     setSavingCell(true)
     const val = field === 'price_per_ml' ? parseFloat(editValue) : parseInt(editValue)
     if (isNaN(val) || val < 0) { toast.error('Некорректное значение'); setSavingCell(false); return }
-    const res = await api.admin.updateProduct({ id, [field]: val })
+    const payload = field === 'id' ? { id, new_id: val } : { id, [field]: val }
+    const res = await api.admin.updateProduct(payload)
     setSavingCell(false)
     if (res.error) { toast.error(res.error); return }
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
+    if (field === 'id') {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, id: val } : p))
+    } else {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
+    }
     setEditingCell(null)
   }
 

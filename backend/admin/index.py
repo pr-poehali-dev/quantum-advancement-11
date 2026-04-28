@@ -713,6 +713,14 @@ def handler(event: dict, context) -> dict:
             conn = get_conn()
             cur = conn.cursor()
             fields, values = [], []
+            if 'new_id' in body:
+                new_id = int(body['new_id'])
+                cur.execute("SELECT id FROM products WHERE id = %s", (new_id,))
+                if cur.fetchone():
+                    conn.close()
+                    return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': f'Товар с ID {new_id} уже существует'})}
+                fields.append("id = %s")
+                values.append(new_id)
             for field in ('name', 'brand', 'description', 'image_url'):
                 if field in body:
                     fields.append(f"{field} = %s")

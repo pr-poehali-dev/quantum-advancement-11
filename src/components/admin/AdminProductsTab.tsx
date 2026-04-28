@@ -166,7 +166,26 @@ export default function AdminProductsTab({
                 const CAT_LABEL: Record<string, string> = { decant: 'Отливант', bottle: 'Флакон' }
                 return (
                   <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${!p.is_active ? 'opacity-40' : ''}`}>
-                    <td className="px-3 py-2.5 text-white/30 text-xs">{p.id}</td>
+                    <td className="px-3 py-2.5 text-white/30 text-xs">
+                      {editingCell?.id === p.id && editingCell?.field === 'id' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={() => onSaveCell(p.id, 'id')}
+                          onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'id'); if (e.key === 'Escape') setEditingCell(null) }}
+                          className="w-14 bg-zinc-800 border border-orange-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => onStartEdit(p.id, 'id', String(p.id))}
+                          className="text-white/30 hover:text-orange-300 transition-colors group flex items-center gap-1">
+                          {p.id}
+                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-orange-400" />
+                        </button>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-white/80 max-w-[180px] truncate">{p.name}</td>
                     <td className="px-3 py-2.5 text-white/50 text-xs">{p.brand}</td>
 
