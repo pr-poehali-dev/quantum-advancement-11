@@ -85,7 +85,7 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={() => window.open(`https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'bot'}?start=web_auth`, '_blank')}
+            onClick={() => window.open(`https://t.me/raspivoshnaya_bot?start=web_auth`, '_blank')}
             className="w-full flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white font-semibold py-3 rounded-xl transition-colors"
           >
             <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
