@@ -29,6 +29,16 @@ def get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
 
+def parse_num(val):
+    if val is None:
+        return None
+    s = str(val).replace('\xa0', '').replace(' ', '').replace(',', '.').replace('₽', '').strip()
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -763,34 +773,38 @@ def handler(event: dict, context) -> dict:
                 pid = item.get('id')
                 name = (item.get('name') or '').strip()
                 brand = (item.get('brand') or '').strip()
-                price_per_ml = item.get('price_per_ml')
-                bottle_ml = item.get('bottle_ml')
+                price_per_ml = parse_num(item.get('price_per_ml'))
+                bottle_ml = parse_num(item.get('bottle_ml'))
                 if not name or not brand or price_per_ml is None or bottle_ml is None:
                     continue
                 description = (item.get('description') or '').strip()
-                image_url = item.get('image_url')
-                concentration = item.get('concentration', 'parfum_water')
+                image_url = item.get('image_url') or None
+                concentration = str(item.get('concentration') or 'parfum_water').strip()
                 if concentration not in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
                     concentration = 'parfum_water'
-                category = item.get('category', 'decant')
-                if category not in ('decant', 'bottle'):
+                category_raw = str(item.get('category') or '').strip().lower()
+                if category_raw in ('bottle', 'флакон'):
+                    category = 'bottle'
+                else:
                     category = 'decant'
                 if pid:
-                    cur.execute("SELECT id FROM products WHERE id = %s", (int(pid),))
-                    exists = cur.fetchone()
-                    if exists:
-                        update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
-                        update_values = [float(price_per_ml), int(bottle_ml)]
-                        if item.get('category'):
-                            update_fields.append("category = %s")
-                            update_values.append(category)
-                        update_values.append(int(pid))
-                        cur.execute(
-                            f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
-                            update_values
-                        )
-                        updated += 1
-                        continue
+                    pid_int = parse_num(pid)
+                    if pid_int is not None:
+                        cur.execute("SELECT id FROM products WHERE id = %s", (int(pid_int),))
+                        exists = cur.fetchone()
+                        if exists:
+                            update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
+                            update_values = [float(price_per_ml), int(bottle_ml)]
+                            if item.get('category'):
+                                update_fields.append("category = %s")
+                                update_values.append(category)
+                            update_values.append(int(pid_int))
+                            cur.execute(
+                                f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
+                                update_values
+                            )
+                            updated += 1
+                            continue
                 cur.execute(
                     "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                     (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category)
