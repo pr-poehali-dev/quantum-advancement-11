@@ -124,6 +124,34 @@ def handler(event: dict, context) -> dict:
                 'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role, 'customer_code': customer_code}
             })}
 
+        if action == 'telegram_login':
+            telegram_id = (body.get('telegram_id') or '').strip()
+            if not telegram_id:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'telegram_id required'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, nickname, email, phone, role, customer_code FROM users WHERE telegram_id = %s",
+                (telegram_id,)
+            )
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'User not found'})}
+            user_id, nickname, email, phone, role, customer_code = row
+            if not customer_code:
+                customer_code = 'AR-' + str(user_id).zfill(5)
+                cur.execute("UPDATE users SET customer_code = %s WHERE id = %s", (customer_code, user_id))
+            token = secrets.token_hex(32)
+            expires = datetime.now() + timedelta(days=30)
+            cur.execute("INSERT INTO sessions (id, user_id, expires_at) VALUES (%s, %s, %s)", (token, user_id, expires))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({
+                'token': token,
+                'user': {'id': user_id, 'nickname': nickname, 'email': email, 'phone': phone, 'role': role, 'customer_code': customer_code}
+            })}
+
         if action == 'logout':
             token = (headers.get('X-Auth-Token') or '').strip()
             if token:
