@@ -717,6 +717,39 @@ def handler(event: dict, context) -> dict:
                     print(f"[broadcast] error {tg_id}: {e}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'sent': sent, 'failed': failed, 'total': len(tg_ids)})}
 
+        if action == 'create_product':
+            name = body.get('name', '').strip()
+            brand = body.get('brand', '').strip()
+            price_per_ml = body.get('price_per_ml')
+            bottle_ml = body.get('bottle_ml')
+            if not name or not brand or not price_per_ml or not bottle_ml:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Заполните: название, бренд, цена за мл, объём флакона'})}
+            concentration = body.get('concentration', 'parfum_water')
+            if concentration not in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
+                concentration = 'parfum_water'
+            category = body.get('category', 'decant')
+            if category not in ('decant', 'bottle'):
+                category = 'decant'
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category, supplier_id, is_active)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                   RETURNING id""",
+                (
+                    name, brand,
+                    body.get('description') or None,
+                    float(price_per_ml), int(bottle_ml),
+                    body.get('image_url') or None,
+                    concentration, category,
+                    str(body.get('supplier_id', '')).strip() or None,
+                )
+            )
+            new_id = cur.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'id': new_id})}
+
         if action == 'update_product':
             product_id = body.get('id')
             if not product_id:

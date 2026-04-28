@@ -1,10 +1,11 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
+import CreateProductModal from './CreateProductModal'
 
 type AdminProduct = { id: number; name: string; brand: string; price_per_ml: number; bottle_ml: number; booked_ml: number; is_active: boolean; image_url: string | null; description: string | null; active_booked: number; concentration: string; category: string; supplier_id: string }
 
@@ -52,6 +53,7 @@ export default function AdminProductsTab({
   selectedProducts, setSelectedProducts, onDeleteProducts, deletingProducts,
 }: AdminProductsTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const toggleSelect = (id: number) => {
     setSelectedProducts(prev => {
@@ -147,7 +149,12 @@ export default function AdminProductsTab({
           className="text-white/30 hover:text-white h-9 text-sm">
           Сбросить
         </Button>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button onClick={() => setShowCreate(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-4">
+            <Icon name="Plus" size={14} className="mr-1.5" />
+            Новый товар
+          </Button>
           <input type="file" accept=".xlsx,.xls,.csv" ref={fileInputRef} onChange={handleImport} className="hidden" />
           <Button onClick={() => fileInputRef.current?.click()} disabled={importing}
             className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 text-sm px-4">
@@ -404,6 +411,15 @@ export default function AdminProductsTab({
           <span>Активных: <span className="text-white/60">{products.filter(p => p.is_active).length}</span></span>
           <span>Заполнено полностью: <span className="text-orange-400">{products.filter(p => p.booked_ml >= p.bottle_ml).length}</span></span>
         </div>
+      )}
+      {showCreate && (
+        <CreateProductModal
+          onClose={() => setShowCreate(false)}
+          onCreated={(p) => {
+            setProducts(prev => [p as never, ...prev])
+            setShowCreate(false)
+          }}
+        />
       )}
     </>
   )

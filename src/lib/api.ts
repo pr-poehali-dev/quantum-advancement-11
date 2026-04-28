@@ -138,6 +138,8 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'import_products', items }),
     deleteProducts: (product_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'delete_products', product_ids }),
+    createProduct: (data: Record<string, unknown>) =>
+      post(`${ADMIN_URL}/`, { action: 'create_product', ...data }),
     users: (q?: string) => get(`${ADMIN_URL}/?action=users${q ? '&q=' + encodeURIComponent(q) : ''}`),
     updateUser: (data: Record<string, unknown>) => post(`${ADMIN_URL}/`, { action: 'update_user', ...data }),
     blockUser: (user_id: number, is_blocked: boolean, reason?: string) =>
