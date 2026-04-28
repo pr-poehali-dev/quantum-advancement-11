@@ -79,8 +79,11 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Пароль минимум 6 символов'})}
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("SELECT id FROM users WHERE nickname = %s OR email = %s OR phone = %s", (nickname, email, phone))
-            if cur.fetchone():
+            print(f"[register] checking nick={nickname!r} email={email!r} phone={phone!r}")
+            cur.execute("SELECT id, nickname, email, phone FROM users WHERE nickname = %s OR email = %s OR phone = %s", (nickname, email, phone))
+            existing = cur.fetchone()
+            print(f"[register] existing={existing}")
+            if existing:
                 conn.close()
                 return {'statusCode': 409, 'headers': CORS, 'body': json.dumps({'error': 'Ник, email или телефон уже заняты'})}
             try:

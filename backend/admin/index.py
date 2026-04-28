@@ -937,10 +937,20 @@ def handler(event: dict, context) -> dict:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id'})}
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("DELETE FROM sessions WHERE user_id = %s", (int(uid),))
-            cur.execute("DELETE FROM users WHERE id = %s", (int(uid),))
+            uid = int(uid)
+            print(f"[delete_user] deleting uid={uid}")
+            for tbl in ('sessions', 'messages', 'orders', 'debts', 'forum_comments', 'forum_topics'):
+                try:
+                    cur.execute(f"DELETE FROM {tbl} WHERE user_id = %s", (uid,))
+                except Exception as e:
+                    print(f"[delete_user] skip {tbl}: {e}")
+                    conn.rollback()
+                    conn = get_conn()
+                    cur = conn.cursor()
+            cur.execute("DELETE FROM users WHERE id = %s", (uid,))
             conn.commit()
             conn.close()
+            print(f"[delete_user] done uid={uid}")
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
