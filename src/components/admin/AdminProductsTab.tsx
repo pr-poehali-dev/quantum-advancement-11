@@ -63,6 +63,7 @@ export default function AdminProductsTab({
         bottle_ml: r['bottle_ml'] || r['флакон_мл'] || r['флакон'] || r['Флакон'] || 0,
         description: r['description'] || r['описание'] || r['Описание'] || '',
         image_url: r['image_url'] || r['фото'] || r['Фото'] || null,
+        category: r['category'] || r['категория'] || r['Категория'] || r['раздел'] || r['Раздел'] || undefined,
       }))
       const res = await api.admin.importProducts(items)
       setImporting(false)
@@ -116,7 +117,7 @@ export default function AdminProductsTab({
 
       {/* Подсказка по формату */}
       <div className="mb-3 text-xs text-white/25 px-1">
-        Колонки Excel: <span className="text-white/40">id, name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: description, image_url. Если id совпадает — обновляется цена и объём флакона.
+        Колонки Excel: <span className="text-white/40">id, name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: description, image_url, <span className="text-white/40">category</span> (значения: <span className="text-white/40">decant</span> — отливант, <span className="text-white/40">bottle</span> — флакон). Если id совпадает — обновляется цена, объём и раздел.
       </div>
 
       {/* Таблица товаров */}

@@ -767,16 +767,6 @@ def handler(event: dict, context) -> dict:
                 bottle_ml = item.get('bottle_ml')
                 if not name or not brand or price_per_ml is None or bottle_ml is None:
                     continue
-                if pid:
-                    cur.execute("SELECT id FROM products WHERE id = %s", (int(pid),))
-                    exists = cur.fetchone()
-                    if exists:
-                        cur.execute(
-                            "UPDATE products SET price_per_ml = %s, bottle_ml = %s WHERE id = %s",
-                            (float(price_per_ml), int(bottle_ml), int(pid))
-                        )
-                        updated += 1
-                        continue
                 description = (item.get('description') or '').strip()
                 image_url = item.get('image_url')
                 concentration = item.get('concentration', 'parfum_water')
@@ -785,6 +775,22 @@ def handler(event: dict, context) -> dict:
                 category = item.get('category', 'decant')
                 if category not in ('decant', 'bottle'):
                     category = 'decant'
+                if pid:
+                    cur.execute("SELECT id FROM products WHERE id = %s", (int(pid),))
+                    exists = cur.fetchone()
+                    if exists:
+                        update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
+                        update_values = [float(price_per_ml), int(bottle_ml)]
+                        if item.get('category'):
+                            update_fields.append("category = %s")
+                            update_values.append(category)
+                        update_values.append(int(pid))
+                        cur.execute(
+                            f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
+                            update_values
+                        )
+                        updated += 1
+                        continue
                 cur.execute(
                     "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                     (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category)
