@@ -148,6 +148,8 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'delete_delivery_option', id }),
     broadcast: (text: string) =>
       post(`${ADMIN_URL}/`, { action: 'broadcast', text }),
+    deleteUser: (user_id: number) =>
+      post(`${ADMIN_URL}/`, { action: 'delete_user', user_id }),
   },
 
   forum: {

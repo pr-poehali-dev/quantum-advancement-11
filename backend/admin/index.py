@@ -931,4 +931,16 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
+        if action == 'delete_user':
+            uid = body.get('user_id')
+            if not uid:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM sessions WHERE user_id = %s", (int(uid),))
+            cur.execute("DELETE FROM users WHERE id = %s", (int(uid),))
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
+
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}

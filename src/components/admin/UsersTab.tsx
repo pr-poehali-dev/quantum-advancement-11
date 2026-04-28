@@ -131,6 +131,20 @@ export default function UsersTab() {
     setBroadcastText('')
   }
 
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const doDelete = async () => {
+    if (!deletingUser) return
+    setDeleting(true)
+    const res = await api.admin.deleteUser(deletingUser.id)
+    setDeleting(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Пользователь @${deletingUser.nickname} удалён`)
+    setDeletingUser(null)
+    load()
+  }
+
   const ROLE_LABEL: Record<string, string> = { buyer: 'Покупатель', moderator: 'Модератор', admin: 'Админ' }
 
   return (
@@ -228,6 +242,10 @@ export default function UsersTab() {
                     <button onClick={() => { setBlockModal({ user: u, unblock: u.is_blocked }); setBlockReason('') }} title={u.is_blocked ? 'Разблокировать' : 'Заблокировать'}
                       className={`p-1.5 rounded-lg transition-colors ${u.is_blocked ? 'text-white/30 hover:text-green-400 hover:bg-green-500/10' : 'text-white/30 hover:text-red-400 hover:bg-red-500/10'}`}>
                       <Icon name={u.is_blocked ? 'UserCheck' : 'UserX'} size={15} />
+                    </button>
+                    <button onClick={() => setDeletingUser(u)} title="Удалить"
+                      className="p-1.5 rounded-lg text-white/30 hover:text-red-500 hover:bg-red-500/10 transition-colors">
+                      <Icon name="Trash2" size={15} />
                     </button>
                   </div>
                 </td>
@@ -363,6 +381,25 @@ export default function UsersTab() {
               <Button onClick={sendReply} disabled={sending || !replyText.trim()} className="bg-orange-500 hover:bg-orange-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
                 <Icon name="Send" size={15} />
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модал удаления */}
+      {deletingUser && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setDeletingUser(null)}>
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-semibold">Удалить пользователя?</h3>
+            <p className="text-white/50 text-sm">
+              Будет удалён аккаунт <span className="text-white">@{deletingUser.nickname}</span>. Это действие нельзя отменить.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={doDelete} disabled={deleting}
+                className="flex-1 bg-red-600 hover:bg-red-500 text-white">
+                {deleting ? 'Удаляем...' : 'Удалить'}
+              </Button>
+              <Button variant="outline" onClick={() => setDeletingUser(null)} className="border-white/20 text-white/50 hover:bg-white/10">Отмена</Button>
             </div>
           </div>
         </div>
