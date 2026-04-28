@@ -33,6 +33,10 @@ interface AdminProductsTabProps {
   onToggleProdSort: (col: string) => void
   onSaveCell: (id: number, field: string) => void
   onStartEdit: (id: number, field: string, value: string) => void
+  selectedProducts: Set<number>
+  setSelectedProducts: React.Dispatch<React.SetStateAction<Set<number>>>
+  onDeleteProducts: (ids: number[]) => Promise<void>
+  deletingProducts: boolean
 }
 
 export default function AdminProductsTab({
@@ -45,8 +49,23 @@ export default function AdminProductsTab({
   editingCell, setEditingCell, editValue, setEditValue, savingCell,
   importing, setImporting, setProducts,
   onLoadProducts, onToggleProdSort, onSaveCell, onStartEdit,
+  selectedProducts, setSelectedProducts, onDeleteProducts, deletingProducts,
 }: AdminProductsTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const toggleSelect = (id: number) => {
+    setSelectedProducts(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = (filtered: AdminProduct[]) => {
+    const ids = filtered.map(p => p.id)
+    const allSelected = ids.every(id => selectedProducts.has(id))
+    setSelectedProducts(allSelected ? new Set() : new Set(ids))
+  }
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -143,11 +162,40 @@ export default function AdminProductsTab({
         Колонки Excel: <span className="text-white/40">name, brand, price_per_ml, bottle_ml</span> — обязательные. Также: <span className="text-white/40">supplier_id</span> (артикул поставщика — по нему обновляется товар), description, image_url, <span className="text-white/40">category</span> (<span className="text-white/40">decant</span> — отливант, <span className="text-white/40">bottle</span> — флакон).
       </div>
 
+      {/* Панель удаления */}
+      {selectedProducts.size > 0 && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30">
+          <span className="text-red-300 text-sm font-medium">Выбрано: {selectedProducts.size}</span>
+          <Button
+            onClick={() => onDeleteProducts(Array.from(selectedProducts))}
+            disabled={deletingProducts}
+            className="bg-red-600 hover:bg-red-500 text-white h-8 text-xs px-4 ml-auto">
+            <Icon name="Trash2" size={13} className="mr-1.5" />
+            {deletingProducts ? 'Удаляю...' : `Удалить (${selectedProducts.size})`}
+          </Button>
+          <button onClick={() => setSelectedProducts(new Set())} className="text-white/30 hover:text-white text-xs">
+            Снять выделение
+          </button>
+        </div>
+      )}
+
       {/* Таблица товаров */}
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="w-full text-sm min-w-[1060px]">
           <thead>
             <tr className="border-b border-white/10 bg-white/3">
+              {(() => {
+                const filtered = products
+                  .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
+                  .filter(p => !prodFilterCategory || p.category === prodFilterCategory)
+                const allSelected = filtered.length > 0 && filtered.every(p => selectedProducts.has(p.id))
+                return (
+                  <th className="px-3 py-3 w-8">
+                    <input type="checkbox" checked={allSelected} onChange={() => toggleAll(filtered)}
+                      className="accent-orange-500 w-4 h-4 cursor-pointer" />
+                  </th>
+                )
+              })()}
               {([
                 { key: 'id', label: 'ID', cls: 'text-left w-12' },
                 { key: null, label: 'Артикул', cls: 'text-left w-28' },
@@ -175,12 +223,12 @@ export default function AdminProductsTab({
           </thead>
           <tbody>
             {productsLoading && (
-              <tr><td colSpan={11} className="py-12 text-center text-white/30">
+              <tr><td colSpan={12} className="py-12 text-center text-white/30">
                 <Icon name="Loader2" size={20} className="animate-spin mx-auto" />
               </td></tr>
             )}
             {!productsLoading && products.length === 0 && (
-              <tr><td colSpan={11} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
+              <tr><td colSpan={12} className="py-12 text-center text-white/20 text-sm">Товары не найдены</td></tr>
             )}
             {!productsLoading && products
               .filter(p => !prodFilterMinBooked || p.booked_ml >= parseInt(prodFilterMinBooked || '0'))
@@ -191,7 +239,11 @@ export default function AdminProductsTab({
                 const CONC_LABEL: Record<string, string> = { parfum_water: 'Парф. вода', parfum: 'Духи', cologne: 'Одеколон', eau_de_toilette: 'Туал. вода' }
                 const CAT_LABEL: Record<string, string> = { decant: 'Отливант', bottle: 'Флакон' }
                 return (
-                  <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${!p.is_active ? 'opacity-40' : ''}`}>
+                  <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${selectedProducts.has(p.id) ? 'bg-red-500/5' : ''} ${!p.is_active ? 'opacity-40' : ''}`}>
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" checked={selectedProducts.has(p.id)} onChange={() => toggleSelect(p.id)}
+                        className="accent-orange-500 w-4 h-4 cursor-pointer" />
+                    </td>
                     <td className="px-3 py-2.5 text-white/25 text-xs">{p.id}</td>
                     <td className="px-3 py-2.5 text-xs">
                       {editingCell?.id === p.id && editingCell?.field === 'supplier_id' ? (

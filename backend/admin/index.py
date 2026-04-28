@@ -758,6 +758,28 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True})}
 
+        if action == 'delete_products':
+            product_ids = body.get('product_ids', [])
+            if not product_ids or not isinstance(product_ids, list):
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите product_ids'})}
+            conn = get_conn()
+            cur = conn.cursor()
+            placeholders = ','.join(['%s'] * len(product_ids))
+            # Запрещаем удалять товары с активными (не архивными) заказами
+            cur.execute(
+                f"SELECT COUNT(*) FROM orders WHERE product_id IN ({placeholders}) AND is_archived = FALSE",
+                list(product_ids)
+            )
+            active_count = cur.fetchone()[0]
+            if active_count > 0:
+                conn.close()
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': f'Нельзя удалить: у {active_count} товаров есть активные заказы. Сначала завершите или архивируйте их.'})}
+            cur.execute(f"DELETE FROM products WHERE id IN ({placeholders})", list(product_ids))
+            deleted = cur.rowcount
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'deleted': deleted})}
+
         if action == 'import_products':
             items = body.get('items', [])
             if not items or not isinstance(items, list):

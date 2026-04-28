@@ -94,6 +94,8 @@ export default function Admin() {
   const [editValue, setEditValue] = useState('')
   const [savingCell, setSavingCell] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set())
+  const [deletingProducts, setDeletingProducts] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
@@ -245,6 +247,17 @@ export default function Admin() {
     if (res.error) { toast.error(res.error); return }
     setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p))
     setEditingCell(null)
+  }
+
+  const deleteProducts = async (ids: number[]) => {
+    if (!window.confirm(`Удалить ${ids.length} товар(ов)? Это действие необратимо.`)) return
+    setDeletingProducts(true)
+    const res = await api.admin.deleteProducts(ids)
+    setDeletingProducts(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Удалено товаров: ${res.deleted}`)
+    setSelectedProducts(new Set())
+    setProducts(prev => prev.filter(p => !ids.includes(p.id)))
   }
 
   if (!user || (user.role !== 'admin' && user.role !== 'moderator')) return null
@@ -407,6 +420,10 @@ export default function Admin() {
             onToggleProdSort={toggleProdSort}
             onSaveCell={saveCell}
             onStartEdit={startEdit}
+            selectedProducts={selectedProducts}
+            setSelectedProducts={setSelectedProducts}
+            onDeleteProducts={deleteProducts}
+            deletingProducts={deletingProducts}
           />
         )}
 
