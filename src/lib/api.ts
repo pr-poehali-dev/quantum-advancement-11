@@ -18,8 +18,8 @@ const authHeaders = () => ({
 })
 
 const safeJson = (r: Response) => r.json().catch(() => ({ error: 'Ошибка сервера' }))
-const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken() } }).then(safeJson)
-const post = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data ?? {}) }).then(safeJson)
+const get = (url: string) => fetch(url, { headers: { 'X-Auth-Token': getToken() } }).then(safeJson).catch(() => ({ error: 'Нет соединения с сервером' }))
+const post = (url: string, data?: unknown) => fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data ?? {}) }).then(safeJson).catch(() => ({ error: 'Нет соединения с сервером' }))
 
 export const api = {
   auth: {
