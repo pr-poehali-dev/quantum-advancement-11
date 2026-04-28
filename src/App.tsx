@@ -17,6 +17,7 @@ import ForumTopic from "./pages/ForumTopic";
 import Offer from "./pages/Offer";
 import Rules from "./pages/Rules";
 import NotFound from "./pages/NotFound";
+import TelegramCallback from "./pages/TelegramCallback";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/forum/:id" element={<ForumTopic />} />
             <Route path="/offer" element={<Offer />} />
             <Route path="/rules" element={<Rules />} />
+            <Route path="/auth/telegram/callback" element={<TelegramCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
