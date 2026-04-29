@@ -879,15 +879,17 @@ def handler(event: dict, context) -> dict:
             existing = {}
             if ids_with_sup:
                 placeholders = ','.join(['%s'] * len(ids_with_sup))
-                cur.execute(f"SELECT supplier_id, id FROM products WHERE supplier_id IN ({placeholders})", ids_with_sup)
-                existing = {row[0]: row[1] for row in cur.fetchall()}
+                cur.execute(f"SELECT supplier_id, id, price_per_ml FROM products WHERE supplier_id IN ({placeholders})", ids_with_sup)
+                existing = {row[0]: (row[1], float(row[2])) for row in cur.fetchall()}
 
             to_insert = []
             for (supplier_id, name, brand, price_per_ml, bottle_ml, description, image_url, concentration, category, has_cat) in valid_rows:
                 if supplier_id and supplier_id in existing:
-                    prod_id = existing[supplier_id]
+                    prod_id, current_price = existing[supplier_id]
+                    # Обновляем цену только если цена в файле НИЖЕ текущей (или равна)
+                    new_price = price_per_ml if price_per_ml <= current_price else current_price
                     update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
-                    update_values = [price_per_ml, bottle_ml]
+                    update_values = [new_price, bottle_ml]
                     if has_cat:
                         update_fields.append("category = %s")
                         update_values.append(category)
