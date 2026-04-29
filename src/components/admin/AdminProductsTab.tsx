@@ -105,7 +105,7 @@ export default function AdminProductsTab({
       const wb = XLSX.read(buf, { type: 'array' })
       const ws = wb.Sheets[wb.SheetNames[0]]
       const items = parseXlsxItems(ws)
-      const CHUNK = 50
+      const CHUNK = 20
       let totalCreated = 0, totalUpdated = 0, totalSkipped = 0
       const allSkippedDetails: Array<{row: number; reason: string; name?: string; raw_price?: string; raw_vol?: string; keys?: string[]}> = []
       for (let i = 0; i < items.length; i += CHUNK) {

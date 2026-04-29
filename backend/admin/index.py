@@ -834,7 +834,9 @@ def handler(event: dict, context) -> dict:
                     s = s[:-2]
                 return s or None
 
+            # Парсим все строки, валидируем
             created, updated, skipped = 0, 0, []
+            valid_rows = []
             for i, item in enumerate(items):
                 supplier_id = norm_id(first_val(item, 'supplier_id', 'id_price', 'артикул', 'Артикул', 'Артикул поставщика', 'арт', 'Арт'))
                 name = str(first_val(item, 'name', 'название', 'Название', 'наименование', 'Наименование') or '').strip()
@@ -864,39 +866,47 @@ def handler(event: dict, context) -> dict:
                 if concentration not in ('parfum_water', 'parfum', 'cologne', 'eau_de_toilette'):
                     concentration = 'parfum_water'
                 category_raw = str(item.get('category') or item.get('категория') or item.get('Категория') or item.get('раздел') or item.get('Раздел') or '').strip().lower()
-                if category_raw in ('bottle', 'флакон'):
-                    category = 'bottle'
+                category = 'bottle' if category_raw in ('bottle', 'флакон') else 'decant'
+                has_cat = bool(item.get('category') or item.get('категория') or item.get('раздел'))
+                valid_rows.append((supplier_id, name, brand, float(price_per_ml), int(bottle_ml), description, image_url, concentration, category, has_cat))
+
+            if dry_run:
+                conn.close()
+                return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': len(valid_rows), 'updated': 0, 'skipped': len(skipped), 'skipped_details': skipped, 'dry_run': True})}
+
+            # Один запрос — получаем все существующие supplier_id батча
+            ids_with_sup = [r[0] for r in valid_rows if r[0]]
+            existing = {}
+            if ids_with_sup:
+                placeholders = ','.join(['%s'] * len(ids_with_sup))
+                cur.execute(f"SELECT supplier_id, id FROM products WHERE supplier_id IN ({placeholders})", ids_with_sup)
+                existing = {row[0]: row[1] for row in cur.fetchall()}
+
+            to_insert = []
+            for (supplier_id, name, brand, price_per_ml, bottle_ml, description, image_url, concentration, category, has_cat) in valid_rows:
+                if supplier_id and supplier_id in existing:
+                    prod_id = existing[supplier_id]
+                    update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
+                    update_values = [price_per_ml, bottle_ml]
+                    if has_cat:
+                        update_fields.append("category = %s")
+                        update_values.append(category)
+                    update_values.append(prod_id)
+                    cur.execute(f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s", update_values)
+                    updated += 1
                 else:
-                    category = 'decant'
-                if dry_run:
-                    created += 1
-                    continue
-                # Ищем товар по supplier_id, если указан
-                if supplier_id:
-                    cur.execute("SELECT id FROM products WHERE supplier_id = %s", (supplier_id,))
-                    exists = cur.fetchone()
-                    if exists:
-                        update_fields = ["price_per_ml = %s", "bottle_ml = %s"]
-                        update_values = [float(price_per_ml), int(bottle_ml)]
-                        if item.get('category') or item.get('категория') or item.get('раздел'):
-                            update_fields.append("category = %s")
-                            update_values.append(category)
-                        update_values.append(exists[0])
-                        cur.execute(
-                            f"UPDATE products SET {', '.join(update_fields)} WHERE id = %s",
-                            update_values
-                        )
-                        updated += 1
-                        continue
-                cur.execute(
+                    to_insert.append((name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category, supplier_id))
+
+            if to_insert:
+                cur.executemany(
                     "INSERT INTO products (name, brand, description, price_per_ml, bottle_ml, image_url, concentration, category, supplier_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category, supplier_id)
+                    to_insert
                 )
-                created += 1
-            if not dry_run:
-                conn.commit()
+                created = len(to_insert)
+
+            conn.commit()
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated, 'skipped': len(skipped), 'skipped_details': skipped, 'dry_run': dry_run})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated, 'skipped': len(skipped), 'skipped_details': skipped, 'dry_run': False})}
 
         if action == 'update_user':
             uid = body.get('user_id')
