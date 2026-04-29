@@ -825,13 +825,21 @@ def handler(event: dict, context) -> dict:
                         return item[k]
                 return None
 
+            def norm_id(val):
+                if val is None:
+                    return None
+                s = str(val).strip()
+                if s.endswith('.0'):
+                    s = s[:-2]
+                return s or None
+
             created, updated, skipped = 0, 0, []
             for i, item in enumerate(items):
-                supplier_id = str(first_val(item, 'supplier_id', 'id_price', 'артикул', 'Артикул') or '').strip() or None
-                name = str(first_val(item, 'name', 'название', 'Название') or '').strip()
-                brand = str(first_val(item, 'brand', 'бренд', 'Бренд') or '').strip()
-                price_per_ml = parse_num(first_val(item, 'price_per_ml', 'цена_мл', 'цена', 'Цена'))
-                bottle_ml = parse_num(first_val(item, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон'))
+                supplier_id = norm_id(first_val(item, 'supplier_id', 'id_price', 'артикул', 'Артикул', 'Артикул поставщика', 'арт', 'Арт'))
+                name = str(first_val(item, 'name', 'название', 'Название', 'наименование', 'Наименование') or '').strip()
+                brand = str(first_val(item, 'brand', 'бренд', 'Бренд', 'производитель', 'Производитель') or '').strip()
+                price_per_ml = parse_num(first_val(item, 'price_per_ml', 'цена_мл', 'цена', 'Цена', 'цена за мл', 'Цена за мл', 'price'))
+                bottle_ml = parse_num(first_val(item, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон', 'объем', 'Объем', 'объём', 'Объём', 'мл', 'МЛ', 'ml'))
                 if not name and not brand:
                     skipped.append({'row': i + 2, 'reason': 'пустая строка'})
                     continue
