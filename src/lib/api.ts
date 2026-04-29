@@ -134,8 +134,8 @@ export const api = {
     },
     updateProduct: (data: Record<string, unknown>) =>
       post(`${ADMIN_URL}/`, { action: 'update_product', ...data }),
-    importProducts: (items: Record<string, unknown>[]) =>
-      post(`${ADMIN_URL}/`, { action: 'import_products', items }),
+    importProducts: (items: Record<string, unknown>[], dry_run = false) =>
+      post(`${ADMIN_URL}/`, { action: 'import_products', items, dry_run }),
     deleteProducts: (product_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'delete_products', product_ids }),
     createProduct: (data: Record<string, unknown>) =>

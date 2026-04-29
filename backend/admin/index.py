@@ -815,6 +815,7 @@ def handler(event: dict, context) -> dict:
 
         if action == 'import_products':
             items = body.get('items', [])
+            dry_run = bool(body.get('dry_run', False))
             if not items or not isinstance(items, list):
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите items'})}
             conn = get_conn()
@@ -850,10 +851,12 @@ def handler(event: dict, context) -> dict:
                     skipped.append({'row': i + 2, 'reason': 'нет бренда', 'name': name})
                     continue
                 if price_per_ml is None:
-                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать цену', 'name': name})
+                    raw_price = first_val(item, 'price_per_ml', 'цена_мл', 'цена', 'Цена', 'цена за мл', 'Цена за мл', 'price')
+                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать цену', 'name': name, 'raw_price': str(raw_price), 'keys': list(item.keys())[:10]})
                     continue
                 if bottle_ml is None:
-                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать объём', 'name': name})
+                    raw_vol = first_val(item, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон', 'объем', 'Объем', 'объём', 'Объём', 'мл', 'МЛ', 'ml')
+                    skipped.append({'row': i + 2, 'reason': 'не удалось прочитать объём', 'name': name, 'raw_vol': str(raw_vol), 'keys': list(item.keys())[:10]})
                     continue
                 description = (item.get('description') or item.get('описание') or item.get('Описание') or '').strip()
                 image_url = item.get('image_url') or item.get('фото') or item.get('Фото') or None
@@ -865,6 +868,9 @@ def handler(event: dict, context) -> dict:
                     category = 'bottle'
                 else:
                     category = 'decant'
+                if dry_run:
+                    created += 1
+                    continue
                 # Ищем товар по supplier_id, если указан
                 if supplier_id:
                     cur.execute("SELECT id FROM products WHERE supplier_id = %s", (supplier_id,))
@@ -887,9 +893,10 @@ def handler(event: dict, context) -> dict:
                     (name, brand, description, float(price_per_ml), int(bottle_ml), image_url, concentration, category, supplier_id)
                 )
                 created += 1
-            conn.commit()
+            if not dry_run:
+                conn.commit()
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated, 'skipped': len(skipped), 'skipped_details': skipped[:20]})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'created': created, 'updated': updated, 'skipped': len(skipped), 'skipped_details': skipped, 'dry_run': dry_run})}
 
         if action == 'update_user':
             uid = body.get('user_id')

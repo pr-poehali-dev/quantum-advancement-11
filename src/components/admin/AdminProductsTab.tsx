@@ -69,46 +69,48 @@ export default function AdminProductsTab({
     setSelectedProducts(allSelected ? new Set() : new Set(ids))
   }
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  const diagInputRef = useRef<HTMLInputElement>(null)
+
+  const parseXlsxItems = (ws: XLSX.WorkSheet) => {
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
+    const toStr = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return undefined
+      const s = String(v).trim()
+      return s === '' ? undefined : s.replace(/\.0$/, '')
+    }
+    const toNum = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return undefined
+      return v
+    }
+    const first = (r: Record<string, unknown>, ...keys: string[]) => {
+      for (const k of keys) { const v = r[k]; if (v !== null && v !== undefined && v !== '') return v }
+      return undefined
+    }
+    return rows.map(r => ({
+      supplier_id: toStr(first(r, 'supplier_id', 'id_price', 'артикул', 'Артикул', 'Артикул поставщика', 'арт', 'Арт')),
+      name: first(r, 'name', 'название', 'Название', 'наименование', 'Наименование') ?? '',
+      brand: first(r, 'brand', 'бренд', 'Бренд', 'производитель', 'Производитель') ?? '',
+      price_per_ml: toNum(first(r, 'price_per_ml', 'цена_мл', 'цена', 'Цена', 'цена за мл', 'Цена за мл', 'price')),
+      bottle_ml: toNum(first(r, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон', 'объем', 'Объем', 'объём', 'Объём', 'мл', 'МЛ', 'ml')),
+      description: first(r, 'description', 'описание', 'Описание') ?? '',
+      image_url: first(r, 'image_url', 'фото', 'Фото') ?? null,
+      category: first(r, 'category', 'категория', 'Категория', 'раздел', 'Раздел'),
+    }))
+  }
+
+  const runImport = async (file: File, dryRun = false) => {
     setImporting(true)
     try {
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
-      const toStr = (v: unknown) => {
-        if (v === null || v === undefined || v === '') return undefined
-        const s = String(v).trim()
-        return s === '' ? undefined : s.replace(/\.0$/, '')
-      }
-      const toNum = (v: unknown) => {
-        if (v === null || v === undefined || v === '') return undefined
-        return v
-      }
-      const first = (r: Record<string, unknown>, ...keys: string[]) => {
-        for (const k of keys) { const v = r[k]; if (v !== null && v !== undefined && v !== '') return v }
-        return undefined
-      }
-      const items = rows.map(r => ({
-        supplier_id: toStr(first(r, 'supplier_id', 'id_price', 'артикул', 'Артикул', 'Артикул поставщика', 'арт', 'Арт')),
-        name: first(r, 'name', 'название', 'Название', 'наименование', 'Наименование') ?? '',
-        brand: first(r, 'brand', 'бренд', 'Бренд', 'производитель', 'Производитель') ?? '',
-        price_per_ml: toNum(first(r, 'price_per_ml', 'цена_мл', 'цена', 'Цена', 'цена за мл', 'Цена за мл', 'price')),
-        bottle_ml: toNum(first(r, 'bottle_ml', 'флакон_мл', 'флакон', 'Флакон', 'объем', 'Объем', 'объём', 'Объём', 'мл', 'МЛ', 'ml')),
-        description: first(r, 'description', 'описание', 'Описание') ?? '',
-        image_url: first(r, 'image_url', 'фото', 'Фото') ?? null,
-        category: first(r, 'category', 'категория', 'Категория', 'раздел', 'Раздел'),
-      }))
-      // Отправляем чанками по 50 строк чтобы не превышать лимит тела запроса
+      const items = parseXlsxItems(ws)
       const CHUNK = 50
       let totalCreated = 0, totalUpdated = 0, totalSkipped = 0
-      const allSkippedDetails: unknown[] = []
+      const allSkippedDetails: Array<{row: number; reason: string; name?: string; raw_price?: string; raw_vol?: string; keys?: string[]}> = []
       for (let i = 0; i < items.length; i += CHUNK) {
         const chunk = items.slice(i, i + CHUNK)
-        const res = await api.admin.importProducts(chunk)
+        const res = await api.admin.importProducts(chunk, dryRun)
         if (res.error) { setImporting(false); toast.error(res.error); return }
         totalCreated += res.created || 0
         totalUpdated += res.updated || 0
@@ -116,21 +118,47 @@ export default function AdminProductsTab({
         if (res.skipped_details) allSkippedDetails.push(...res.skipped_details)
       }
       setImporting(false)
+      if (dryRun) {
+        if (allSkippedDetails.length === 0) {
+          toast.success(`Диагностика: все ${totalCreated} строк пройдут импорт без ошибок`, { duration: 8000 })
+        } else {
+          const details = allSkippedDetails
+            .map(d => `Стр.${d.row} [${d.reason}]${d.name ? ` "${d.name}"` : ''}${d.raw_price !== undefined ? ` цена="${d.raw_price}"` : ''}${d.raw_vol !== undefined ? ` объём="${d.raw_vol}"` : ''}${d.keys ? ` ключи: ${d.keys.join(', ')}` : ''}`)
+            .join('\n')
+          toast.error(`Диагностика: пропустится ${allSkippedDetails.length} строк:\n${details}`, { duration: 30000 })
+          console.warn('Import dry_run skipped:', allSkippedDetails)
+        }
+        return
+      }
       let msg = `Создано: ${totalCreated}, обновлено: ${totalUpdated}`
       if (totalSkipped > 0) msg += `. Пропущено: ${totalSkipped}`
       toast.success(msg, { duration: 6000 })
       if (allSkippedDetails.length > 0) {
-        const details = (allSkippedDetails as Array<{row: number; reason: string; name?: string}>)
-          .slice(0, 10)
-          .map(d => `Строка ${d.row}: ${d.reason}${d.name ? ` (${d.name})` : ''}`)
+        const details = allSkippedDetails
+          .map(d => `Стр.${d.row}: ${d.reason}${d.name ? ` (${d.name})` : ''}${d.raw_price !== undefined ? ` цена="${d.raw_price}"` : ''}${d.raw_vol !== undefined ? ` объём="${d.raw_vol}"` : ''}`)
           .join('\n')
-        toast.error(`Пропущенные строки:\n${details}`, { duration: 15000 })
+        toast.error(`Пропущенные строки:\n${details}`, { duration: 20000 })
+        console.warn('Import skipped details:', allSkippedDetails)
       }
       onLoadProducts()
     } catch {
       setImporting(false)
       toast.error('Ошибка чтения файла')
     }
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    await runImport(file, false)
+  }
+
+  const handleDiag = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    await runImport(file, true)
   }
 
   return (
@@ -178,6 +206,13 @@ export default function AdminProductsTab({
             Новый товар
           </Button>
           <input type="file" accept=".xlsx,.xls,.csv" ref={fileInputRef} onChange={handleImport} className="hidden" />
+          <input type="file" accept=".xlsx,.xls,.csv" ref={diagInputRef} onChange={handleDiag} className="hidden" />
+          <Button onClick={() => diagInputRef.current?.click()} disabled={importing}
+            variant="ghost"
+            className="text-white/30 hover:text-yellow-400 h-9 text-sm px-3 border border-white/10">
+            <Icon name="Stethoscope" size={14} className="mr-1.5" />
+            Диагностика
+          </Button>
           <Button onClick={() => fileInputRef.current?.click()} disabled={importing}
             className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 text-sm px-4">
             <Icon name="Upload" size={14} className="mr-2" />
