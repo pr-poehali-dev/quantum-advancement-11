@@ -284,7 +284,7 @@ def handler(event: dict, context) -> dict:
             brand_filter = (params.get('brand') or '').strip().lower()
             sort_by = (params.get('sort') or 'created_at').strip()
             sort_dir = 'DESC' if (params.get('dir') or 'desc').lower() == 'desc' else 'ASC'
-            ALLOWED_SORT = {'id', 'name', 'brand', 'price_per_ml', 'bottle_ml', 'booked_ml', 'created_at'}
+            ALLOWED_SORT = {'id', 'name', 'brand', 'price_per_ml', 'bottle_ml', 'booked_ml', 'created_at', 'supplier_id'}
             if sort_by not in ALLOWED_SORT:
                 sort_by = 'created_at'
             conn = get_conn()

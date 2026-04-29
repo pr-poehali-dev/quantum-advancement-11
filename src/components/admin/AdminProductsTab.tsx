@@ -205,7 +205,7 @@ export default function AdminProductsTab({
               })()}
               {([
                 { key: 'id', label: 'ID', cls: 'text-left w-12' },
-                { key: null, label: 'Артикул', cls: 'text-left w-28' },
+                { key: 'supplier_id', label: 'Артикул', cls: 'text-left w-28' },
                 { key: 'name', label: 'Название', cls: 'text-left' },
                 { key: 'brand', label: 'Бренд', cls: 'text-left w-32' },
                 { key: null, label: 'Конц.', cls: 'text-center w-24' },
