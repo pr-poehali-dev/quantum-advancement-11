@@ -96,6 +96,7 @@ export default function Cabinet() {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
     return now.toISOString().slice(0, 16)
   })
+  const [payAmount, setPayAmount] = useState('')
   const [paying, setPaying] = useState(false)
 
   // доставка
@@ -197,13 +198,15 @@ export default function Cabinet() {
   const handlePay = async () => {
     if (paySelected.size === 0) { toast.error('Отметьте заказы'); return }
     if (!payDateTime) { toast.error('Укажите дату и время платежа'); return }
+    const actualAmount = payAmount ? parseFloat(payAmount) : selectedPayTotal
+    if (isNaN(actualAmount) || actualAmount <= 0) { toast.error('Укажите корректную сумму'); return }
     setPaying(true)
-    const r = await api.orders.pay({ order_ids: Array.from(paySelected), payment_amount: selectedPayTotal, payment_note: payNote, payment_date: payDateTime } as Parameters<typeof api.orders.pay>[0])
+    const r = await api.orders.pay({ order_ids: Array.from(paySelected), payment_amount: actualAmount, payment_note: payNote, payment_date: payDateTime } as Parameters<typeof api.orders.pay>[0])
     setPaying(false)
     if (r.error) { toast.error(r.error); return }
     toast.success('Отметка отправлена модератору')
     const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-    setPaySelected(new Set()); setPayNote(''); setPayDateTime(now.toISOString().slice(0, 16)); load()
+    setPaySelected(new Set()); setPayNote(''); setPayAmount(''); setPayDateTime(now.toISOString().slice(0, 16)); load()
   }
 
   const toggleDeliveryOrder = (id: number) => {
@@ -478,12 +481,31 @@ export default function Cabinet() {
                                 required
                                 className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white text-sm [color-scheme:dark]" />
                             </div>
+                            <div>
+                              <label className="text-white/40 text-xs mb-1 block">
+                                Сумма перевода (если отличается от {selectedPayTotal.toFixed(0)} ₽)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={payAmount}
+                                onChange={e => setPayAmount(e.target.value)}
+                                placeholder={`${selectedPayTotal.toFixed(0)} ₽ (по умолчанию)`}
+                                className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm"
+                              />
+                              {payAmount && parseFloat(payAmount) !== selectedPayTotal && (
+                                <div className="text-xs mt-1 text-orange-300/70">
+                                  Разница: {(parseFloat(payAmount) - selectedPayTotal).toFixed(2)} ₽ — модератор учтёт при проверке
+                                </div>
+                              )}
+                            </div>
                             <Input value={payNote} onChange={e => setPayNote(e.target.value)}
                               placeholder="Комментарий к платежу (необязательно)"
                               className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm" />
                             <Button onClick={handlePay} disabled={paying}
                               className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm">
-                              {paying ? 'Отправка...' : `Отметить оплату ${selectedPayTotal.toFixed(0)} ₽`}
+                              {paying ? 'Отправка...' : `Отметить оплату ${payAmount ? parseFloat(payAmount).toFixed(0) : selectedPayTotal.toFixed(0)} ₽`}
                             </Button>
                           </div>
                         )}

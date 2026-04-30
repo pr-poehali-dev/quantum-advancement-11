@@ -81,6 +81,7 @@ export default function Admin() {
   const [archiveFilterProduct, setArchiveFilterProduct] = useState('')
   const [archiveSelected, setArchiveSelected] = useState<Set<number>>(new Set())
   const [unarchiving, setUnarchiving] = useState(false)
+  const [cleaningUp, setCleaningUp] = useState(false)
 
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(false)
@@ -182,6 +183,16 @@ export default function Admin() {
     if (res.error) { toast.error(res.error); return }
     toast.success(`Восстановлено заказов: ${res.restored}`)
     loadArchive()
+  }
+
+  const handleCleanupInactive = async () => {
+    if (!window.confirm('Архивировать все заказы в статусе «Принят» у пользователей, не заходивших более 60 дней?')) return
+    setCleaningUp(true)
+    const res = await api.admin.cleanupInactiveOrders()
+    setCleaningUp(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success(`Архивировано заказов: ${res.archived}`)
+    load()
   }
 
   const handleBulkStatus = async () => {
@@ -385,11 +396,13 @@ export default function Admin() {
             archiveFilterProduct={archiveFilterProduct} setArchiveFilterProduct={setArchiveFilterProduct}
             archiveSelected={archiveSelected} setArchiveSelected={setArchiveSelected}
             unarchiving={unarchiving}
+            cleaningUp={cleaningUp}
             onLoad={load}
             onLoadArchive={loadArchive}
             onBulkStatus={handleBulkStatus}
             onArchiveSelected={handleArchiveSelected}
             onUnarchive={handleUnarchive}
+            onCleanupInactive={handleCleanupInactive}
           />
         )}
 

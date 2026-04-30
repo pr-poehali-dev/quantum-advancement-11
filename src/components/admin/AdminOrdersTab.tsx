@@ -195,11 +195,13 @@ interface AdminOrdersTabProps {
   archiveSelected: Set<number>
   setArchiveSelected: React.Dispatch<React.SetStateAction<Set<number>>>
   unarchiving: boolean
+  cleaningUp: boolean
   onLoad: () => void
   onLoadArchive: () => void
   onBulkStatus: () => void
   onArchiveSelected: () => void
   onUnarchive: () => void
+  onCleanupInactive: () => void
 }
 
 export default function AdminOrdersTab({
@@ -217,7 +219,8 @@ export default function AdminOrdersTab({
   archiveFilterProduct, setArchiveFilterProduct,
   archiveSelected, setArchiveSelected,
   unarchiving,
-  onLoad, onLoadArchive, onBulkStatus, onArchiveSelected, onUnarchive,
+  cleaningUp,
+  onLoad, onLoadArchive, onBulkStatus, onArchiveSelected, onUnarchive, onCleanupInactive,
 }: AdminOrdersTabProps) {
   const toggleSelect = (id: number) => {
     setSelected(prev => {
@@ -481,6 +484,16 @@ export default function AdminOrdersTab({
           >
             <Icon name="Archive" size={13} className="mr-1.5" />
             {archiving ? 'Архивирую...' : selected.size > 0 ? `В архив (${selected.size})` : `В архив (все ${orders.length})`}
+          </Button>
+          <Button
+            onClick={onCleanupInactive}
+            disabled={cleaningUp}
+            variant="ghost"
+            className="text-white/30 hover:text-red-400 h-8 text-xs px-3 border border-white/10 disabled:opacity-40"
+            title="Архивировать заказы в статусе «Принят» пользователей, не заходивших 60+ дней"
+          >
+            <Icon name="UserX" size={13} className="mr-1.5" />
+            {cleaningUp ? 'Очищаю...' : '60 дней'}
           </Button>
           {selected.size > 0 && (
             <button onClick={() => setSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">

@@ -600,6 +600,26 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': archived})}
 
+        if action == 'cleanup_inactive_orders':
+            """Архивирует заказы в статусе 'accepted' пользователей, не заходивших 60+ дней"""
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE orders SET is_archived = TRUE, archived_at = NOW(), updated_at = NOW()
+                WHERE status = 'accepted'
+                  AND is_archived = FALSE
+                  AND user_id IN (
+                    SELECT id FROM users
+                    WHERE last_login IS NOT NULL
+                      AND last_login < NOW() - INTERVAL '60 days'
+                  )
+                RETURNING id
+            """)
+            archived_ids = [row[0] for row in cur.fetchall()]
+            conn.commit()
+            conn.close()
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': len(archived_ids), 'order_ids': archived_ids})}
+
         if action == 'unarchive_orders':
             order_ids = body.get('order_ids', [])
             if not order_ids or not isinstance(order_ids, list):

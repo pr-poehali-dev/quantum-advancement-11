@@ -124,6 +124,8 @@ export const api = {
     },
     unarchiveOrders: (order_ids: number[]) =>
       post(`${ADMIN_URL}/`, { action: 'unarchive_orders', order_ids }),
+    cleanupInactiveOrders: () =>
+      post(`${ADMIN_URL}/`, { action: 'cleanup_inactive_orders' }),
     adminProducts: (filters: { name?: string; brand?: string; sort?: string; dir?: string }) => {
       const p = new URLSearchParams({ action: 'admin_products' })
       if (filters.name) p.set('name', filters.name)
