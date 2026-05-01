@@ -601,11 +601,11 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': archived})}
 
         if action == 'cleanup_inactive_orders':
-            """Архивирует заказы в статусе 'accepted' пользователей, не заходивших 60+ дней"""
+            """Отменяет заказы в статусе 'accepted' пользователей, не заходивших 60+ дней, освобождая забронированные мл"""
             conn = get_conn()
             cur = conn.cursor()
             cur.execute("""
-                UPDATE orders SET is_archived = TRUE, archived_at = NOW(), updated_at = NOW()
+                UPDATE orders SET status = 'declined', updated_at = NOW()
                 WHERE status = 'accepted'
                   AND is_archived = FALSE
                   AND user_id IN (
@@ -613,12 +613,17 @@ def handler(event: dict, context) -> dict:
                     WHERE last_login IS NOT NULL
                       AND last_login < NOW() - INTERVAL '60 days'
                   )
-                RETURNING id
+                RETURNING id, product_id, volume_ml
             """)
-            archived_ids = [row[0] for row in cur.fetchall()]
+            cancelled = cur.fetchall()
+            for order_id, product_id, volume_ml in cancelled:
+                cur.execute(
+                    "UPDATE products SET booked_ml = GREATEST(0, booked_ml - %s) WHERE id = %s",
+                    (volume_ml, product_id)
+                )
             conn.commit()
             conn.close()
-            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'archived': len(archived_ids), 'order_ids': archived_ids})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'cancelled': len(cancelled), 'order_ids': [r[0] for r in cancelled]})}
 
         if action == 'unarchive_orders':
             order_ids = body.get('order_ids', [])

@@ -186,12 +186,12 @@ export default function Admin() {
   }
 
   const handleCleanupInactive = async () => {
-    if (!window.confirm('Архивировать все заказы в статусе «Принят» у пользователей, не заходивших более 60 дней?')) return
+    if (!window.confirm('Отменить все заказы в статусе «Принят» у пользователей, не заходивших более 60 дней?\n\nЗабронированные мл будут освобождены.')) return
     setCleaningUp(true)
     const res = await api.admin.cleanupInactiveOrders()
     setCleaningUp(false)
     if (res.error) { toast.error(res.error); return }
-    toast.success(`Архивировано заказов: ${res.archived}`)
+    toast.success(`Отменено заказов: ${res.cancelled}`)
     load()
   }
 
