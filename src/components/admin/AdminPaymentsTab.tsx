@@ -41,6 +41,11 @@ function PaymentCard({ payment: p, onConfirmed }: { payment: Payment; onConfirme
         ? `Подтверждено. Наш долг ${diff.toFixed(2)} ₽ зафиксирован.`
         : `Оплата @${p.nickname} подтверждена → «Ожидается»`
     toast.success(msg)
+    // Создаём заказ в МойСклад (тихо, не блокируем UI)
+    api.moysklad.createOrder(p.order_id).then(msRes => {
+      if (msRes.error) console.warn('МойСклад: не удалось создать заказ:', msRes.error)
+      else toast.info(`МойСклад: заказ #${p.order_id} создан`, { duration: 3000 })
+    }).catch(e => console.warn('МойСклад ошибка:', e))
     onConfirmed()
   }
 

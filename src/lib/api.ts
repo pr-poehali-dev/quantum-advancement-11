@@ -1,4 +1,5 @@
 const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952354e'
+const MOYSKLAD_URL = 'https://functions.poehali.dev/c076e9f9-b9a3-43b4-a706-1bd0f104421f'
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
 const ORDERS_URL = 'https://functions.poehali.dev/aceea045-9087-4f41-8120-bd74f2063f6e'
 const ADMIN_URL = 'https://functions.poehali.dev/029f6170-ce3b-4284-acff-07d6c3c33519'
@@ -158,6 +159,12 @@ export const api = {
       post(`${ADMIN_URL}/`, { action: 'broadcast', text }),
     deleteUser: (user_id: number) =>
       post(`${ADMIN_URL}/`, { action: 'delete_user', user_id }),
+  },
+
+  moysklad: {
+    check: () => get(`${MOYSKLAD_URL}/?action=check`),
+    syncProducts: () => post(`${MOYSKLAD_URL}/`, { action: 'sync_products' }),
+    createOrder: (order_id: number) => post(`${MOYSKLAD_URL}/`, { action: 'create_order', order_id }),
   },
 
   forum: {

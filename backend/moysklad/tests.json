@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET check without auth returns 403",
+      "method": "GET",
+      "path": "/?action=check",
+      "expectedStatus": 403
+    },
+    {
+      "name": "POST sync_products without auth returns 403",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "sync_products"},
+      "expectedStatus": 403
+    }
+  ]
+}

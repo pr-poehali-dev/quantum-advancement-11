@@ -54,6 +54,7 @@ export default function AdminProductsTab({
 }: AdminProductsTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [msSyncing, setMsSyncing] = useState(false)
 
   const toggleSelect = (id: number) => {
     setSelectedProducts(prev => {
@@ -204,6 +205,30 @@ export default function AdminProductsTab({
             className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-4">
             <Icon name="Plus" size={14} className="mr-1.5" />
             Новый товар
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!window.confirm('Синхронизировать все активные товары в МойСклад?')) return
+              setMsSyncing(true)
+              const res = await api.moysklad.syncProducts()
+              setMsSyncing(false)
+              if (res.error) { toast.error(`МойСклад: ${res.error}`); return }
+              const msg = `МойСклад: создано ${res.created}, обновлено ${res.updated}`
+              if (res.errors?.length) {
+                toast.warning(`${msg}. Ошибок: ${res.errors.length}`)
+                console.warn('МС ошибки:', res.errors)
+              } else {
+                toast.success(msg)
+              }
+              onLoadProducts()
+            }}
+            disabled={msSyncing}
+            variant="ghost"
+            className="text-white/30 hover:text-blue-400 h-9 text-sm px-3 border border-white/10"
+            title="Выгрузить товары в МойСклад"
+          >
+            <Icon name="RefreshCw" size={14} className="mr-1.5" />
+            {msSyncing ? 'Синхронизирую...' : 'МойСклад'}
           </Button>
           <input type="file" accept=".xlsx,.xls,.csv" ref={fileInputRef} onChange={handleImport} className="hidden" />
           <input type="file" accept=".xlsx,.xls,.csv" ref={diagInputRef} onChange={handleDiag} className="hidden" />
