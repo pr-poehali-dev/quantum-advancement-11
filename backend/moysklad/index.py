@@ -259,6 +259,32 @@ def ensure_product_in_ms(cur, prod_id, prod_name, brand, price_per_ml):
     return new_ext_id
 
 
+def get_or_create_packaging_product(atomizer_name: str, atomizer_price: float) -> str:
+    """Находит или создаёт товар 'Упаковка' в МС, возвращает href."""
+    ms_name = f'Упаковка ({atomizer_name})'
+    # Ищем существующий
+    data = ms_get('/entity/product', {'filter': f'name={ms_name}', 'limit': 5})
+    rows = data.get('rows', [])
+    if rows:
+        return rows[0]['meta']['href']
+    # Создаём новый
+    price_type_href = get_price_type_href()
+    currency_href = get_currency_href()
+    uom_href = get_uom_sht_href()
+    payload = {
+        'name': ms_name,
+        'salePrices': [{
+            'value': round(atomizer_price * 100),
+            'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
+            'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
+        }],
+    }
+    if uom_href:
+        payload['uom'] = {'meta': {'href': uom_href, 'type': 'uom', 'mediaType': 'application/json'}}
+    result = ms_post('/entity/product', payload)
+    return result['meta']['href']
+
+
 def sync_orders_to_ms(order_ids: list, force: bool = False) -> dict:
     """Отправляет список заказов в МойСклад. Пропускает уже отправленные (если не force)."""
     conn = get_conn()
@@ -269,10 +295,11 @@ def sync_orders_to_ms(order_ids: list, force: bool = False) -> dict:
         SELECT o.id, o.ms_order_id, o.total_price, o.volume_ml,
                u.nickname, u.phone,
                p.id, p.name, p.brand, p.price_per_ml, p.ext_id,
-               o.status
+               o.status, o.atomizer_price, a.name
         FROM orders o
         JOIN users u ON o.user_id = u.id
         JOIN products p ON o.product_id = p.id
+        LEFT JOIN atomizers a ON o.atomizer_id = a.id
         WHERE o.id IN ({placeholders})
     """, order_ids)
     rows = cur.fetchall()
@@ -284,7 +311,7 @@ def sync_orders_to_ms(order_ids: list, force: bool = False) -> dict:
     organization_href = get_organization_href()
 
     for row in rows:
-        oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_id, prod_name, brand, price_per_ml, ext_id, status = row
+        oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_id, prod_name, brand, price_per_ml, ext_id, status, atomizer_price, atomizer_name = row
 
         if ms_order_id and not force:
             skipped += 1
@@ -308,6 +335,15 @@ def sync_orders_to_ms(order_ids: list, force: bool = False) -> dict:
                     }
                 },
             }]
+
+            # Добавляем упаковку (атомайзер) как отдельную позицию
+            if atomizer_price and float(atomizer_price) > 0 and atomizer_name:
+                packaging_href = get_or_create_packaging_product(atomizer_name, float(atomizer_price))
+                positions.append({
+                    'quantity': 1,
+                    'price': round(float(atomizer_price) * 100),
+                    'assortment': {'meta': {'href': packaging_href, 'type': 'product', 'mediaType': 'application/json'}},
+                })
 
             payload = {
                 'organization': {'meta': {'href': organization_href, 'type': 'organization', 'mediaType': 'application/json'}},
