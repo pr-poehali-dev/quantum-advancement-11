@@ -6,7 +6,7 @@ import requests
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token, X-Authorization',
 }
 
 MS_BASE = 'https://api.moysklad.ru/api/remap/1.2'
@@ -25,10 +25,15 @@ def ms_headers():
 
 
 def get_token_user(headers):
-    auth = headers.get('x-authorization') or headers.get('X-Authorization') or ''
-    if not auth.startswith('Bearer '):
+    # Фронтенд шлёт X-Auth-Token (простой токен, без Bearer)
+    token = (
+        headers.get('x-auth-token') or
+        headers.get('X-Auth-Token') or
+        headers.get('x-authorization', '').replace('Bearer ', '') or
+        headers.get('X-Authorization', '').replace('Bearer ', '')
+    )
+    if not token:
         return None
-    token = auth[7:]
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -71,7 +76,6 @@ def ms_put(path, data):
 
 
 def get_price_type_href():
-    """Получает href первого типа цены из настроек компании МС."""
     data = ms_get('/context/companysettings/pricetype')
     rows = data.get('rows', [])
     if not rows:
@@ -80,7 +84,6 @@ def get_price_type_href():
 
 
 def get_currency_href():
-    """Получает href рублёвой валюты (или первой доступной)."""
     data = ms_get('/entity/currency')
     rows = data.get('rows', [])
     for r in rows:
@@ -102,24 +105,19 @@ def sync_products_to_ms(conn):
     if not products:
         return 0, 0, []
 
-    # Получаем priceType и валюту один раз
     price_type_href = get_price_type_href()
     currency_href = get_currency_href()
 
-    # Загружаем существующие товары из МС (по ext_id)
     existing_ids = set()
-    try:
-        offset = 0
-        while True:
-            data = ms_get('/entity/product', {'limit': 100, 'offset': offset})
-            rows = data.get('rows', [])
-            for item in rows:
-                existing_ids.add(item['id'])
-            if len(rows) < 100:
-                break
-            offset += 100
-    except Exception as e:
-        raise RuntimeError(f'Ошибка получения товаров из МС: {e}')
+    offset = 0
+    while True:
+        data = ms_get('/entity/product', {'limit': 100, 'offset': offset})
+        rows = data.get('rows', [])
+        for item in rows:
+            existing_ids.add(item['id'])
+        if len(rows) < 100:
+            break
+        offset += 100
 
     created = 0
     updated = 0
@@ -127,7 +125,6 @@ def sync_products_to_ms(conn):
 
     for prod_id, name, brand, price_per_ml, supplier_id, ext_id in products:
         ms_name = f'{brand} — {name}'
-        # Цена в МС хранится в копейках (умножаем на 100)
         price_kopecks = round(float(price_per_ml) * 100)
 
         payload = {
@@ -160,7 +157,6 @@ def sync_products_to_ms(conn):
 
 
 def get_or_create_counterparty(nickname, phone):
-    """Находит или создаёт контрагента в МС."""
     try:
         data = ms_get('/entity/counterparty', {'filter': f'name={nickname}', 'limit': 5})
         rows = data.get('rows', [])
@@ -168,7 +164,6 @@ def get_or_create_counterparty(nickname, phone):
             return rows[0]['meta']['href']
     except Exception:
         pass
-
     payload = {'name': nickname}
     if phone:
         payload['phone'] = phone
