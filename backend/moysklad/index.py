@@ -95,6 +95,36 @@ def get_currency_href():
     raise RuntimeError('Не найдена валюта в МойСклад')
 
 
+def get_uom_sht_href():
+    """Возвращает href единицы измерения 'шт' из МойСклад."""
+    data = ms_get('/entity/uom')
+    rows = data.get('rows', [])
+    for r in rows:
+        if r.get('name', '').lower() in ('шт', 'штука', 'штук'):
+            return r['meta']['href']
+    # Если не нашли — возвращаем None (МС подставит дефолтную)
+    return None
+
+
+def make_product_payload(name, brand, price_per_ml, supplier_id, prod_id, price_type_href, currency_href, uom_href):
+    """Формирует payload товара для МойСклад."""
+    ms_name = f'{brand} {name} отливант 1мл'
+    price_kopecks = round(float(price_per_ml) * 100)
+    payload = {
+        'name': ms_name,
+        'code': supplier_id or str(prod_id),
+        'article': supplier_id or str(prod_id),
+        'salePrices': [{
+            'value': price_kopecks,
+            'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
+            'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
+        }],
+    }
+    if uom_href:
+        payload['uom'] = {'meta': {'href': uom_href, 'type': 'uom', 'mediaType': 'application/json'}}
+    return payload
+
+
 def sync_products_to_ms(conn):
     """Синхронизирует товары из БД в МойСклад."""
     cur = conn.cursor()
@@ -108,6 +138,7 @@ def sync_products_to_ms(conn):
 
     price_type_href = get_price_type_href()
     currency_href = get_currency_href()
+    uom_href = get_uom_sht_href()
 
     existing_ids = set()
     offset = 0
@@ -125,22 +156,7 @@ def sync_products_to_ms(conn):
     errors = []
 
     for prod_id, name, brand, price_per_ml, supplier_id, ext_id in products:
-        ms_name = f'{brand} — {name}'
-        price_kopecks = round(float(price_per_ml) * 100)
-
-        payload = {
-            'name': ms_name,
-            'code': supplier_id or str(prod_id),
-            'article': supplier_id or str(prod_id),
-            'salePrices': [
-                {
-                    'value': price_kopecks,
-                    'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
-                    'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
-                }
-            ],
-        }
-
+        payload = make_product_payload(name, brand, price_per_ml, supplier_id, prod_id, price_type_href, currency_href, uom_href)
         try:
             if ext_id and ext_id in existing_ids:
                 ms_put(f'/entity/product/{ext_id}', payload)
@@ -151,7 +167,7 @@ def sync_products_to_ms(conn):
                 cur.execute("UPDATE products SET ext_id = %s WHERE id = %s", (ms_id, prod_id))
                 created += 1
         except Exception as e:
-            errors.append(f'Товар #{prod_id} ({ms_name}): {str(e)}')
+            errors.append(f'Товар #{prod_id} ({payload["name"]}): {str(e)}')
 
     conn.commit()
     return created, updated, errors
@@ -235,18 +251,8 @@ def ensure_product_in_ms(cur, prod_id, prod_name, brand, price_per_ml):
     """Создаёт товар в МС если его ещё нет, возвращает ext_id."""
     price_type_href = get_price_type_href()
     currency_href = get_currency_href()
-    ms_name = f'{brand} — {prod_name}'
-    price_kopecks = round(float(price_per_ml) * 100)
-    payload = {
-        'name': ms_name,
-        'code': str(prod_id),
-        'article': str(prod_id),
-        'salePrices': [{
-            'value': price_kopecks,
-            'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
-            'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
-        }],
-    }
+    uom_href = get_uom_sht_href()
+    payload = make_product_payload(prod_name, brand, price_per_ml, None, prod_id, price_type_href, currency_href, uom_href)
     result = ms_post('/entity/product', payload)
     new_ext_id = result['id']
     cur.execute("UPDATE products SET ext_id = %s WHERE id = %s", (new_ext_id, prod_id))
