@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import AdminOrdersTab from '@/components/admin/AdminOrdersTab'
 import AdminProductsTab from '@/components/admin/AdminProductsTab'
 import UsersTab from '@/components/admin/UsersTab'
+import WarehouseTab from '@/components/admin/WarehouseTab'
 import { PaymentsTab, DebtsTab, AdminMessagesTab, DeliveryTab, AdminForumTab } from '@/components/admin/AdminTabsContent'
 import type { Payment, Debt } from '@/components/admin/AdminTabsContent'
 
@@ -45,7 +46,7 @@ export default function Admin() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings' | 'broadcast'>('orders')
+  const [tab, setTab] = useState<'orders' | 'payments' | 'debts' | 'products' | 'users' | 'messages' | 'delivery' | 'forum' | 'settings' | 'broadcast' | 'warehouse'>('orders')
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'archive'>('active')
   const [adminUnread, setAdminUnread] = useState(0)
 
@@ -357,6 +358,12 @@ export default function Admin() {
             Форум
           </button>
           <button
+            onClick={() => setTab('warehouse')}
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'warehouse' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            Склад
+          </button>
+          <button
             onClick={() => setTab('broadcast')}
             className={`px-5 py-2 text-sm rounded-lg font-medium transition-colors ${tab === 'broadcast' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
           >
@@ -449,6 +456,8 @@ export default function Admin() {
         {tab === 'delivery' && <DeliveryTab />}
 
         {tab === 'forum' && <AdminForumTab />}
+
+        {tab === 'warehouse' && <WarehouseTab />}
 
         {tab === 'broadcast' && <BroadcastTab />}
 

@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET list without auth returns 403",
+      "method": "GET",
+      "path": "/?action=list",
+      "expectedStatus": 403
+    },
+    {
+      "name": "POST income without auth returns 403",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "income"},
+      "expectedStatus": 403
+    }
+  ]
+}

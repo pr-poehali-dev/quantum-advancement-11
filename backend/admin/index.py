@@ -669,6 +669,24 @@ def handler(event: dict, context) -> dict:
                     ) WHERE id IN (SELECT DISTINCT product_id FROM orders WHERE id IN ({placeholders}))""",
                     list(order_ids) + list(order_ids)
                 )
+            # При переходе в delivery — списываем реальный остаток со склада
+            if new_status == 'delivery':
+                cur.execute(
+                    f"""SELECT o.id, o.product_id, o.volume_ml
+                        FROM orders o WHERE o.id IN ({placeholders}) AND o.is_archived = FALSE""",
+                    list(order_ids)
+                )
+                delivery_orders = cur.fetchall()
+                for d_order_id, d_product_id, d_volume_ml in delivery_orders:
+                    cur.execute(
+                        "UPDATE products SET stock_ml = GREATEST(0, stock_ml - %s) WHERE id = %s",
+                        (d_volume_ml, d_product_id)
+                    )
+                    cur.execute(
+                        """INSERT INTO stock_movements (product_id, type, amount_ml, order_id, comment, created_by)
+                           VALUES (%s, 'order_writeoff', %s, %s, %s, %s)""",
+                        (d_product_id, d_volume_ml, d_order_id, f'Отгрузка по заказу #{d_order_id}', user['id'])
+                    )
             # Собираем данные для уведомлений ДО commit
             cur.execute(
                 f"""SELECT u.telegram_id, o.id, p.name, p.brand, o.volume_ml

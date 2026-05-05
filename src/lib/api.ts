@@ -1,3 +1,4 @@
+const WAREHOUSE_URL = 'https://functions.poehali.dev/e8b8a219-6f07-476b-859d-eb901f8cb208'
 const AUTH_URL = 'https://functions.poehali.dev/be74786c-a9f9-457d-a174-be96c952354e'
 const MOYSKLAD_URL = 'https://functions.poehali.dev/c076e9f9-b9a3-43b4-a706-1bd0f104421f'
 const CATALOG_URL = 'https://functions.poehali.dev/5054db99-99b8-4d43-84f2-b8a136e47dc5'
@@ -192,6 +193,28 @@ export const api = {
   upload: {
     image: (image_b64: string, filename: string) =>
       post(`${UPLOAD_URL}/`, { image_b64, filename }),
+  },
+
+  warehouse: {
+    list: (name?: string) => {
+      const p = new URLSearchParams({ action: 'list' })
+      if (name) p.set('name', name)
+      return get(`${WAREHOUSE_URL}/?${p.toString()}`)
+    },
+    movements: (filters: { product_id?: number; type?: string; date_from?: string; date_to?: string }) => {
+      const p = new URLSearchParams({ action: 'movements' })
+      if (filters.product_id) p.set('product_id', String(filters.product_id))
+      if (filters.type) p.set('type', filters.type)
+      if (filters.date_from) p.set('date_from', filters.date_from)
+      if (filters.date_to) p.set('date_to', filters.date_to)
+      return get(`${WAREHOUSE_URL}/?${p.toString()}`)
+    },
+    income: (data: { document_number?: string; comment?: string; items: { product_id: number; amount_ml: number }[] }) =>
+      post(`${WAREHOUSE_URL}/`, { action: 'income', ...data }),
+    writeoff: (data: { document_number?: string; comment?: string; items: { product_id: number; amount_ml: number }[] }) =>
+      post(`${WAREHOUSE_URL}/`, { action: 'writeoff', ...data }),
+    export: (date_from?: string, date_to?: string) =>
+      post(`${WAREHOUSE_URL}/`, { action: 'export', date_from, date_to }),
   },
 
   messages: {
