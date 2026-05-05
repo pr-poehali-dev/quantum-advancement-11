@@ -222,6 +222,20 @@ export default function AdminOrdersTab({
   cleaningUp,
   onLoad, onLoadArchive, onBulkStatus, onArchiveSelected, onUnarchive, onCleanupInactive,
 }: AdminOrdersTabProps) {
+  const [syncingMs, setSyncingMs] = useState(false)
+
+  const handleSyncOrdersToMs = async () => {
+    const ids = selected.size > 0 ? Array.from(selected) : orders.map(o => o.id)
+    if (ids.length === 0) { toast.error('Нет заказов для отправки'); return }
+    setSyncingMs(true)
+    const res = await api.moysklad.syncOrders(ids)
+    setSyncingMs(false)
+    if (res.error) { toast.error('МойСклад: ' + res.error); return }
+    const { created, skipped, errors } = res
+    if (errors?.length) toast.error(`Ошибки (${errors.length}): ${errors[0]}`)
+    else toast.success(`МойСклад: создано ${created}, пропущено (уже есть) ${skipped}`)
+  }
+
   const toggleSelect = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev)
@@ -494,6 +508,15 @@ export default function AdminOrdersTab({
           >
             <Icon name="UserX" size={13} className="mr-1.5" />
             {cleaningUp ? 'Очищаю...' : '60 дней'}
+          </Button>
+          <Button
+            onClick={handleSyncOrdersToMs}
+            disabled={syncingMs || orders.length === 0}
+            className="bg-emerald-700 hover:bg-emerald-600 text-white h-8 text-xs px-4 disabled:opacity-40 border border-emerald-500/30"
+            title={selected.size > 0 ? 'Отправить выбранные заказы в МойСклад' : 'Отправить все отфильтрованные заказы в МойСклад'}
+          >
+            <Icon name="Send" size={13} className="mr-1.5" />
+            {syncingMs ? 'Отправляю...' : selected.size > 0 ? `МойСклад (${selected.size})` : `МойСклад (${orders.length})`}
           </Button>
           {selected.size > 0 && (
             <button onClick={() => setSelected(new Set())} className="text-white/30 hover:text-white text-xs transition-colors">

@@ -220,6 +220,71 @@ def create_customerorder_in_ms(order_id):
     return result['id']
 
 
+def sync_orders_to_ms(order_ids: list) -> dict:
+    """Отправляет список заказов в МойСклад. Пропускает уже отправленные."""
+    conn = get_conn()
+    cur = conn.cursor()
+
+    placeholders = ','.join(['%s'] * len(order_ids))
+    cur.execute(f"""
+        SELECT o.id, o.ms_order_id, o.total_price, o.volume_ml,
+               u.nickname, u.phone,
+               p.name, p.brand, p.price_per_ml, p.ext_id,
+               o.status
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        JOIN products p ON o.product_id = p.id
+        WHERE o.id IN ({placeholders})
+    """, order_ids)
+    rows = cur.fetchall()
+
+    created = 0
+    skipped = 0
+    errors = []
+
+    for row in rows:
+        oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_name, brand, price_per_ml, ext_id, status = row
+
+        if ms_order_id:
+            skipped += 1
+            continue
+
+        try:
+            counterparty_href = get_or_create_counterparty(nickname, phone)
+
+            positions = []
+            if ext_id:
+                positions.append({
+                    'quantity': float(volume_ml),
+                    'price': round(float(price_per_ml) * 100),
+                    'assortment': {
+                        'meta': {
+                            'href': f'{MS_BASE}/entity/product/{ext_id}',
+                            'type': 'product',
+                            'mediaType': 'application/json',
+                        }
+                    },
+                })
+
+            payload = {
+                'agent': {'meta': {'href': counterparty_href, 'type': 'counterparty', 'mediaType': 'application/json'}},
+                'description': f'{brand} — {prod_name}, {volume_ml} мл. Клиент: {nickname} ({phone})',
+            }
+            if positions:
+                payload['positions'] = positions
+
+            result = ms_post('/entity/customerorder', payload)
+            new_ms_id = result['id']
+            cur.execute("UPDATE orders SET ms_order_id = %s WHERE id = %s", (new_ms_id, oid))
+            created += 1
+        except Exception as e:
+            errors.append(f'Заказ #{oid}: {str(e)}')
+
+    conn.commit()
+    conn.close()
+    return {'created': created, 'skipped': skipped, 'errors': errors}
+
+
 def handler(event: dict, context) -> dict:
     """Интеграция с МойСклад: синхронизация товаров и создание заказов."""
     if event.get('httpMethod') == 'OPTIONS':
@@ -261,6 +326,16 @@ def handler(event: dict, context) -> dict:
             except Exception as e:
                 return {'statusCode': 500, 'headers': CORS, 'body': json.dumps({'error': str(e)})}
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, 'ms_order_id': ms_order_id})}
+
+        if action == 'sync_orders':
+            order_ids = body.get('order_ids', [])
+            if not order_ids:
+                return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_ids'})}
+            try:
+                result = sync_orders_to_ms(order_ids)
+            except Exception as e:
+                return {'statusCode': 500, 'headers': CORS, 'body': json.dumps({'error': str(e)})}
+            return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, **result})}
 
         return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Неизвестный action'})}
 

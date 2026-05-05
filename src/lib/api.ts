@@ -165,6 +165,7 @@ export const api = {
     check: () => get(`${MOYSKLAD_URL}/?action=check`),
     syncProducts: () => post(`${MOYSKLAD_URL}/`, { action: 'sync_products' }),
     createOrder: (order_id: number) => post(`${MOYSKLAD_URL}/`, { action: 'create_order', order_id }),
+    syncOrders: (order_ids: number[]) => post(`${MOYSKLAD_URL}/`, { action: 'sync_orders', order_ids }),
   },
 
   forum: {
