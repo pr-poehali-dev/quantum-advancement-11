@@ -77,7 +77,8 @@ def ms_put(path, data):
 
 def get_price_type_href():
     data = ms_get('/context/companysettings/pricetype')
-    rows = data.get('rows', [])
+    # МС возвращает список напрямую для этого эндпоинта
+    rows = data if isinstance(data, list) else data.get('rows', [])
     if not rows:
         raise RuntimeError('Не найдены типы цен в МойСклад')
     return rows[0]['meta']['href']
