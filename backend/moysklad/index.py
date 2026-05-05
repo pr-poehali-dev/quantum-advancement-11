@@ -231,8 +231,30 @@ def create_customerorder_in_ms(order_id):
     return result['id']
 
 
-def sync_orders_to_ms(order_ids: list) -> dict:
-    """Отправляет список заказов в МойСклад. Пропускает уже отправленные."""
+def ensure_product_in_ms(cur, prod_id, prod_name, brand, price_per_ml):
+    """Создаёт товар в МС если его ещё нет, возвращает ext_id."""
+    price_type_href = get_price_type_href()
+    currency_href = get_currency_href()
+    ms_name = f'{brand} — {prod_name}'
+    price_kopecks = round(float(price_per_ml) * 100)
+    payload = {
+        'name': ms_name,
+        'code': str(prod_id),
+        'article': str(prod_id),
+        'salePrices': [{
+            'value': price_kopecks,
+            'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
+            'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
+        }],
+    }
+    result = ms_post('/entity/product', payload)
+    new_ext_id = result['id']
+    cur.execute("UPDATE products SET ext_id = %s WHERE id = %s", (new_ext_id, prod_id))
+    return new_ext_id
+
+
+def sync_orders_to_ms(order_ids: list, force: bool = False) -> dict:
+    """Отправляет список заказов в МойСклад. Пропускает уже отправленные (если не force)."""
     conn = get_conn()
     cur = conn.cursor()
 
@@ -240,7 +262,7 @@ def sync_orders_to_ms(order_ids: list) -> dict:
     cur.execute(f"""
         SELECT o.id, o.ms_order_id, o.total_price, o.volume_ml,
                u.nickname, u.phone,
-               p.name, p.brand, p.price_per_ml, p.ext_id,
+               p.id, p.name, p.brand, p.price_per_ml, p.ext_id,
                o.status
         FROM orders o
         JOIN users u ON o.user_id = u.id
@@ -256,36 +278,37 @@ def sync_orders_to_ms(order_ids: list) -> dict:
     organization_href = get_organization_href()
 
     for row in rows:
-        oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_name, brand, price_per_ml, ext_id, status = row
+        oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_id, prod_name, brand, price_per_ml, ext_id, status = row
 
-        if ms_order_id:
+        if ms_order_id and not force:
             skipped += 1
             continue
 
         try:
+            # Если товар не выгружен в МС — создаём его на лету
+            if not ext_id:
+                ext_id = ensure_product_in_ms(cur, prod_id, prod_name, brand, price_per_ml)
+
             counterparty_href = get_or_create_counterparty(nickname, phone)
 
-            positions = []
-            if ext_id:
-                positions.append({
-                    'quantity': float(volume_ml),
-                    'price': round(float(price_per_ml) * 100),
-                    'assortment': {
-                        'meta': {
-                            'href': f'{MS_BASE}/entity/product/{ext_id}',
-                            'type': 'product',
-                            'mediaType': 'application/json',
-                        }
-                    },
-                })
+            positions = [{
+                'quantity': float(volume_ml),
+                'price': round(float(price_per_ml) * 100),
+                'assortment': {
+                    'meta': {
+                        'href': f'{MS_BASE}/entity/product/{ext_id}',
+                        'type': 'product',
+                        'mediaType': 'application/json',
+                    }
+                },
+            }]
 
             payload = {
                 'organization': {'meta': {'href': organization_href, 'type': 'organization', 'mediaType': 'application/json'}},
                 'agent': {'meta': {'href': counterparty_href, 'type': 'counterparty', 'mediaType': 'application/json'}},
                 'description': f'{brand} — {prod_name}, {volume_ml} мл. Клиент: {nickname} ({phone})',
+                'positions': positions,
             }
-            if positions:
-                payload['positions'] = positions
 
             result = ms_post('/entity/customerorder', payload)
             new_ms_id = result['id']
@@ -343,10 +366,11 @@ def handler(event: dict, context) -> dict:
 
         if action == 'sync_orders':
             order_ids = body.get('order_ids', [])
+            force = body.get('force', False)
             if not order_ids:
                 return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите order_ids'})}
             try:
-                result = sync_orders_to_ms(order_ids)
+                result = sync_orders_to_ms(order_ids, force=force)
             except Exception as e:
                 return {'statusCode': 500, 'headers': CORS, 'body': json.dumps({'error': str(e)})}
             return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'ok': True, **result})}
