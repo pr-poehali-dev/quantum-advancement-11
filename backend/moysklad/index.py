@@ -21,7 +21,6 @@ def ms_headers():
     return {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json',
-        'Accept-Encoding': 'gzip',
     }
 
 
@@ -51,34 +50,74 @@ def require_admin(headers):
 
 
 def ms_get(path, params=None):
-    r = requests.get(f'{MS_BASE}{path}', headers=ms_headers(), params=params, timeout=15)
-    r.raise_for_status()
+    r = requests.get(f'{MS_BASE}{path}', headers=ms_headers(), params=params, timeout=20)
+    if not r.ok:
+        raise RuntimeError(f'МС {r.status_code}: {r.text[:300]}')
     return r.json()
 
 
 def ms_post(path, data):
-    r = requests.post(f'{MS_BASE}{path}', headers=ms_headers(), json=data, timeout=15)
-    r.raise_for_status()
+    r = requests.post(f'{MS_BASE}{path}', headers=ms_headers(), json=data, timeout=20)
+    if not r.ok:
+        raise RuntimeError(f'МС {r.status_code}: {r.text[:300]}')
     return r.json()
 
 
 def ms_put(path, data):
-    r = requests.put(f'{MS_BASE}{path}', headers=ms_headers(), json=data, timeout=15)
-    r.raise_for_status()
+    r = requests.put(f'{MS_BASE}{path}', headers=ms_headers(), json=data, timeout=20)
+    if not r.ok:
+        raise RuntimeError(f'МС {r.status_code}: {r.text[:300]}')
     return r.json()
 
 
+def get_price_type_href():
+    """Получает href первого типа цены из настроек компании МС."""
+    data = ms_get('/context/companysettings/pricetype')
+    rows = data.get('rows', [])
+    if not rows:
+        raise RuntimeError('Не найдены типы цен в МойСклад')
+    return rows[0]['meta']['href']
+
+
+def get_currency_href():
+    """Получает href рублёвой валюты (или первой доступной)."""
+    data = ms_get('/entity/currency')
+    rows = data.get('rows', [])
+    for r in rows:
+        if r.get('isoCode') in ('RUB', 'RUR'):
+            return r['meta']['href']
+    if rows:
+        return rows[0]['meta']['href']
+    raise RuntimeError('Не найдена валюта в МойСклад')
+
+
 def sync_products_to_ms(conn):
-    """Синхронизирует товары из БД в МойСклад. Возвращает (created, updated, errors)."""
+    """Синхронизирует товары из БД в МойСклад."""
     cur = conn.cursor()
-    cur.execute("SELECT id, name, brand, price_per_ml, supplier_id, ext_id FROM products WHERE is_active = TRUE")
+    cur.execute(
+        "SELECT id, name, brand, price_per_ml, supplier_id, ext_id FROM products WHERE is_active = TRUE"
+    )
     products = cur.fetchall()
 
-    existing = {}
+    if not products:
+        return 0, 0, []
+
+    # Получаем priceType и валюту один раз
+    price_type_href = get_price_type_href()
+    currency_href = get_currency_href()
+
+    # Загружаем существующие товары из МС (по ext_id)
+    existing_ids = set()
     try:
-        data = ms_get('/entity/product', {'limit': 1000, 'offset': 0})
-        for item in data.get('rows', []):
-            existing[item['id']] = item
+        offset = 0
+        while True:
+            data = ms_get('/entity/product', {'limit': 100, 'offset': offset})
+            rows = data.get('rows', [])
+            for item in rows:
+                existing_ids.add(item['id'])
+            if len(rows) < 100:
+                break
+            offset += 100
     except Exception as e:
         raise RuntimeError(f'Ошибка получения товаров из МС: {e}')
 
@@ -87,8 +126,8 @@ def sync_products_to_ms(conn):
     errors = []
 
     for prod_id, name, brand, price_per_ml, supplier_id, ext_id in products:
-        # Имя товара: "Бренд — Название"
         ms_name = f'{brand} — {name}'
+        # Цена в МС хранится в копейках (умножаем на 100)
         price_kopecks = round(float(price_per_ml) * 100)
 
         payload = {
@@ -98,14 +137,14 @@ def sync_products_to_ms(conn):
             'salePrices': [
                 {
                     'value': price_kopecks,
-                    'currency': {'meta': {'href': f'{MS_BASE}/entity/currency', 'type': 'currency', 'mediaType': 'application/json'}},
-                    'priceType': {'meta': {'href': f'{MS_BASE}/context/companysettings/pricetype/', 'type': 'pricetype', 'mediaType': 'application/json'}},
+                    'currency': {'meta': {'href': currency_href, 'type': 'currency', 'mediaType': 'application/json'}},
+                    'priceType': {'meta': {'href': price_type_href, 'type': 'pricetype', 'mediaType': 'application/json'}},
                 }
             ],
         }
 
         try:
-            if ext_id and ext_id in existing:
+            if ext_id and ext_id in existing_ids:
                 ms_put(f'/entity/product/{ext_id}', payload)
                 updated += 1
             else:
@@ -114,16 +153,16 @@ def sync_products_to_ms(conn):
                 cur.execute("UPDATE products SET ext_id = %s WHERE id = %s", (ms_id, prod_id))
                 created += 1
         except Exception as e:
-            errors.append(f'Товар #{prod_id} ({ms_name}): {e}')
+            errors.append(f'Товар #{prod_id} ({ms_name}): {str(e)}')
 
     conn.commit()
     return created, updated, errors
 
 
 def get_or_create_counterparty(nickname, phone):
-    """Находит или создаёт контрагента в МС по нику."""
+    """Находит или создаёт контрагента в МС."""
     try:
-        data = ms_get('/entity/counterparty', {'filter': f'name={nickname}', 'limit': 1})
+        data = ms_get('/entity/counterparty', {'filter': f'name={nickname}', 'limit': 5})
         rows = data.get('rows', [])
         if rows:
             return rows[0]['meta']['href']
@@ -143,8 +182,8 @@ def create_customerorder_in_ms(order_id):
     cur = conn.cursor()
     cur.execute("""
         SELECT o.id, o.total_price, o.volume_ml, o.payment_confirmed_amount,
-               u.nickname, u.phone, u.email,
-               p.name, p.brand, p.price_per_ml, p.ext_id, p.supplier_id
+               u.nickname, u.phone,
+               p.name, p.brand, p.price_per_ml, p.ext_id
         FROM orders o
         JOIN users u ON o.user_id = u.id
         JOIN products p ON o.product_id = p.id
@@ -156,15 +195,14 @@ def create_customerorder_in_ms(order_id):
     if not row:
         raise RuntimeError(f'Заказ #{order_id} не найден')
 
-    (oid, total_price, volume_ml, confirmed_amount,
-     nickname, phone, email, prod_name, brand, price_per_ml, ext_id, supplier_id) = row
+    oid, total_price, volume_ml, confirmed_amount, nickname, phone, prod_name, brand, price_per_ml, ext_id = row
 
     counterparty_href = get_or_create_counterparty(nickname, phone)
 
     positions = []
     if ext_id:
         positions.append({
-            'quantity': volume_ml,
+            'quantity': float(volume_ml),
             'price': round(float(price_per_ml) * 100),
             'assortment': {
                 'meta': {
@@ -175,13 +213,9 @@ def create_customerorder_in_ms(order_id):
             },
         })
 
-    sum_kopecks = round(float(confirmed_amount or total_price) * 100)
-
     payload = {
-        'name': f'Заказ #{oid} — {nickname}',
         'agent': {'meta': {'href': counterparty_href, 'type': 'counterparty', 'mediaType': 'application/json'}},
         'description': f'{brand} — {prod_name}, {volume_ml} мл. Клиент: {nickname} ({phone})',
-        'sum': sum_kopecks,
     }
     if positions:
         payload['positions'] = positions
