@@ -157,6 +157,15 @@ def sync_products_to_ms(conn):
     return created, updated, errors
 
 
+def get_organization_href():
+    """Получает href первой организации аккаунта МС (обязательное поле для заказов)."""
+    data = ms_get('/entity/organization')
+    rows = data.get('rows', [])
+    if not rows:
+        raise RuntimeError('В МойСклад не найдено ни одной организации')
+    return rows[0]['meta']['href']
+
+
 def get_or_create_counterparty(nickname, phone):
     try:
         data = ms_get('/entity/counterparty', {'filter': f'name={nickname}', 'limit': 5})
@@ -194,6 +203,7 @@ def create_customerorder_in_ms(order_id):
     oid, total_price, volume_ml, confirmed_amount, nickname, phone, prod_name, brand, price_per_ml, ext_id = row
 
     counterparty_href = get_or_create_counterparty(nickname, phone)
+    organization_href = get_organization_href()
 
     positions = []
     if ext_id:
@@ -210,6 +220,7 @@ def create_customerorder_in_ms(order_id):
         })
 
     payload = {
+        'organization': {'meta': {'href': organization_href, 'type': 'organization', 'mediaType': 'application/json'}},
         'agent': {'meta': {'href': counterparty_href, 'type': 'counterparty', 'mediaType': 'application/json'}},
         'description': f'{brand} — {prod_name}, {volume_ml} мл. Клиент: {nickname} ({phone})',
     }
@@ -242,6 +253,8 @@ def sync_orders_to_ms(order_ids: list) -> dict:
     skipped = 0
     errors = []
 
+    organization_href = get_organization_href()
+
     for row in rows:
         oid, ms_order_id, total_price, volume_ml, nickname, phone, prod_name, brand, price_per_ml, ext_id, status = row
 
@@ -267,6 +280,7 @@ def sync_orders_to_ms(order_ids: list) -> dict:
                 })
 
             payload = {
+                'organization': {'meta': {'href': organization_href, 'type': 'organization', 'mediaType': 'application/json'}},
                 'agent': {'meta': {'href': counterparty_href, 'type': 'counterparty', 'mediaType': 'application/json'}},
                 'description': f'{brand} — {prod_name}, {volume_ml} мл. Клиент: {nickname} ({phone})',
             }
