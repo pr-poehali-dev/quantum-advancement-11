@@ -107,6 +107,7 @@ export default function Cabinet() {
 
   // реквизиты
   const [paymentDetails, setPaymentDetails] = useState('')
+  const [payAgreed, setPayAgreed] = useState(false)
 
   // долги
   const [debtRequestId, setDebtRequestId] = useState<number | null>(null)
@@ -197,6 +198,7 @@ export default function Cabinet() {
 
   const handlePay = async () => {
     if (paySelected.size === 0) { toast.error('Отметьте заказы'); return }
+    if (!payAgreed) { toast.error('Необходимо подтвердить согласие с договором оферты'); return }
     if (!payDateTime) { toast.error('Укажите дату и время платежа'); return }
     const actualAmount = payAmount ? parseFloat(payAmount) : selectedPayTotal
     if (isNaN(actualAmount) || actualAmount <= 0) { toast.error('Укажите корректную сумму'); return }
@@ -503,8 +505,25 @@ export default function Cabinet() {
                             <Input value={payNote} onChange={e => setPayNote(e.target.value)}
                               placeholder="Комментарий к платежу (необязательно)"
                               className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm" />
-                            <Button onClick={handlePay} disabled={paying}
-                              className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm">
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                              <div className="relative shrink-0 mt-0.5">
+                                <input type="checkbox" checked={payAgreed} onChange={e => setPayAgreed(e.target.checked)} className="sr-only" />
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                  payAgreed ? 'bg-orange-500 border-orange-500' : 'border-white/30 bg-white/5 group-hover:border-white/50'
+                                }`}>
+                                  {payAgreed && <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                </div>
+                              </div>
+                              <span className="text-white/50 text-xs leading-snug select-none">
+                                Я согласен с условиями{' '}
+                                <Link to="/offer" target="_blank" onClick={e => e.stopPropagation()} className="text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2">
+                                  Договора оферты
+                                </Link>
+                                {' '}и подтверждаю заказ на индивидуальный розлив парфюмерии в транспортировочную тару.
+                              </span>
+                            </label>
+                            <Button onClick={handlePay} disabled={paying || !payAgreed}
+                              className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed">
                               {paying ? 'Отправка...' : `Отметить оплату ${payAmount ? parseFloat(payAmount).toFixed(0) : selectedPayTotal.toFixed(0)} ₽`}
                             </Button>
                           </div>
