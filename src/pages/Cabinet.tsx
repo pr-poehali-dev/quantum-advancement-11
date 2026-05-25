@@ -208,7 +208,7 @@ export default function Cabinet() {
     if (r.error) { toast.error(r.error); return }
     toast.success('Отметка отправлена модератору')
     const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-    setPaySelected(new Set()); setPayNote(''); setPayAmount(''); setPayDateTime(now.toISOString().slice(0, 16)); load()
+    setPaySelected(new Set()); setPayNote(''); setPayAmount(''); setPayDateTime(now.toISOString().slice(0, 16)); setPayAgreed(false); load()
   }
 
   const toggleDeliveryOrder = (id: number) => {
