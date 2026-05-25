@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Icon from '@/components/ui/icon'
 import { useAuth } from '@/lib/auth-context'
+import Footer from '@/components/Footer'
 
 const STEPS = [
   { num: 1, status: 'принят', color: 'bg-white/15 text-white' },
@@ -189,6 +190,7 @@ export default function HowItWorks() {
         </div>
 
       </div>
+      <Footer />
     </div>
   )
 }

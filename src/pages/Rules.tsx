@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Icon from '@/components/ui/icon'
+import Footer from '@/components/Footer'
 
 export default function Rules() {
   return (
@@ -111,6 +112,7 @@ export default function Rules() {
           </Link>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

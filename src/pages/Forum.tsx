@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
 import Icon from '@/components/ui/icon'
+import Footer from '@/components/Footer'
 
 interface TopicProduct { id: number; name: string; brand: string; image_url: string | null; price_per_ml: number }
 
@@ -136,6 +137,7 @@ export default function Forum() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Icon from '@/components/ui/icon'
 import { toast } from 'sonner'
+import Footer from '@/components/Footer'
 
 interface Product {
   id: number
@@ -423,6 +424,7 @@ export default function ProductPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

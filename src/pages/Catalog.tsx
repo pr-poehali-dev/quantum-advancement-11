@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context'
 import { api } from '@/lib/api'
 import { ShimmerLink } from '@/components/shimmer-button'
 import Icon from '@/components/ui/icon'
+import Footer from '@/components/Footer'
 
 interface Product {
   id: number
@@ -294,6 +295,7 @@ export default function Catalog() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }
