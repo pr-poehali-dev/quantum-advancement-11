@@ -289,7 +289,7 @@ export default function ProductPage() {
                 <div>
                   <div className="text-white/40 text-sm uppercase tracking-widest mb-1">{product.brand}</div>
                   <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{product.name}</h1>
-                  <div className="text-white/40 text-sm mt-1">{CONC_LABEL[product.concentration] || product.concentration}</div>
+                  <div className="text-white/40 text-sm mt-1">{CONC_LABEL[product.concentration] || product.concentration}{!isBottle && ' (Оригинал, на розлив под заказ)'}</div>
                 </div>
 
                 {product.description && (
