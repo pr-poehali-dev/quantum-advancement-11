@@ -1,5 +1,5 @@
-import { Menu } from "lucide-react"
-import { ShimmerButton } from "@/components/shimmer-button"
+import { Menu, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/lib/auth-context"
@@ -10,65 +10,69 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12 border-b border-white/10">
-        <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
-          <span className="text-white font-bold text-lg sm:text-xl lg:text-2xl tracking-wide">Распивошная</span>
+      <header className="relative z-50 bg-white/90 backdrop-blur-sm border-b border-black/5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+          <Link to="/" className="text-neutral-900 font-semibold text-lg sm:text-xl tracking-tight">
+            Распивошная
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <Link to="/catalog" className="text-neutral-500 hover:text-neutral-900 transition-colors text-sm">
+              Каталог
+            </Link>
+            <Link to="/how-it-works" className="text-neutral-500 hover:text-neutral-900 transition-colors text-sm">
+              Как это работает
+            </Link>
+            <Link to="/forum" className="text-neutral-500 hover:text-neutral-900 transition-colors text-sm">
+              Форум
+            </Link>
+          </nav>
+
+          <div className="hidden md:block">
+            {user ? (
+              <Link to="/cabinet">
+                <Button className="bg-neutral-900 hover:bg-neutral-700 text-white rounded-full px-5">
+                  Личный кабинет
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/login">
+                <Button className="bg-neutral-900 hover:bg-neutral-700 text-white rounded-full px-5">
+                  Войти
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          <button className="md:hidden text-neutral-900 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-
-        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
-          <Link to="/catalog" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Каталог
-          </Link>
-          <Link to="/how-it-works" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Как это работает
-          </Link>
-          <Link to="/forum" className="text-white/80 hover:text-white transition-colors text-sm lg:text-base">
-            Форум
-          </Link>
-        </nav>
-
-        <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          <Menu className="w-6 h-6" />
-        </button>
-
-        {user ? (
-          <Link to="/cabinet">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Личный кабинет
-            </ShimmerButton>
-          </Link>
-        ) : (
-          <Link to="/login">
-            <ShimmerButton className="hidden md:flex px-4 lg:px-6 py-2 text-sm lg:text-base font-medium text-white">
-              Войти
-            </ShimmerButton>
-          </Link>
-        )}
       </header>
 
       {mobileMenuOpen && (
-        <div className="relative z-50 md:hidden bg-black/95 backdrop-blur-sm border-b border-white/10">
-          <nav className="flex flex-col space-y-4 px-6 py-6">
-            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
+        <div className="relative z-50 md:hidden bg-white border-b border-black/5">
+          <nav className="flex flex-col gap-4 px-6 py-6">
+            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-neutral-900 transition-colors">
               Каталог
             </Link>
-            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
+            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-neutral-900 transition-colors">
               Как это работает
             </Link>
-            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white transition-colors">
+            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-neutral-900 transition-colors">
               Форум
             </Link>
             {user ? (
               <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
-                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                <Button className="bg-neutral-900 hover:bg-neutral-700 text-white rounded-full px-5 w-fit">
                   Личный кабинет
-                </ShimmerButton>
+                </Button>
               </Link>
             ) : (
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <ShimmerButton className="text-white px-6 py-2.5 text-sm font-medium w-fit">
+                <Button className="bg-neutral-900 hover:bg-neutral-700 text-white rounded-full px-5 w-fit">
                   Войти
-                </ShimmerButton>
+                </Button>
               </Link>
             )}
           </nav>
