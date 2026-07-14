@@ -1,4 +1,4 @@
-import { Menu, X } from "lucide-react"
+import { Menu, X, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { Link } from "react-router-dom"
@@ -10,67 +10,72 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-black/5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
-          <Link to="/" className="text-neutral-900 font-semibold text-lg sm:text-xl tracking-tight">
-            Распивошная
-          </Link>
+      <div className="bg-gold-500 text-choco-950 text-xs tracking-widest uppercase text-center py-2 px-4">
+        Оригинальный парфюм по оптовым ценам от 1 мл
+      </div>
 
-          <nav className="hidden md:flex items-center gap-8">
-            <Link to="/catalog" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+      <header className="sticky top-0 z-50 bg-choco-950/95 backdrop-blur-sm border-b border-gold-500/20">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+          <nav className="hidden md:flex items-center gap-6 flex-1">
+            <Link to="/catalog" className="text-choco-100/60 hover:text-gold-400 transition-colors text-xs tracking-widest uppercase">
               Каталог
             </Link>
-            <Link to="/how-it-works" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+            <Link to="/how-it-works" className="text-choco-100/60 hover:text-gold-400 transition-colors text-xs tracking-widest uppercase">
               Как это работает
             </Link>
-            <Link to="/forum" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+            <Link to="/forum" className="text-choco-100/60 hover:text-gold-400 transition-colors text-xs tracking-widest uppercase">
               Форум
             </Link>
           </nav>
 
-          <div className="hidden md:block">
+          <Link to="/" className="font-serif text-gold-400 font-semibold text-xl sm:text-2xl tracking-wide text-center flex-1">
+            Распивошная
+          </Link>
+
+          <div className="hidden md:flex items-center justify-end gap-4 flex-1">
+            <Search className="w-4 h-4 text-choco-100/50 hover:text-gold-400 transition-colors cursor-pointer" />
             {user ? (
               <Link to="/cabinet">
-                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5">
-                  Личный кабинет
+                <Button className="bg-transparent border border-gold-500/50 text-gold-400 hover:bg-gold-500 hover:text-choco-950 rounded-none px-5 text-xs tracking-widest uppercase">
+                  Кабинет
                 </Button>
               </Link>
             ) : (
               <Link to="/login">
-                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5">
+                <Button className="bg-transparent border border-gold-500/50 text-gold-400 hover:bg-gold-500 hover:text-choco-950 rounded-none px-5 text-xs tracking-widest uppercase">
                   Войти
                 </Button>
               </Link>
             )}
           </div>
 
-          <button className="md:hidden text-neutral-900 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="md:hidden text-gold-400 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </header>
 
       {mobileMenuOpen && (
-        <div className="relative z-50 md:hidden bg-white border-b border-black/5">
+        <div className="relative z-50 md:hidden bg-choco-950 border-b border-gold-500/20">
           <nav className="flex flex-col gap-4 px-6 py-6">
-            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
+            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-choco-100/70 hover:text-gold-400 transition-colors text-sm tracking-widest uppercase">
               Каталог
             </Link>
-            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
+            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-choco-100/70 hover:text-gold-400 transition-colors text-sm tracking-widest uppercase">
               Как это работает
             </Link>
-            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
+            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-choco-100/70 hover:text-gold-400 transition-colors text-sm tracking-widest uppercase">
               Форум
             </Link>
             {user ? (
               <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5 w-fit">
-                  Личный кабинет
+                <Button className="bg-transparent border border-gold-500/50 text-gold-400 hover:bg-gold-500 hover:text-choco-950 rounded-none px-5 w-fit text-xs tracking-widest uppercase">
+                  Кабинет
                 </Button>
               </Link>
             ) : (
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5 w-fit">
+                <Button className="bg-transparent border border-gold-500/50 text-gold-400 hover:bg-gold-500 hover:text-choco-950 rounded-none px-5 w-fit text-xs tracking-widest uppercase">
                   Войти
                 </Button>
               </Link>

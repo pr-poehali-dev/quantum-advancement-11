@@ -19,9 +19,29 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'sans-serif']
+				sans: ['Inter', 'sans-serif'],
+				serif: ['"Cormorant Garamond"', 'serif']
 			},
 			colors: {
+				choco: {
+					50: '#f7f3ef',
+					100: '#e9ded2',
+					200: '#d3bda3',
+					300: '#b8935a',
+					400: '#a67c3d',
+					500: '#8a6529',
+					600: '#5c4526',
+					700: '#3d2f1c',
+					800: '#241c13',
+					900: '#140f0a',
+					950: '#0b0806'
+				},
+				gold: {
+					300: '#e8d3a0',
+					400: '#d4b96e',
+					500: '#c9a24a',
+					600: '#a9822f'
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
