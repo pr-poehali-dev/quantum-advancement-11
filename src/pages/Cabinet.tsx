@@ -65,7 +65,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 const STATUS_COLOR: Record<string, string> = {
   accepted: 'bg-white/10 text-white/60', fixed: 'bg-blue-500/15 text-blue-300',
-  awaiting_payment: 'bg-teal-500/20 text-teal-300',
+  awaiting_payment: 'bg-gold-500/20 text-gold-300',
   waiting: 'bg-purple-500/15 text-purple-300', delivery: 'bg-green-500/15 text-green-300',
   declined: 'bg-red-500/15 text-red-400',
 }
@@ -262,13 +262,13 @@ export default function Cabinet() {
   ]
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">Распивошная</Link>
+    <div className="min-h-screen bg-choco-950 text-white">
+      <header className="border-b border-gold-500/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-choco-950/90 backdrop-blur-sm z-10">
+        <Link to="/" className="font-serif text-gold-400 font-semibold text-xl tracking-wide hover:text-gold-300 transition-colors">Распивошная</Link>
         <div className="flex items-center gap-3">
           <Link to="/catalog" className="text-white/50 hover:text-white text-sm transition-colors hidden sm:block">Каталог</Link>
           {(user.role === 'admin' || user.role === 'moderator') && (
-            <Link to="/admin"><Button variant="outline" size="sm" className="border-teal-500/40 text-teal-400 hover:bg-teal-500/10 text-xs">Админ</Button></Link>
+            <Link to="/admin"><Button variant="outline" size="sm" className="border-gold-500/40 text-gold-400 hover:bg-gold-500/10 text-xs">Админ</Button></Link>
           )}
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/40 hover:text-white text-xs">Выйти</Button>
         </div>
@@ -277,7 +277,7 @@ export default function Cabinet() {
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8">
         {/* Профиль */}
         <div className="mb-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-lg shrink-0">
+          <div className="w-12 h-12 rounded-full bg-gold-500/20 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold text-lg shrink-0">
             {user.nickname[0].toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -327,7 +327,7 @@ export default function Cabinet() {
                 <div className="space-y-3">
                   <p className="text-white/60 text-sm">Открой бота и отправь ему этот код:</p>
                   <div className="flex items-center gap-3">
-                    <div className="bg-black border border-white/20 rounded-xl px-5 py-3 font-mono text-2xl font-bold tracking-[0.3em] text-teal-400 select-all">
+                    <div className="bg-choco-950 border border-white/20 rounded-xl px-5 py-3 font-mono text-2xl font-bold tracking-[0.3em] text-gold-400 select-all">
                       {tgCode}
                     </div>
                     <a
@@ -348,11 +348,11 @@ export default function Cabinet() {
 
         {/* Баннеры */}
         {awaitingPayment.length > 0 && mainTab !== 'orders' && (
-          <div className="mb-4 bg-teal-500/10 border border-teal-500/40 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-teal-500/15 transition-colors"
+          <div className="mb-4 bg-gold-500/10 border border-gold-500/40 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gold-500/15 transition-colors"
             onClick={() => { setMainTab('orders'); setOrderTab('payment') }}>
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
-            <span className="text-teal-300 text-sm font-medium">Ожидает оплаты: {awaitingPayment.length} заказ(а) на {paymentTotal.toFixed(0)} ₽</span>
-            <Icon name="ChevronRight" size={14} className="text-teal-400 ml-auto shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-gold-400 animate-pulse shrink-0" />
+            <span className="text-gold-300 text-sm font-medium">Ожидает оплаты: {awaitingPayment.length} заказ(а) на {paymentTotal.toFixed(0)} ₽</span>
+            <Icon name="ChevronRight" size={14} className="text-gold-400 ml-auto shrink-0" />
           </div>
         )}
         {weOweTotal > 0 && mainTab !== 'debts' && (
@@ -373,11 +373,11 @@ export default function Cabinet() {
           ]).map(t => (
             <button key={t.id} onClick={() => { setMainTab(t.id); if (t.id === 'messages') setUnreadCount(0) }}
               className={`relative px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                mainTab === t.id ? 'border-teal-500 text-white' : 'border-transparent text-white/40 hover:text-white'
+                mainTab === t.id ? 'border-gold-500 text-white' : 'border-transparent text-white/40 hover:text-white'
               }`}>
               {t.label}
               {t.badge ? (
-                <span className="ml-2 text-xs bg-teal-500/20 text-teal-300 rounded-full px-1.5 py-0.5">{t.badge}</span>
+                <span className="ml-2 text-xs bg-gold-500/20 text-gold-300 rounded-full px-1.5 py-0.5">{t.badge}</span>
               ) : null}
             </button>
           ))}
@@ -398,7 +398,7 @@ export default function Cabinet() {
                         orderTab === t.id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'
                       }`}>
                       {t.label}
-                      {t.badge ? <span className={`text-xs rounded-full px-1.5 py-0.5 ${orderTab === t.id ? 'bg-teal-500/30 text-teal-200' : 'bg-white/10 text-white/60'}`}>{t.badge}</span> : null}
+                      {t.badge ? <span className={`text-xs rounded-full px-1.5 py-0.5 ${orderTab === t.id ? 'bg-gold-500/30 text-gold-200' : 'bg-white/10 text-white/60'}`}>{t.badge}</span> : null}
                     </button>
                   ))}
                 </div>
@@ -428,25 +428,25 @@ export default function Cabinet() {
                         <div className="flex items-center justify-between mb-3">
                           <button onClick={togglePayAll} className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                              paySelected.size > 0 ? 'bg-teal-500 border-teal-500' : 'border-white/20'
+                              paySelected.size > 0 ? 'bg-gold-500 border-gold-500' : 'border-white/20'
                             }`}>
                               {paySelected.size > 0 && <Icon name="Check" size={10} className="text-white" />}
                             </div>
                             Выбрать все
                           </button>
                           {paySelected.size > 0 && (
-                            <span className="text-sm text-teal-300 font-medium">{selectedPayTotal.toFixed(0)} ₽</span>
+                            <span className="text-sm text-gold-300 font-medium">{selectedPayTotal.toFixed(0)} ₽</span>
                           )}
                         </div>
                         <div className="space-y-3 mb-4">
                           {awaitingPayment.map(o => (
                             <div key={o.id} onClick={() => togglePayOrder(o.id)}
                               className={`cursor-pointer rounded-xl border transition-all ${
-                                paySelected.has(o.id) ? 'border-teal-500/50 bg-teal-500/5' : 'border-white/8 hover:border-white/15'
+                                paySelected.has(o.id) ? 'border-gold-500/50 bg-gold-500/5' : 'border-white/8 hover:border-white/15'
                               }`}>
                               <div className="p-4 flex items-start gap-3">
                                 <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                                  paySelected.has(o.id) ? 'bg-teal-500 border-teal-500' : 'border-white/20'
+                                  paySelected.has(o.id) ? 'bg-gold-500 border-gold-500' : 'border-white/20'
                                 }`}>
                                   {paySelected.has(o.id) && <Icon name="Check" size={12} className="text-white" />}
                                 </div>
@@ -468,10 +468,10 @@ export default function Cabinet() {
                           <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-white/50">Итого к оплате:</span>
-                              <span className="font-bold text-teal-300">{selectedPayTotal.toFixed(0)} ₽</span>
+                              <span className="font-bold text-gold-300">{selectedPayTotal.toFixed(0)} ₽</span>
                             </div>
                             {paymentDetails && (
-                              <div className="bg-teal-500/8 border border-teal-500/20 rounded-lg px-3 py-2">
+                              <div className="bg-gold-500/8 border border-gold-500/20 rounded-lg px-3 py-2">
                                 <div className="text-white/40 text-xs mb-1">Реквизиты для оплаты:</div>
                                 <div className="text-white/90 text-sm whitespace-pre-wrap">{paymentDetails}</div>
                               </div>
@@ -497,7 +497,7 @@ export default function Cabinet() {
                                 className="bg-white/5 border-white/10 text-white placeholder-white/30 text-sm"
                               />
                               {payAmount && parseFloat(payAmount) !== selectedPayTotal && (
-                                <div className="text-xs mt-1 text-teal-300/70">
+                                <div className="text-xs mt-1 text-gold-300/70">
                                   Разница: {(parseFloat(payAmount) - selectedPayTotal).toFixed(2)} ₽ — модератор учтёт при проверке
                                 </div>
                               )}
@@ -509,21 +509,21 @@ export default function Cabinet() {
                               <div className="relative shrink-0 mt-0.5">
                                 <input type="checkbox" checked={payAgreed} onChange={e => setPayAgreed(e.target.checked)} className="sr-only" />
                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                  payAgreed ? 'bg-teal-500 border-teal-500' : 'border-white/30 bg-white/5 group-hover:border-white/50'
+                                  payAgreed ? 'bg-gold-500 border-gold-500' : 'border-white/30 bg-white/5 group-hover:border-white/50'
                                 }`}>
                                   {payAgreed && <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                                 </div>
                               </div>
                               <span className="text-white/50 text-xs leading-snug select-none">
                                 Я согласен с условиями{' '}
-                                <Link to="/offer" target="_blank" onClick={e => e.stopPropagation()} className="text-teal-400 hover:text-teal-300 transition-colors underline underline-offset-2">
+                                <Link to="/offer" target="_blank" onClick={e => e.stopPropagation()} className="text-gold-400 hover:text-gold-300 transition-colors underline underline-offset-2">
                                   Договора оферты
                                 </Link>
                                 {' '}и подтверждаю заказ на индивидуальный розлив парфюмерии в транспортировочную тару.
                               </span>
                             </label>
                             <Button onClick={handlePay} disabled={paying || !payAgreed}
-                              className="w-full bg-teal-500 hover:bg-teal-600 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                              className="w-full bg-gold-500 hover:bg-gold-600 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed">
                               {paying ? 'Отправка...' : `Отметить оплату ${payAmount ? parseFloat(payAmount).toFixed(0) : selectedPayTotal.toFixed(0)} ₽`}
                             </Button>
                           </div>
@@ -788,7 +788,7 @@ function OrderCard({ order: o, children }: { order: Order; children?: React.Reac
                 {STATUS_LABEL[o.status] || o.status}
               </span>
               {o.status === 'delivery' && o.pickup_batch && (
-                <div className="text-teal-400 text-xs font-semibold mt-1">Выкуп №{o.pickup_batch}</div>
+                <div className="text-gold-400 text-xs font-semibold mt-1">Выкуп №{o.pickup_batch}</div>
               )}
             </div>
           </div>

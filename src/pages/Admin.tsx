@@ -275,14 +275,14 @@ export default function Admin() {
   if (!user || (user.role !== 'admin' && user.role !== 'moderator')) return null
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-choco-950 text-white">
       {/* Header */}
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-20">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
+      <header className="border-b border-gold-500/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-choco-950/90 backdrop-blur-sm z-20">
+        <Link to="/" className="font-serif text-gold-400 font-semibold text-xl tracking-wide hover:text-gold-300 transition-colors">
           Распивошная
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-teal-400/70 text-xs hidden sm:block">Модератор</span>
+          <span className="text-gold-400/70 text-xs hidden sm:block">Модератор</span>
           <Link to="/cabinet">
             <Button size="sm" className="bg-zinc-700 hover:bg-zinc-600 text-white border border-white/10 text-xs">Кабинет</Button>
           </Link>
@@ -307,7 +307,7 @@ export default function Admin() {
           >
             Платежи
             {payments.length > 0 && (
-              <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+              <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-gold-400 animate-pulse" />
             )}
           </button>
           <button
@@ -342,7 +342,7 @@ export default function Admin() {
           >
             Сообщения
             {adminUnread > 0 && tab !== 'messages' && (
-              <span className="absolute -top-0.5 -right-0.5 bg-teal-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{adminUnread}</span>
+              <span className="absolute -top-0.5 -right-0.5 bg-gold-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{adminUnread}</span>
             )}
           </button>
           <button
@@ -498,9 +498,9 @@ function SettingsTab() {
         onChange={e => setValue(e.target.value)}
         rows={5}
         placeholder={"Например:\nСбербанк 4276 1234 5678 9012\nПо СБП: +7 900 000-00-00"}
-        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors"
+        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors"
       />
-      <Button onClick={handleSave} disabled={saving} className="bg-teal-500 hover:bg-teal-600 text-white text-sm">
+      <Button onClick={handleSave} disabled={saving} className="bg-gold-500 hover:bg-gold-600 text-white text-sm">
         {saving ? 'Сохранение...' : 'Сохранить'}
       </Button>
     </div>
@@ -535,7 +535,7 @@ function BroadcastTab() {
         onChange={e => setText(e.target.value)}
         rows={6}
         placeholder={"Например:\n<b>Новый выкуп!</b>\nДобавили свежие позиции в каталог — заходите выбирать 🌸"}
-        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors"
+        className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/20 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors"
       />
       <div className="flex items-center gap-3">
         <Button onClick={handleSend} disabled={sending || !text.trim()} className="bg-[#0088cc] hover:bg-[#0077b5] text-white text-sm">

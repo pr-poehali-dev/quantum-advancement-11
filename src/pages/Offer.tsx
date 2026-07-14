@@ -3,9 +3,9 @@ import Footer from '@/components/Footer'
 
 export default function Offer() {
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
+    <div className="min-h-screen bg-choco-950 text-white">
+      <header className="border-b border-gold-500/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-choco-950/90 backdrop-blur-sm z-10">
+        <Link to="/" className="font-serif text-gold-400 font-semibold text-xl tracking-wide hover:text-gold-300 transition-colors">
           Распивошная
         </Link>
         <Link to="/catalog" className="text-white/50 hover:text-white text-sm transition-colors">
@@ -15,7 +15,7 @@ export default function Offer() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-10 sm:py-16 space-y-8">
         <div>
-          <div className="text-teal-400 text-sm font-medium uppercase tracking-widest mb-3">Документы</div>
+          <div className="text-gold-400 text-sm font-medium uppercase tracking-widest mb-3">Документы</div>
           <h1 className="text-3xl sm:text-4xl font-bold mb-2">Публичная оферта</h1>
           <p className="text-white/50 text-sm">Договор розничной купли-продажи парфюмерной продукции методом отмеривания</p>
           <p className="text-white/30 text-xs mt-2">Дата публикации: 25.05.2025 · Дата вступления в силу: 25.05.2025</p>
@@ -77,15 +77,15 @@ export default function Offer() {
               <p className="text-white font-medium">ИП Шиванова Валентина Александровна</p>
               <p><span className="text-white/40">ИНН:</span> 583509289160</p>
               <p><span className="text-white/40">ОГРНИП:</span> 326580000037753</p>
-              <p><span className="text-white/40">Email:</span> <a href="mailto:dontoffice@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">dontoffice@gmail.com</a></p>
-              <p><span className="text-white/40">Телефон:</span> <a href="tel:+79953063070" className="text-teal-400 hover:text-teal-300 transition-colors">+7 995 306 30 70</a></p>
+              <p><span className="text-white/40">Email:</span> <a href="mailto:dontoffice@gmail.com" className="text-gold-400 hover:text-gold-300 transition-colors">dontoffice@gmail.com</a></p>
+              <p><span className="text-white/40">Телефон:</span> <a href="tel:+79953063070" className="text-gold-400 hover:text-gold-300 transition-colors">+7 995 306 30 70</a></p>
             </div>
           </section>
 
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-wrap gap-4">
-          <Link to="/rules" className="text-teal-400 hover:text-teal-300 text-sm transition-colors">
+          <Link to="/rules" className="text-gold-400 hover:text-gold-300 text-sm transition-colors">
             Правила участия →
           </Link>
           <Link to="/register" className="text-white/40 hover:text-white text-sm transition-colors">

@@ -115,11 +115,11 @@ function CommentItem({
 
   return (
     <div className={depth > 0 ? 'ml-4 sm:ml-8 border-l-2 border-white/8 pl-3 sm:pl-4' : ''}>
-      <div className={`border rounded-xl p-3.5 ${isMod ? 'border-teal-500/20 bg-teal-500/5' : 'border-white/8 bg-white/2'}`}>
+      <div className={`border rounded-xl p-3.5 ${isMod ? 'border-gold-500/20 bg-gold-500/5' : 'border-white/8 bg-white/2'}`}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {isMod && <Icon name="Shield" size={12} className="text-teal-400 shrink-0" />}
-            <span className={`text-sm font-medium ${isMod ? 'text-teal-300' : 'text-white/80'}`}>
+            {isMod && <Icon name="Shield" size={12} className="text-gold-400 shrink-0" />}
+            <span className={`text-sm font-medium ${isMod ? 'text-gold-300' : 'text-white/80'}`}>
               @{comment.author_nickname}
             </span>
             <span className="text-white/20 text-xs">{fmtDate(comment.created_at)}</span>
@@ -128,7 +128,7 @@ function CommentItem({
             {canReply && (
               <button
                 onClick={() => onReply(comment.id)}
-                className="text-white/25 hover:text-teal-400 transition-colors text-xs flex items-center gap-1"
+                className="text-white/25 hover:text-gold-400 transition-colors text-xs flex items-center gap-1"
               >
                 <Icon name="CornerDownRight" size={13} />
                 <span className="hidden sm:inline">Ответить</span>
@@ -158,11 +158,11 @@ function CommentItem({
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) onSendReply() }}
             placeholder="Ваш ответ... (Ctrl+Enter — отправить)"
             rows={2}
-            className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors mb-2"
+            className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors mb-2"
           />
           <div className="flex gap-2">
             <Button onClick={onSendReply} disabled={sendingReply || !replyText.trim()}
-              className="bg-teal-500 hover:bg-teal-600 text-white text-xs h-8 px-4">
+              className="bg-gold-500 hover:bg-gold-600 text-white text-xs h-8 px-4">
               {sendingReply ? <Icon name="Loader2" size={13} className="animate-spin" /> : 'Отправить'}
             </Button>
             <Button onClick={onCancelReply} variant="ghost" className="text-white/30 text-xs h-8">Отмена</Button>
@@ -273,7 +273,7 @@ export default function ForumTopic() {
   const rootComments = comments.filter(c => !c.parent_id)
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="min-h-screen bg-choco-950 flex items-center justify-center">
       <Icon name="Loader2" size={24} className="animate-spin text-white/30" />
     </div>
   )
@@ -281,9 +281,9 @@ export default function ForumTopic() {
   if (!topic) return null
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
+    <div className="min-h-screen bg-choco-950 text-white">
+      <header className="border-b border-gold-500/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-choco-950/90 backdrop-blur-sm z-10">
+        <Link to="/" className="font-serif text-gold-400 font-semibold text-xl tracking-wide hover:text-gold-300 transition-colors">
           Распивошная
         </Link>
         <nav className="hidden md:flex items-center gap-5 text-sm">
@@ -311,7 +311,7 @@ export default function ForumTopic() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 {topic.is_pinned && (
-                  <span className="flex items-center gap-1 text-teal-400 text-xs font-medium bg-teal-500/10 px-2 py-0.5 rounded-full">
+                  <span className="flex items-center gap-1 text-gold-400 text-xs font-medium bg-gold-500/10 px-2 py-0.5 rounded-full">
                     <Icon name="Pin" size={10} /> Закреплено
                   </span>
                 )}
@@ -330,7 +330,7 @@ export default function ForumTopic() {
             {isAdmin && (
               <div className="flex gap-2 shrink-0">
                 <button onClick={async () => { const r = await api.forum.pinTopic(topic.id, !topic.is_pinned); if (!r.error) load() }}
-                  className={`p-1.5 rounded transition-colors ${topic.is_pinned ? 'text-teal-400' : 'text-white/25 hover:text-teal-400'}`}
+                  className={`p-1.5 rounded transition-colors ${topic.is_pinned ? 'text-gold-400' : 'text-white/25 hover:text-gold-400'}`}
                   title={topic.is_pinned ? 'Открепить' : 'Закрепить'}>
                   <Icon name="Pin" size={15} />
                 </button>
@@ -374,7 +374,7 @@ export default function ForumTopic() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {topic.products.map(p => (
-                <div key={p.id} className="border border-white/10 bg-white/3 rounded-2xl overflow-hidden hover:border-teal-500/30 hover:bg-white/5 transition-all group">
+                <div key={p.id} className="border border-white/10 bg-white/3 rounded-2xl overflow-hidden hover:border-gold-500/30 hover:bg-white/5 transition-all group">
                   {p.image_url && (
                     <div className="h-44 overflow-hidden bg-white/5">
                       <img src={p.image_url} alt={p.name}
@@ -394,15 +394,15 @@ export default function ForumTopic() {
                         <span>{p.fill_percent}% заполнен</span>
                       </div>
                       <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-teal-500/60 rounded-full transition-all"
+                        <div className="h-full bg-gold-500/60 rounded-full transition-all"
                           style={{ width: `${p.fill_percent}%` }} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-teal-300 font-bold text-sm">{p.price_per_ml} ₽/мл</div>
+                      <div className="text-gold-300 font-bold text-sm">{p.price_per_ml} ₽/мл</div>
                       {p.available_ml > 0 ? (
                         <Link to={`/catalog/${p.id}`}
-                          className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                          className="bg-gold-500 hover:bg-gold-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                           Заказать
                         </Link>
                       ) : (
@@ -464,11 +464,11 @@ export default function ForumTopic() {
                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSend() }}
                 placeholder="Написать комментарий... (Ctrl+Enter — отправить)"
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-xl px-4 py-3 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors mb-3"
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-xl px-4 py-3 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors mb-3"
               />
               <div className="flex justify-end">
                 <Button onClick={handleSend} disabled={sending || !text.trim()}
-                  className="bg-teal-500 hover:bg-teal-600 text-white text-sm h-9 px-5">
+                  className="bg-gold-500 hover:bg-gold-600 text-white text-sm h-9 px-5">
                   {sending ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Отправить'}
                 </Button>
               </div>
@@ -477,7 +477,7 @@ export default function ForumTopic() {
             <div className="text-center py-6 border border-white/8 rounded-2xl">
               <p className="text-white/40 text-sm mb-3">Войдите, чтобы оставить комментарий</p>
               <Link to="/login">
-                <Button className="bg-teal-500 hover:bg-teal-600 text-white text-sm h-9">Войти</Button>
+                <Button className="bg-gold-500 hover:bg-gold-600 text-white text-sm h-9">Войти</Button>
               </Link>
             </div>
           )

@@ -94,7 +94,7 @@ export function AdminForumTab() {
           </a>
           {!form && (
             <Button onClick={() => setForm({ title: '', body: '', products: [] })}
-              className="bg-teal-500 hover:bg-teal-600 text-white text-sm h-9">
+              className="bg-gold-500 hover:bg-gold-600 text-white text-sm h-9">
               + Новая тема
             </Button>
           )}
@@ -102,13 +102,13 @@ export function AdminForumTab() {
       </div>
 
       {form && (
-        <div className="border border-teal-500/20 bg-teal-500/5 rounded-2xl p-4 space-y-3">
+        <div className="border border-gold-500/20 bg-gold-500/5 rounded-2xl p-4 space-y-3">
           <div className="text-white/60 text-sm font-medium">Новая тема</div>
           <Input value={form.title} onChange={e => setForm(f => f ? { ...f, title: e.target.value } : f)}
             placeholder="Заголовок темы" className="bg-white/5 border-white/15 text-white placeholder:text-white/25 h-10" />
           <textarea value={form.body} onChange={e => setForm(f => f ? { ...f, body: e.target.value } : f)}
             placeholder="Текст темы" rows={4}
-            className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors" />
+            className="w-full bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors" />
           <div>
             <label className="text-white/40 text-xs mb-1.5 block">Изображение (необязательно)</label>
             {form.imagePreview ? (
@@ -131,7 +131,7 @@ export function AdminForumTab() {
           </div>
           <ForumProductPicker selected={form.products} onChange={p => setForm(f => f ? { ...f, products: p } : f)} />
           <div className="flex gap-2">
-            <Button onClick={handleCreate} disabled={saving} className="bg-teal-500 hover:bg-teal-600 text-white text-sm h-9">
+            <Button onClick={handleCreate} disabled={saving} className="bg-gold-500 hover:bg-gold-600 text-white text-sm h-9">
               {saving ? <><Icon name="Loader2" size={14} className="animate-spin mr-1" />Публикую...</> : 'Опубликовать'}
             </Button>
             <Button onClick={() => setForm(null)} variant="ghost" className="text-white/40 text-sm h-9">Отмена</Button>
@@ -148,7 +148,7 @@ export function AdminForumTab() {
       ) : (
         <div className="space-y-2">
           {topics.map(t => (
-            <div key={t.id} className={`border rounded-xl p-4 ${t.is_pinned ? 'border-teal-500/20 bg-teal-500/5' : 'border-white/8 bg-white/2'}`}>
+            <div key={t.id} className={`border rounded-xl p-4 ${t.is_pinned ? 'border-gold-500/20 bg-gold-500/5' : 'border-white/8 bg-white/2'}`}>
               {editTopic?.id === t.id ? (
                 <div className="space-y-2">
                   <Input value={editTopic.title} onChange={e => setEditTopic(et => et ? { ...et, title: e.target.value } : et)}
@@ -161,7 +161,7 @@ export function AdminForumTab() {
                       {saving ? '...' : 'Сохранить текст'}
                     </Button>
                     <Button onClick={() => handleSaveProducts(t.id)} disabled={savingProducts === t.id}
-                      className="bg-teal-600 hover:bg-teal-700 text-white text-xs h-8 px-3">
+                      className="bg-gold-600 hover:bg-gold-700 text-white text-xs h-8 px-3">
                       {savingProducts === t.id ? '...' : 'Сохранить товары'}
                     </Button>
                     <Button onClick={() => setEditTopic(null)} variant="ghost" className="text-white/30 text-xs h-8">Отмена</Button>
@@ -171,10 +171,10 @@ export function AdminForumTab() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      {t.is_pinned && <span className="text-teal-400 text-xs flex items-center gap-1"><Icon name="Pin" size={10} />Закреплено</span>}
+                      {t.is_pinned && <span className="text-gold-400 text-xs flex items-center gap-1"><Icon name="Pin" size={10} />Закреплено</span>}
                       {t.is_closed && <span className="text-white/30 text-xs flex items-center gap-1"><Icon name="Lock" size={10} />Закрыто</span>}
                     </div>
-                    <a href={`/forum/${t.id}`} target="_blank" className="text-white font-medium text-sm hover:text-teal-300 transition-colors">
+                    <a href={`/forum/${t.id}`} target="_blank" className="text-white font-medium text-sm hover:text-gold-300 transition-colors">
                       {t.title}
                     </a>
                     <p className="text-white/40 text-xs mt-1 line-clamp-2">{t.body}</p>
@@ -185,7 +185,7 @@ export function AdminForumTab() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => api.forum.pinTopic(t.id, !t.is_pinned).then(load)}
-                      className={`p-1.5 rounded transition-colors ${t.is_pinned ? 'text-teal-400' : 'text-white/25 hover:text-teal-400'}`}>
+                      className={`p-1.5 rounded transition-colors ${t.is_pinned ? 'text-gold-400' : 'text-white/25 hover:text-gold-400'}`}>
                       <Icon name="Pin" size={14} />
                     </button>
                     <button onClick={() => api.forum.closeTopic(t.id, !t.is_closed).then(load)}

@@ -31,7 +31,7 @@ export function ForumProductPicker({ selected, onChange }: { selected: ForumProd
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selected.map(p => (
-            <div key={p.id} className="flex items-center gap-1.5 bg-teal-500/10 border border-teal-500/20 rounded-lg px-2 py-1">
+            <div key={p.id} className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-lg px-2 py-1">
               {p.image_url && <img src={p.image_url} className="w-6 h-6 rounded object-cover" />}
               <span className="text-white/80 text-xs">{p.brand} {p.name}</span>
               <button onClick={() => remove(p.id)} className="text-white/30 hover:text-red-400 ml-0.5"><Icon name="X" size={12} /></button>

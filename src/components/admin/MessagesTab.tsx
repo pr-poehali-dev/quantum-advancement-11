@@ -72,10 +72,10 @@ export default function MessagesTab() {
       {/* Список диалогов */}
       <div className="w-64 shrink-0 border border-white/10 rounded-xl overflow-hidden flex flex-col">
         <div className="px-3 py-2.5 border-b border-white/10 flex items-center gap-2 bg-white/3">
-          <Icon name="MessageCircle" size={14} className="text-teal-400" />
+          <Icon name="MessageCircle" size={14} className="text-gold-400" />
           <span className="text-white/70 text-sm font-medium">Диалоги</span>
           {unreadCount > 0 && (
-            <span className="ml-auto bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{unreadCount}</span>
+            <span className="ml-auto bg-gold-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{unreadCount}</span>
           )}
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -89,7 +89,7 @@ export default function MessagesTab() {
             <button key={d.user_id} onClick={() => openDialog(d)}
               className={`w-full px-3 py-3 text-left border-b border-white/5 hover:bg-white/5 transition-colors ${activeDialog?.user_id === d.user_id ? 'bg-white/8' : ''}`}>
               <div className="flex items-center gap-2 mb-0.5">
-                {d.has_unread && <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />}
+                {d.has_unread && <span className="w-2 h-2 rounded-full bg-gold-400 shrink-0" />}
                 <span className={`text-sm truncate ${d.has_unread ? 'text-white font-medium' : 'text-white/70'}`}>@{d.nickname}</span>
                 <span className="text-white/25 text-xs ml-auto shrink-0">{fmt(d.last_at).split(', ')[0]}</span>
               </div>
@@ -120,7 +120,7 @@ export default function MessagesTab() {
               )}
               {messages.map(m => (
                 <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${m.is_mine ? 'bg-teal-500/20 border border-teal-500/30' : 'bg-white/8 border border-white/10'}`}>
+                  <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${m.is_mine ? 'bg-gold-500/20 border border-gold-500/30' : 'bg-white/8 border border-white/10'}`}>
                     {!m.is_mine && <div className="text-blue-400 text-xs font-medium mb-1">@{activeDialog.nickname}</div>}
                     <div className="text-white text-sm whitespace-pre-wrap">{m.body}</div>
                     <div className="text-xs text-white/25 mt-1 text-right">{fmt(m.created_at)}</div>
@@ -133,9 +133,9 @@ export default function MessagesTab() {
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
                 placeholder="Ответить... (Enter — отправить, Shift+Enter — новая строка)"
                 rows={2}
-                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors" />
+                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors" />
               <Button onClick={sendReply} disabled={sending || !replyText.trim()}
-                className="bg-teal-500 hover:bg-teal-600 text-white h-9 w-9 p-0 rounded-xl shrink-0 self-end">
+                className="bg-gold-500 hover:bg-gold-600 text-white h-9 w-9 p-0 rounded-xl shrink-0 self-end">
                 <Icon name="Send" size={15} />
               </Button>
             </div>

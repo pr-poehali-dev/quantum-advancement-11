@@ -37,10 +37,12 @@ export default {
 					950: '#0b0806'
 				},
 				gold: {
+					200: '#f0e6c8',
 					300: '#e8d3a0',
 					400: '#d4b96e',
 					500: '#c9a24a',
-					600: '#a9822f'
+					600: '#a9822f',
+					700: '#8a6a26'
 				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

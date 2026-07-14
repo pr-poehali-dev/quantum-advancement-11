@@ -109,18 +109,18 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
                 activeUserId === t.user_id
                   ? 'bg-white/10'
                   : t.has_unread
-                  ? 'bg-teal-500/8 hover:bg-teal-500/12'
+                  ? 'bg-gold-500/8 hover:bg-gold-500/12'
                   : 'hover:bg-white/5'
               }`}>
               <div className="flex items-center gap-2">
                 {t.has_unread && activeUserId !== t.user_id && (
-                  <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-gold-400 shrink-0 animate-pulse" />
                 )}
                 <span className={`text-sm font-medium truncate flex-1 ${
                   t.has_unread && activeUserId !== t.user_id ? 'text-white' : 'text-white/70'
                 }`}>@{t.nickname}</span>
                 {t.unread_count > 0 && activeUserId !== t.user_id && (
-                  <span className="bg-teal-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0">
+                  <span className="bg-gold-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0">
                     {t.unread_count > 9 ? '9+' : t.unread_count}
                   </span>
                 )}
@@ -140,7 +140,7 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
         ) : (
           <>
             <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2 shrink-0">
-              <Icon name="MessageCircle" size={14} className="text-teal-400" />
+              <Icon name="MessageCircle" size={14} className="text-gold-400" />
               <span className="text-white font-medium text-sm">@{activeThread.nickname}</span>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
@@ -151,9 +151,9 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
                 <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
                     m.is_mine
-                      ? 'bg-teal-500/20 border border-teal-500/30'
+                      ? 'bg-gold-500/20 border border-gold-500/30'
                       : !m.is_read
-                      ? 'bg-teal-500/10 border border-teal-500/25'
+                      ? 'bg-gold-500/10 border border-gold-500/25'
                       : 'bg-white/8 border border-white/10'
                   }`}>
                     <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{m.body}</div>
@@ -173,10 +173,10 @@ export function AdminMessagesTab({ onUnreadChange }: { onUnreadChange: (n: numbe
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
                 placeholder="Ответить... (Enter — отправить)"
                 rows={1}
-                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors"
+                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-gold-500/50 transition-colors"
               />
               <Button onClick={handleSend} disabled={sending || !text.trim()}
-                className="bg-teal-500 hover:bg-teal-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
+                className="bg-gold-500 hover:bg-gold-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
                 <Icon name="Send" size={15} />
               </Button>
             </div>

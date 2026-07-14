@@ -227,7 +227,7 @@ export function DebtsTab({ debts, loading, onChanged }: { debts: Debt[]; loading
               placeholder="напр. Товар не поступил" className="bg-white/10 border-white/20 text-white h-9 text-sm" />
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleAdd} disabled={addSaving} className="bg-teal-500 hover:bg-teal-600 text-white text-sm h-9">
+            <Button onClick={handleAdd} disabled={addSaving} className="bg-gold-500 hover:bg-gold-600 text-white text-sm h-9">
               {addSaving ? 'Сохраняю...' : 'Добавить'}
             </Button>
             <Button variant="ghost" onClick={() => setAddForm(null)} className="text-white/40 text-sm h-9">Отмена</Button>

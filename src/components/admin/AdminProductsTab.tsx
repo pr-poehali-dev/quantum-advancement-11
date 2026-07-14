@@ -193,7 +193,7 @@ export default function AdminProductsTab({
             <option value="bottle">Флаконы</option>
           </select>
         </div>
-        <Button onClick={onLoadProducts} disabled={productsLoading} className="bg-teal-500 hover:bg-teal-600 text-white h-9 text-sm px-5">
+        <Button onClick={onLoadProducts} disabled={productsLoading} className="bg-gold-500 hover:bg-gold-600 text-white h-9 text-sm px-5">
           {productsLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
         </Button>
         <Button variant="ghost" onClick={() => { setProdFilterName(''); setProdFilterBrand(''); setProdFilterMinBooked(''); setProdFilterCategory('') }}
@@ -202,7 +202,7 @@ export default function AdminProductsTab({
         </Button>
         <div className="ml-auto flex items-center gap-2">
           <Button onClick={() => setShowCreate(true)}
-            className="bg-teal-500 hover:bg-teal-600 text-white h-9 text-sm px-4">
+            className="bg-gold-500 hover:bg-gold-600 text-white h-9 text-sm px-4">
             <Icon name="Plus" size={14} className="mr-1.5" />
             Новый товар
           </Button>
@@ -281,7 +281,7 @@ export default function AdminProductsTab({
                 return (
                   <th className="px-3 py-3 w-8">
                     <input type="checkbox" checked={allSelected} onChange={() => toggleAll(filtered)}
-                      className="accent-teal-500 w-4 h-4 cursor-pointer" />
+                      className="accent-gold-500 w-4 h-4 cursor-pointer" />
                   </th>
                 )
               })()}
@@ -303,7 +303,7 @@ export default function AdminProductsTab({
                     <button onClick={() => onToggleProdSort(col.key!)}
                       className="flex items-center gap-1 text-white/40 hover:text-white transition-colors">
                       {col.label}
-                      <Icon name={prodSort === col.key ? (prodSortDir === 'desc' ? 'ChevronDown' : 'ChevronUp') : 'ChevronsUpDown'} size={12} className={prodSort === col.key ? 'text-teal-400' : 'text-white/20'} />
+                      <Icon name={prodSort === col.key ? (prodSortDir === 'desc' ? 'ChevronDown' : 'ChevronUp') : 'ChevronsUpDown'} size={12} className={prodSort === col.key ? 'text-gold-400' : 'text-white/20'} />
                     </button>
                   ) : <span className="text-white/40">{col.label}</span>}
                 </th>
@@ -331,7 +331,7 @@ export default function AdminProductsTab({
                   <tr key={p.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${selectedProducts.has(p.id) ? 'bg-red-500/5' : ''} ${!p.is_active ? 'opacity-40' : ''}`}>
                     <td className="px-3 py-2.5">
                       <input type="checkbox" checked={selectedProducts.has(p.id)} onChange={() => toggleSelect(p.id)}
-                        className="accent-teal-500 w-4 h-4 cursor-pointer" />
+                        className="accent-gold-500 w-4 h-4 cursor-pointer" />
                     </td>
                     <td className="px-3 py-2.5 text-white/25 text-xs">{p.id}</td>
                     <td className="px-3 py-2.5 text-xs">
@@ -343,9 +343,9 @@ export default function AdminProductsTab({
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'supplier_id'); if (e.key === 'Escape') setEditingCell(null) }}
-                            className="w-20 bg-zinc-800 border border-teal-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
+                            className="w-20 bg-zinc-800 border border-gold-500/50 text-white text-xs rounded px-1 py-0.5 outline-none"
                           />
-                          <button onClick={() => onSaveCell(p.id, 'supplier_id')} disabled={savingCell} className="text-teal-400 hover:text-teal-300">
+                          <button onClick={() => onSaveCell(p.id, 'supplier_id')} disabled={savingCell} className="text-gold-400 hover:text-gold-300">
                             <Icon name="Check" size={13} />
                           </button>
                           <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white">
@@ -355,11 +355,11 @@ export default function AdminProductsTab({
                       ) : (
                         <button
                           onClick={() => onStartEdit(p.id, 'supplier_id', p.supplier_id || '')}
-                          className="text-white/40 hover:text-teal-300 transition-colors group flex items-center gap-1">
+                          className="text-white/40 hover:text-gold-300 transition-colors group flex items-center gap-1">
                           <span className={p.supplier_id ? 'text-white/60' : 'text-white/20 italic'}>
                             {p.supplier_id || '—'}
                           </span>
-                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -371,7 +371,7 @@ export default function AdminProductsTab({
                       {editingCell?.id === p.id && editingCell?.field === 'concentration' ? (
                         <select autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                           onBlur={() => { api.admin.updateProduct({ id: p.id, concentration: editValue }).then(r => { if (!r.error) setProducts(prev => prev.map(x => x.id === p.id ? { ...x, concentration: editValue } : x)); setEditingCell(null) }) }}
-                          className="bg-zinc-800 border border-teal-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
+                          className="bg-zinc-800 border border-gold-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
                           <option value="parfum_water">Парф. вода</option>
                           <option value="parfum">Духи</option>
                           <option value="cologne">Одеколон</option>
@@ -379,9 +379,9 @@ export default function AdminProductsTab({
                         </select>
                       ) : (
                         <button onClick={() => onStartEdit(p.id, 'concentration', p.concentration)}
-                          className="text-white/50 hover:text-teal-300 text-xs transition-colors group flex items-center gap-1 mx-auto">
+                          className="text-white/50 hover:text-gold-300 text-xs transition-colors group flex items-center gap-1 mx-auto">
                           {CONC_LABEL[p.concentration] || p.concentration}
-                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -391,15 +391,15 @@ export default function AdminProductsTab({
                       {editingCell?.id === p.id && editingCell?.field === 'category' ? (
                         <select autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                           onBlur={() => { api.admin.updateProduct({ id: p.id, category: editValue }).then(r => { if (!r.error) setProducts(prev => prev.map(x => x.id === p.id ? { ...x, category: editValue } : x)); setEditingCell(null) }) }}
-                          className="bg-zinc-800 border border-teal-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
+                          className="bg-zinc-800 border border-gold-500/50 text-white text-xs rounded px-1 py-0.5 outline-none">
                           <option value="decant">Отливант</option>
                           <option value="bottle">Флакон</option>
                         </select>
                       ) : (
                         <button onClick={() => onStartEdit(p.id, 'category', p.category)}
-                          className={`text-xs px-2 py-0.5 rounded-full transition-colors group flex items-center gap-1 mx-auto ${p.category === 'bottle' ? 'text-purple-300 hover:text-teal-300' : 'text-blue-300 hover:text-teal-300'}`}>
+                          className={`text-xs px-2 py-0.5 rounded-full transition-colors group flex items-center gap-1 mx-auto ${p.category === 'bottle' ? 'text-purple-300 hover:text-gold-300' : 'text-blue-300 hover:text-gold-300'}`}>
                           {CAT_LABEL[p.category] || p.category}
-                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={10} className="text-white/15 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -410,17 +410,17 @@ export default function AdminProductsTab({
                         <div className="flex items-center gap-1 justify-center">
                           <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'price_per_ml'); if (e.key === 'Escape') setEditingCell(null) }}
-                            className="w-20 bg-white/10 border border-teal-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
-                          <button onClick={() => onSaveCell(p.id, 'price_per_ml')} disabled={savingCell} className="text-teal-400 hover:text-teal-300">
+                            className="w-20 bg-white/10 border border-gold-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                          <button onClick={() => onSaveCell(p.id, 'price_per_ml')} disabled={savingCell} className="text-gold-400 hover:text-gold-300">
                             <Icon name="Check" size={13} />
                           </button>
                           <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
                         </div>
                       ) : (
                         <button onClick={() => onStartEdit(p.id, 'price_per_ml', String(p.price_per_ml))}
-                          className="text-white/80 hover:text-teal-300 transition-colors group flex items-center gap-1 mx-auto">
+                          className="text-white/80 hover:text-gold-300 transition-colors group flex items-center gap-1 mx-auto">
                           {p.price_per_ml} ₽
-                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -431,17 +431,17 @@ export default function AdminProductsTab({
                         <div className="flex items-center gap-1 justify-center">
                           <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'bottle_ml'); if (e.key === 'Escape') setEditingCell(null) }}
-                            className="w-20 bg-white/10 border border-teal-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
-                          <button onClick={() => onSaveCell(p.id, 'bottle_ml')} disabled={savingCell} className="text-teal-400 hover:text-teal-300">
+                            className="w-20 bg-white/10 border border-gold-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                          <button onClick={() => onSaveCell(p.id, 'bottle_ml')} disabled={savingCell} className="text-gold-400 hover:text-gold-300">
                             <Icon name="Check" size={13} />
                           </button>
                           <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
                         </div>
                       ) : (
                         <button onClick={() => onStartEdit(p.id, 'bottle_ml', String(p.bottle_ml))}
-                          className="text-white/80 hover:text-teal-300 transition-colors group flex items-center gap-1 mx-auto">
+                          className="text-white/80 hover:text-gold-300 transition-colors group flex items-center gap-1 mx-auto">
                           {p.bottle_ml}
-                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -452,18 +452,18 @@ export default function AdminProductsTab({
                         <div className="flex items-center gap-1 justify-center">
                           <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') onSaveCell(p.id, 'booked_ml'); if (e.key === 'Escape') setEditingCell(null) }}
-                            className="w-20 bg-white/10 border border-teal-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
-                          <button onClick={() => onSaveCell(p.id, 'booked_ml')} disabled={savingCell} className="text-teal-400 hover:text-teal-300">
+                            className="w-20 bg-white/10 border border-gold-500/50 text-white text-center text-sm rounded px-1.5 py-0.5 outline-none" />
+                          <button onClick={() => onSaveCell(p.id, 'booked_ml')} disabled={savingCell} className="text-gold-400 hover:text-gold-300">
                             <Icon name="Check" size={13} />
                           </button>
                           <button onClick={() => setEditingCell(null)} className="text-white/30 hover:text-white"><Icon name="X" size={13} /></button>
                         </div>
                       ) : (
                         <button onClick={() => onStartEdit(p.id, 'booked_ml', String(p.booked_ml))}
-                          className="text-white/80 hover:text-teal-300 transition-colors group flex items-center gap-1 mx-auto">
+                          className="text-white/80 hover:text-gold-300 transition-colors group flex items-center gap-1 mx-auto">
                           <span>{p.booked_ml}</span>
                           <span className="text-white/25 text-xs">({fillPct}%)</span>
-                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-teal-400" />
+                          <Icon name="Pencil" size={11} className="text-white/20 group-hover:text-gold-400" />
                         </button>
                       )}
                     </td>
@@ -491,7 +491,7 @@ export default function AdminProductsTab({
         <div className="mt-3 flex gap-4 text-sm text-white/30 px-1">
           <span>Всего: <span className="text-white/60">{products.length}</span></span>
           <span>Активных: <span className="text-white/60">{products.filter(p => p.is_active).length}</span></span>
-          <span>Заполнено полностью: <span className="text-teal-400">{products.filter(p => p.booked_ml >= p.bottle_ml).length}</span></span>
+          <span>Заполнено полностью: <span className="text-gold-400">{products.filter(p => p.booked_ml >= p.bottle_ml).length}</span></span>
         </div>
       )}
       {showCreate && (

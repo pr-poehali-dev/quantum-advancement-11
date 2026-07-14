@@ -169,7 +169,7 @@ export default function WarehouseTab() {
             <input
               value={stockSearch} onChange={e => setStockSearch(e.target.value)}
               placeholder="Поиск по названию..."
-              className="bg-white/5 border border-white/10 text-white placeholder:text-white/30 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50 w-52"
+              className="bg-white/5 border border-white/10 text-white placeholder:text-white/30 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50 w-52"
             />
             <Button size="sm" onClick={loadStocks} disabled={stocksLoading} className="bg-white/10 hover:bg-white/15 text-white border border-white/10">
               {stocksLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="RefreshCw" size={14} />}
@@ -200,7 +200,7 @@ export default function WarehouseTab() {
                           {p.stock_ml.toFixed(1)} мл
                         </span>
                       </td>
-                      <td className="text-right pr-4 text-teal-300 font-mono">{p.booked_ml.toFixed(1)} мл</td>
+                      <td className="text-right pr-4 text-gold-300 font-mono">{p.booked_ml.toFixed(1)} мл</td>
                       <td className="text-right">
                         <span className={`font-mono font-medium ${p.available_ml > 0 ? 'text-white' : 'text-red-400'}`}>
                           {p.available_ml.toFixed(1)} мл
@@ -225,7 +225,7 @@ export default function WarehouseTab() {
             <div>
               <div className="text-white/40 text-xs mb-1">Тип</div>
               <select value={movType} onChange={e => setMovType(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50">
+                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50">
                 <option value="">Все</option>
                 <option value="income">Приход</option>
                 <option value="writeoff">Списание</option>
@@ -235,12 +235,12 @@ export default function WarehouseTab() {
             <div>
               <div className="text-white/40 text-xs mb-1">С даты</div>
               <input type="date" value={movDateFrom} onChange={e => setMovDateFrom(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50" />
+                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50" />
             </div>
             <div>
               <div className="text-white/40 text-xs mb-1">По дату</div>
               <input type="date" value={movDateTo} onChange={e => setMovDateTo(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50" />
+                className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50" />
             </div>
             <Button size="sm" onClick={loadMovements} disabled={movLoading} className="bg-white/10 hover:bg-white/15 text-white border border-white/10">
               {movLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Обновить'}
@@ -251,12 +251,12 @@ export default function WarehouseTab() {
               <div>
                 <div className="text-white/40 text-xs mb-1">Экспорт с</div>
                 <input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
-                  className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50" />
+                  className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50" />
               </div>
               <div>
                 <div className="text-white/40 text-xs mb-1">по</div>
                 <input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
-                  className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-teal-500/50" />
+                  className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gold-500/50" />
               </div>
               <Button size="sm" onClick={handleExport} disabled={exporting}
                 className="bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/20">
@@ -323,13 +323,13 @@ export default function WarehouseTab() {
               <div className="text-white/40 text-xs mb-1">{subTab === 'income' ? '№ документа прихода' : '№ акта списания'}</div>
               <input value={docNumber} onChange={e => setDocNumber(e.target.value)}
                 placeholder="Например: ПН-2024-001"
-                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500/50" />
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold-500/50" />
             </div>
             <div>
               <div className="text-white/40 text-xs mb-1">Комментарий</div>
               <input value={docComment} onChange={e => setDocComment(e.target.value)}
                 placeholder="Необязательно"
-                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500/50" />
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold-500/50" />
             </div>
           </div>
 
@@ -339,7 +339,7 @@ export default function WarehouseTab() {
             <div className="relative">
               <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
                 placeholder="Начните вводить название..."
-                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500/50" />
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold-500/50" />
               {productSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-white/10 rounded-lg overflow-hidden z-10">
                   {productSuggestions.map(p => (
@@ -378,7 +378,7 @@ export default function WarehouseTab() {
                           value={item.amount_ml}
                           onChange={e => updateDocItemAmount(item.product_id, e.target.value)}
                           placeholder="0"
-                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-2 py-1 text-sm outline-none focus:border-teal-500/50 text-right"
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-2 py-1 text-sm outline-none focus:border-gold-500/50 text-right"
                         />
                       </td>
                       <td className="px-2">

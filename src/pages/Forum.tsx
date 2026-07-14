@@ -39,10 +39,10 @@ export default function Forum() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-choco-950 text-white">
       {/* Header */}
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
+      <header className="border-b border-gold-500/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-choco-950/90 backdrop-blur-sm z-10">
+        <Link to="/" className="font-serif text-gold-400 font-semibold text-xl tracking-wide hover:text-gold-300 transition-colors">
           Распивошная
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/60">
@@ -95,7 +95,7 @@ export default function Forum() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {t.is_pinned && (
-                        <span className="flex items-center gap-1 text-teal-400 text-xs font-medium">
+                        <span className="flex items-center gap-1 text-gold-400 text-xs font-medium">
                           <Icon name="Pin" size={11} />
                           Закреплено
                         </span>
@@ -107,7 +107,7 @@ export default function Forum() {
                         </span>
                       )}
                     </div>
-                    <h2 className="text-white font-semibold text-base group-hover:text-teal-300 transition-colors leading-snug">
+                    <h2 className="text-white font-semibold text-base group-hover:text-gold-300 transition-colors leading-snug">
                       {t.title}
                     </h2>
                     <p className="text-white/40 text-sm mt-1 line-clamp-2 leading-relaxed">{t.body}</p>
@@ -119,9 +119,9 @@ export default function Forum() {
                     {t.products_preview && t.products_preview.length > 0 && (
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         {t.products_preview.map(p => (
-                          <div key={p.id} className="flex items-center gap-1 bg-teal-500/8 border border-teal-500/15 rounded-lg px-2 py-0.5">
+                          <div key={p.id} className="flex items-center gap-1 bg-gold-500/8 border border-gold-500/15 rounded-lg px-2 py-0.5">
                             {p.image_url && <img src={p.image_url} className="w-4 h-4 rounded object-cover" />}
-                            <span className="text-teal-300/70 text-xs">{p.brand} {p.name}</span>
+                            <span className="text-gold-300/70 text-xs">{p.brand} {p.name}</span>
                           </div>
                         ))}
                       </div>

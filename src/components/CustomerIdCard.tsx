@@ -17,7 +17,7 @@ export default function CustomerIdCard({ nickname, customerCode }: Props) {
         variant="outline"
         size="sm"
         onClick={() => setOpen(true)}
-        className="border-teal-500/40 text-teal-300 hover:bg-teal-500/10 hover:text-teal-200 flex items-center gap-2"
+        className="border-gold-500/40 text-gold-300 hover:bg-gold-500/10 hover:text-gold-200 flex items-center gap-2"
       >
         <Icon name="QrCode" size={16} />
         Моё удостоверение
@@ -29,7 +29,7 @@ export default function CustomerIdCard({ nickname, customerCode }: Props) {
           onClick={() => setOpen(false)}
         >
           <div
-            className="relative bg-[#1a1410] border border-teal-500/30 rounded-2xl p-6 max-w-xs w-full shadow-2xl shadow-teal-900/30"
+            className="relative bg-[#1a1410] border border-gold-500/30 rounded-2xl p-6 max-w-xs w-full shadow-2xl shadow-gold-700/30"
             onClick={e => e.stopPropagation()}
           >
             <button
@@ -58,7 +58,7 @@ export default function CustomerIdCard({ nickname, customerCode }: Props) {
 
             <div className="text-center">
               <p className="text-white/40 text-xs mb-1">Ваш номер</p>
-              <p className="text-teal-400 font-mono text-2xl font-bold tracking-widest">{customerCode}</p>
+              <p className="text-gold-400 font-mono text-2xl font-bold tracking-widest">{customerCode}</p>
             </div>
 
             <p className="text-white/30 text-xs text-center mt-4 leading-relaxed">
