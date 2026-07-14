@@ -25,6 +25,16 @@ export default function ApproachSection() {
   return (
     <section className="px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden border border-gold-500/15 bg-choco-900 relative p-8 sm:p-12 lg:p-16">
+        <div
+          className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
+          style={{
+            backgroundImage: 'url(/images/noise-texture.png)',
+            backgroundSize: '256px 256px',
+          }}
+        />
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-gold-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-gold-500/5 rounded-full blur-[100px] pointer-events-none" />
+
         <div className="relative flex items-center justify-between mb-10 sm:mb-14">
           <span className="text-choco-100/40 text-xs tracking-[0.25em]">02</span>
           <span className="text-choco-100/40 text-xs tracking-[0.25em] uppercase">Наш подход</span>

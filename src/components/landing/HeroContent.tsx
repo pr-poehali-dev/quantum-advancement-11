@@ -5,15 +5,17 @@ import Icon from "@/components/ui/icon"
 export default function HeroContent() {
   return (
     <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
-      <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden border border-gold-500/15 bg-choco-900 relative min-h-[480px] lg:min-h-[620px] flex items-end lg:items-center">
+      <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden bg-choco-900 relative min-h-[480px] lg:min-h-[620px] flex items-end lg:items-center">
         {/* Фоновое изображение, плавно перетекающее в фоновый цвет */}
         <img
           src="/images/hero-perfume-collection.jpg"
           alt="Нишевый парфюм"
           className="absolute inset-0 w-full h-full object-cover object-right"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-choco-900 via-choco-900/85 sm:via-choco-900/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-choco-900 via-transparent to-choco-900/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-choco-900 via-choco-900/85 sm:via-choco-900/55 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-choco-900 via-transparent to-choco-900/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-choco-900/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-choco-900/30" />
 
         {/* Текст */}
         <div className="relative p-8 sm:p-12 lg:p-16 max-w-xl">
