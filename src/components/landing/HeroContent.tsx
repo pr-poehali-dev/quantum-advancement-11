@@ -4,21 +4,23 @@ import Icon from "@/components/ui/icon"
 
 export default function HeroContent() {
   return (
-    <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
-      <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden bg-choco-900 relative min-h-[480px] lg:min-h-[620px] flex items-end lg:items-center">
-        {/* Фоновое изображение, плавно перетекающее в фоновый цвет */}
-        <img
-          src="/images/hero-perfume-collection.jpg"
-          alt="Нишевый парфюм"
-          className="absolute inset-0 w-full h-full object-cover object-right"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-choco-900 via-choco-900/85 sm:via-choco-900/55 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-choco-900 via-transparent to-choco-900/40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-choco-900/50 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-choco-900/30" />
+    <section className="relative z-10 min-h-[480px] lg:min-h-[620px] flex items-end lg:items-center overflow-hidden bg-choco-950">
+      {/* Фоновое изображение, плавно перетекающее в фоновый цвет */}
+      <img
+        src="/images/hero-perfume-collection.jpg"
+        alt="Нишевый парфюм"
+        className="absolute inset-0 w-full h-full object-cover object-right"
+        style={{
+          maskImage: 'radial-gradient(ellipse 75% 100% at 78% 50%, black 45%, transparent 88%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 75% 100% at 78% 50%, black 45%, transparent 88%)',
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-choco-950 via-choco-950/60 sm:via-choco-950/25 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-choco-950 via-transparent to-choco-950/50" />
 
-        {/* Текст */}
-        <div className="relative p-8 sm:p-12 lg:p-16 max-w-xl">
+      {/* Текст */}
+      <div className="relative max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="max-w-xl">
           <p className="text-choco-100/50 text-[11px] sm:text-xs uppercase tracking-[0.25em] mb-6 sm:mb-8">
             Клуб совместных закупок
           </p>
@@ -49,10 +51,10 @@ export default function HeroContent() {
             Оригинал · Экономия · Доверие
           </p>
         </div>
+      </div>
 
-        <div className="absolute top-5 right-5 sm:top-8 sm:right-8 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-gold-400/50 bg-choco-950/40 backdrop-blur-sm flex items-center justify-center">
-          <Icon name="Sparkles" size={16} className="text-gold-400" />
-        </div>
+      <div className="absolute top-5 right-5 sm:top-8 sm:right-8 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-gold-400/50 bg-choco-950/40 backdrop-blur-sm flex items-center justify-center">
+        <Icon name="Sparkles" size={16} className="text-gold-400" />
       </div>
     </section>
   )
