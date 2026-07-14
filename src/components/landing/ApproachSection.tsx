@@ -26,17 +26,23 @@ export default function ApproachSection() {
     <section className="px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden border border-gold-500/15 bg-choco-900 relative p-8 sm:p-12 lg:p-16">
         <div
-          className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
+          className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
           style={{
             backgroundImage: 'url(/images/noise-texture.png)',
             backgroundSize: '256px 256px',
           }}
         />
+        <div
+          className="absolute inset-0 opacity-[0.35] pointer-events-none"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(135deg, rgba(212,185,110,0.05) 0px, rgba(212,185,110,0.05) 1px, transparent 1px, transparent 14px)',
+          }}
+        />
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-gold-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-gold-500/5 rounded-full blur-[100px] pointer-events-none" />
 
-        <div className="relative flex items-center justify-between mb-10 sm:mb-14">
-          <span className="text-choco-100/40 text-xs tracking-[0.25em]">02</span>
+        <div className="relative flex items-center justify-end mb-10 sm:mb-14">
           <span className="text-choco-100/40 text-xs tracking-[0.25em] uppercase">Наш подход</span>
         </div>
 
@@ -46,9 +52,9 @@ export default function ApproachSection() {
 
         <div className="relative grid sm:grid-cols-3 gap-10 sm:gap-8">
           {points.map((p) => (
-            <div key={p.num}>
-              <div className="w-14 h-14 rounded-full border border-gold-500/30 flex items-center justify-center mb-6">
-                <Icon name={p.icon} size={22} className="text-gold-400" />
+            <div key={p.num} className="group">
+              <div className="w-20 h-20 rounded-full border border-gold-500/30 flex items-center justify-center mb-6 transition-all duration-300 group-hover:border-gold-400/60 group-hover:scale-110 group-hover:-translate-y-1">
+                <Icon name={p.icon} size={34} className="text-gold-400 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" />
               </div>
               <div className="font-serif text-gold-400/70 text-3xl mb-3">{p.num}</div>
               <div className="text-choco-50 text-xs uppercase tracking-[0.2em] mb-3">{p.title}</div>
