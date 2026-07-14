@@ -100,7 +100,7 @@ export default function Catalog() {
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-orange-400 transition-colors">
+        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
           Распивошная
         </Link>
         <nav className="hidden md:flex items-center gap-5 text-sm">
@@ -111,8 +111,8 @@ export default function Catalog() {
           {user ? (
             <>
               {(user.role === 'admin' || user.role === 'moderator') && (
-                <ShimmerLink to="/admin" shimmerColor="#f97316" shimmerDuration="2.5s" borderRadius="8px"
-                  className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
+                <ShimmerLink to="/admin" shimmerColor="#14b8a6" shimmerDuration="2.5s" borderRadius="8px"
+                  className="px-4 py-2 text-xs font-medium text-teal-300 border-teal-500/40">
                   Админ
                 </ShimmerLink>
               )}
@@ -128,8 +128,8 @@ export default function Catalog() {
               <ShimmerLink to="/login" borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
                 Войти
               </ShimmerLink>
-              <ShimmerLink to="/register" shimmerColor="#f97316" shimmerDuration="2s" borderRadius="8px"
-                className="px-4 py-2 text-xs font-medium text-orange-300 border-orange-500/40">
+              <ShimmerLink to="/register" shimmerColor="#14b8a6" shimmerDuration="2s" borderRadius="8px"
+                className="px-4 py-2 text-xs font-medium text-teal-300 border-teal-500/40">
                 Регистрация
               </ShimmerLink>
             </>
@@ -162,7 +162,7 @@ export default function Catalog() {
                 <button key={opt.val} onClick={() => setCategory(opt.val)}
                   className={`text-sm px-4 py-2 rounded-lg font-medium transition-all ${
                     category === opt.val
-                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                      ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
                       : 'text-white/50 hover:text-white hover:bg-white/8'
                   }`}>
                   {opt.label}
@@ -199,7 +199,7 @@ export default function Catalog() {
                     onClick={() => { setBrandDropdownOpen(v => !v); setBrandSearch('') }}
                     className={`flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-all ${
                       brandFilter
-                        ? 'border-orange-500/60 bg-orange-500/10 text-orange-300'
+                        ? 'border-teal-500/60 bg-teal-500/10 text-teal-300'
                         : 'border-white/15 bg-white/5 text-white/60 hover:text-white hover:border-white/30'
                     }`}
                   >
@@ -208,7 +208,7 @@ export default function Catalog() {
                     {brandFilter && (
                       <span
                         onClick={e => { e.stopPropagation(); setBrandFilter(''); setBrandDropdownOpen(false) }}
-                        className="ml-1 text-orange-400/60 hover:text-orange-300 cursor-pointer"
+                        className="ml-1 text-teal-400/60 hover:text-teal-300 cursor-pointer"
                       >
                         <Icon name="X" size={12} />
                       </span>
@@ -244,7 +244,7 @@ export default function Catalog() {
                             onClick={() => { setBrandFilter(brand); setBrandDropdownOpen(false); setBrandSearch('') }}
                             className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                               brandFilter === brand
-                                ? 'text-orange-300 bg-orange-500/10'
+                                ? 'text-teal-300 bg-teal-500/10'
                                 : 'text-white/60 hover:text-white hover:bg-white/5'
                             }`}
                           >
@@ -282,7 +282,7 @@ export default function Catalog() {
               {brandFilter ? `Нет товаров бренда ${brandFilter}` : category === 'bottle' ? 'Флаконы ещё не добавлены' : 'Каталог пока пуст'}
             </h2>
             {brandFilter && (
-              <button onClick={() => setBrandFilter('')} className="mt-3 text-orange-400 text-sm hover:underline">
+              <button onClick={() => setBrandFilter('')} className="mt-3 text-teal-400 text-sm hover:underline">
                 Показать все бренды
               </button>
             )}
@@ -315,16 +315,16 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link to={`/catalog/${product.id}`} className="group block">
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-orange-500/40 hover:bg-white/8 transition-all duration-300">
+      <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-teal-500/40 hover:bg-white/8 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300">
         {/* Image */}
-        <div className="aspect-square bg-gradient-to-br from-orange-500/10 to-purple-500/10 flex items-center justify-center relative overflow-hidden">
+        <div className="aspect-square bg-gradient-to-br from-teal-500/10 to-purple-500/10 flex items-center justify-center relative overflow-hidden">
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
           ) : (
             <div className="text-5xl">{isBottle ? '🫙' : '🌸'}</div>
           )}
           {isAlmostFull && !isBottle && (
-            <div className="absolute top-3 right-3 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            <div className="absolute top-3 right-3 bg-teal-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
               Скоро выкуп
             </div>
           )}
@@ -338,7 +338,7 @@ function ProductCard({ product }: { product: Product }) {
         {/* Info */}
         <div className="p-4">
           <div className="text-white/40 text-xs mb-1 uppercase tracking-wider">{product.brand}</div>
-          <h3 className="text-white font-semibold text-sm leading-tight mb-2 group-hover:text-orange-300 transition-colors line-clamp-2">
+          <h3 className="text-white font-semibold text-sm leading-tight mb-2 group-hover:text-teal-300 transition-colors line-clamp-2">
             {product.name}
           </h3>
           <div className="text-white/30 text-xs mb-3">{CONC_LABEL[product.concentration] || product.concentration}</div>
@@ -346,7 +346,7 @@ function ProductCard({ product }: { product: Product }) {
           {isBottle ? (
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-orange-400 font-bold text-lg">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
+                <span className="text-teal-400 font-bold text-lg">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
               </div>
               <div className="flex items-center gap-1 text-white/30 text-xs">
                 <Icon name="Package" size={12} />
@@ -362,14 +362,14 @@ function ProductCard({ product }: { product: Product }) {
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
+                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-teal-500' : 'bg-teal-400/60'}`}
                     style={{ width: `${fillPercent}%` }}
                   />
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-orange-400 font-bold text-lg">{product.price_per_ml} ₽</span>
+                  <span className="text-teal-400 font-bold text-lg">{product.price_per_ml} ₽</span>
                   <span className="text-white/40 text-xs"> / мл</span>
                 </div>
                 <div className="flex items-center gap-1 text-white/30 text-xs">

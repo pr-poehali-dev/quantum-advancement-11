@@ -195,7 +195,7 @@ export default function CreateProductModal({ onCreated, onClose }: Props) {
             Отмена
           </Button>
           <Button onClick={handleSave} disabled={saving || uploadingImage}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6">
+            className="bg-teal-500 hover:bg-teal-600 text-white px-6">
             {saving ? (
               <><Icon name="Loader2" size={14} className="animate-spin mr-2" />Создаю...</>
             ) : 'Создать товар'}

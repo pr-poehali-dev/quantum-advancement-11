@@ -26,7 +26,7 @@ export default function Login() {
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="text-white font-bold text-2xl tracking-wide hover:text-orange-400 transition-colors">
+          <Link to="/" className="text-white font-bold text-2xl tracking-wide hover:text-teal-400 transition-colors">
             Распивошная
           </Link>
           <p className="text-white/50 mt-2 text-sm">Нишевый парфюм от 1 мл</p>
@@ -40,7 +40,7 @@ export default function Login() {
               <Label className="text-white/70 text-sm">Email</Label>
               <Input
                 type="email"
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="mail@example.com"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -51,7 +51,7 @@ export default function Login() {
               <Label className="text-white/70 text-sm">Пароль</Label>
               <Input
                 type="password"
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="ваш пароль"
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
@@ -68,7 +68,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl mt-2"
+              className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl mt-2"
             >
               {loading ? 'Входим...' : 'Войти'}
             </Button>
@@ -76,7 +76,7 @@ export default function Login() {
 
           <p className="text-white/40 text-sm text-center mt-6">
             Нет аккаунта?{' '}
-            <Link to="/register" className="text-orange-400 hover:text-orange-300 transition-colors">
+            <Link to="/register" className="text-teal-400 hover:text-teal-300 transition-colors">
               Зарегистрироваться
             </Link>
           </p>

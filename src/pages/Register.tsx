@@ -30,7 +30,7 @@ export default function Register() {
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="text-white font-bold text-2xl tracking-wide hover:text-orange-400 transition-colors">
+          <Link to="/" className="text-white font-bold text-2xl tracking-wide hover:text-teal-400 transition-colors">
             Распивошная
           </Link>
           <p className="text-white/50 mt-2 text-sm">Нишевый парфюм от 1 мл</p>
@@ -43,7 +43,7 @@ export default function Register() {
             <div>
               <Label className="text-white/70 text-sm">Ник</Label>
               <Input
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="например: aromalover"
                 value={form.nickname}
                 onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))}
@@ -54,7 +54,7 @@ export default function Register() {
               <Label className="text-white/70 text-sm">Email</Label>
               <Input
                 type="email"
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="mail@example.com"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -65,7 +65,7 @@ export default function Register() {
               <Label className="text-white/70 text-sm">Телефон</Label>
               <Input
                 type="tel"
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="+7 900 000 00 00"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -76,7 +76,7 @@ export default function Register() {
               <Label className="text-white/70 text-sm">Пароль</Label>
               <Input
                 type="password"
-                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-orange-500"
+                className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-teal-500"
                 placeholder="минимум 6 символов"
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
@@ -94,7 +94,7 @@ export default function Register() {
                 />
                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                   agreed
-                    ? 'bg-orange-500 border-orange-500'
+                    ? 'bg-teal-500 border-teal-500'
                     : error && !agreed
                     ? 'border-red-500 bg-red-500/10'
                     : 'border-white/30 bg-white/5 group-hover:border-white/50'
@@ -108,11 +108,11 @@ export default function Register() {
               </div>
               <span className="text-white/50 text-sm leading-snug select-none">
                 Я прочитал(а) и принимаю{' '}
-                <Link to="/offer" target="_blank" onClick={e => e.stopPropagation()} className="text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2">
+                <Link to="/offer" target="_blank" onClick={e => e.stopPropagation()} className="text-teal-400 hover:text-teal-300 transition-colors underline underline-offset-2">
                   договор оферты
                 </Link>
                 {' '}и{' '}
-                <Link to="/rules" target="_blank" onClick={e => e.stopPropagation()} className="text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2">
+                <Link to="/rules" target="_blank" onClick={e => e.stopPropagation()} className="text-teal-400 hover:text-teal-300 transition-colors underline underline-offset-2">
                   правила участия
                 </Link>
               </span>
@@ -128,7 +128,7 @@ export default function Register() {
                 />
                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                   agreedPrivacy
-                    ? 'bg-orange-500 border-orange-500'
+                    ? 'bg-teal-500 border-teal-500'
                     : error && !agreedPrivacy
                     ? 'border-red-500 bg-red-500/10'
                     : 'border-white/30 bg-white/5 group-hover:border-white/50'
@@ -142,7 +142,7 @@ export default function Register() {
               </div>
               <span className="text-white/50 text-sm leading-snug select-none">
                 Я даю согласие на обработку персональных данных в соответствии с{' '}
-                <Link to="/privacy" target="_blank" onClick={e => e.stopPropagation()} className="text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2">
+                <Link to="/privacy" target="_blank" onClick={e => e.stopPropagation()} className="text-teal-400 hover:text-teal-300 transition-colors underline underline-offset-2">
                   Политикой конфиденциальности
                 </Link>
               </span>
@@ -157,7 +157,7 @@ export default function Register() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl mt-2"
+              className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl mt-2"
             >
               {loading ? 'Регистрируемся...' : 'Зарегистрироваться'}
             </Button>
@@ -165,7 +165,7 @@ export default function Register() {
 
           <p className="text-white/40 text-sm text-center mt-6">
             Уже есть аккаунт?{' '}
-            <Link to="/login" className="text-orange-400 hover:text-orange-300 transition-colors">
+            <Link to="/login" className="text-teal-400 hover:text-teal-300 transition-colors">
               Войти
             </Link>
           </p>

@@ -230,7 +230,7 @@ export function PaymentsTab({ payments, loading, onConfirmed }: { payments: Paym
         <button onClick={() => setSubTab('pending')}
           className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors relative ${subTab === 'pending' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60'}`}>
           На подтверждение
-          {payments.length > 0 && <span className="ml-1.5 bg-orange-500/30 text-orange-200 text-xs rounded-full px-1.5">{payments.length}</span>}
+          {payments.length > 0 && <span className="ml-1.5 bg-teal-500/30 text-teal-200 text-xs rounded-full px-1.5">{payments.length}</span>}
         </button>
         <button onClick={() => setSubTab('confirmed')}
           className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${subTab === 'confirmed' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60'}`}>

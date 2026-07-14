@@ -8,7 +8,7 @@ export default function HeroContent() {
       <div className="grid md:grid-cols-2 gap-12 md:gap-8 items-center">
         <div>
           <div className="inline-flex items-center gap-2 bg-neutral-100 border border-black/5 rounded-full px-3.5 py-1.5 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
             <span className="text-neutral-500 text-xs">Распив · Совместные закупки · от 1 мл</span>
           </div>
 
@@ -53,12 +53,12 @@ export default function HeroContent() {
           </div>
         </div>
 
-        <div className="relative order-first md:order-last">
-          <div className="aspect-square rounded-3xl bg-neutral-50 border border-black/5 overflow-hidden flex items-center justify-center">
+        <div className="relative order-first md:order-last group">
+          <div className="aspect-square rounded-3xl bg-neutral-50 border border-black/5 overflow-hidden flex items-center justify-center shadow-lg shadow-teal-100/50 hover:shadow-2xl hover:shadow-teal-200/50 transition-all duration-500">
             <img
               src="https://cdn.poehali.dev/projects/1a5ec0e8-88b9-4062-a5e2-e2ec44d19777/files/4b60d3b3-bfc0-477a-8fa1-b244b8e0d6aa.jpg"
               alt="Нишевый парфюм"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
           </div>
         </div>

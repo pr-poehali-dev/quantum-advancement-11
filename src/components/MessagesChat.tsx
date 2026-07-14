@@ -78,10 +78,10 @@ export default function MessagesChat({ onUnreadChange }: { onUnreadChange?: (n: 
     <div className="flex flex-col h-[500px] bg-white/3 border border-white/10 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
-        <Icon name="MessageCircle" size={16} className="text-orange-400" />
+        <Icon name="MessageCircle" size={16} className="text-teal-400" />
         <span className="text-white font-medium text-sm">Поддержка</span>
         {hasNew && (
-          <span className="bg-orange-500 text-white text-[10px] rounded-full px-2 py-0.5 font-bold animate-pulse">
+          <span className="bg-teal-500 text-white text-[10px] rounded-full px-2 py-0.5 font-bold animate-pulse">
             {unreadIds.size} новых
           </span>
         )}
@@ -103,27 +103,27 @@ export default function MessagesChat({ onUnreadChange }: { onUnreadChange?: (n: 
             <div key={m.id}>
               {isFirstNew && (
                 <div className="flex items-center gap-2 my-2">
-                  <div className="flex-1 h-px bg-orange-500/30" />
-                  <span className="text-orange-400 text-xs font-medium">Новые сообщения</span>
-                  <div className="flex-1 h-px bg-orange-500/30" />
+                  <div className="flex-1 h-px bg-teal-500/30" />
+                  <span className="text-teal-400 text-xs font-medium">Новые сообщения</span>
+                  <div className="flex-1 h-px bg-teal-500/30" />
                 </div>
               )}
               <div className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
                   m.is_mine
-                    ? 'bg-orange-500/20 border border-orange-500/30'
+                    ? 'bg-teal-500/20 border border-teal-500/30'
                     : isNew
-                    ? 'bg-orange-500/10 border border-orange-500/25 shadow-[0_0_10px_rgba(249,115,22,0.15)]'
+                    ? 'bg-teal-500/10 border border-teal-500/25 shadow-[0_0_10px_rgba(20,184,166,0.15)]'
                     : 'bg-white/8 border border-white/10'
                 }`}>
                   {!m.is_mine && (
-                    <div className="text-orange-400 text-xs font-medium mb-1">{m.from_nick}</div>
+                    <div className="text-teal-400 text-xs font-medium mb-1">{m.from_nick}</div>
                   )}
                   <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{m.body}</div>
                   <div className={`text-xs mt-1 flex items-center gap-1 ${m.is_mine ? 'justify-end text-white/30' : 'text-white/25'}`}>
                     {fmt(m.created_at)}
                     {m.is_mine && <span>{m.is_read ? '✓✓' : '✓'}</span>}
-                    {isNew && <span className="text-orange-400">●</span>}
+                    {isNew && <span className="text-teal-400">●</span>}
                   </div>
                 </div>
               </div>
@@ -141,12 +141,12 @@ export default function MessagesChat({ onUnreadChange }: { onUnreadChange?: (n: 
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
           placeholder="Напишите сообщение... (Enter — отправить)"
           rows={1}
-          className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-orange-500/50 transition-colors"
+          className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-teal-500/50 transition-colors"
         />
         <Button
           onClick={handleSend}
           disabled={sending || !text.trim()}
-          className="bg-orange-500 hover:bg-orange-600 text-white h-9 w-9 p-0 rounded-xl shrink-0"
+          className="bg-teal-500 hover:bg-teal-600 text-white h-9 w-9 p-0 rounded-xl shrink-0"
         >
           <Icon name="Send" size={15} />
         </Button>

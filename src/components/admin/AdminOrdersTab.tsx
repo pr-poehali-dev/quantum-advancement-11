@@ -45,7 +45,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_COLOR: Record<string, string> = {
   accepted: 'bg-white/10 text-white/60',
   fixed: 'bg-blue-500/15 text-blue-300',
-  awaiting_payment: 'bg-orange-500/20 text-orange-300',
+  awaiting_payment: 'bg-teal-500/20 text-teal-300',
   waiting: 'bg-purple-500/15 text-purple-300',
   delivery: 'bg-green-500/15 text-green-300',
   declined: 'bg-red-500/15 text-red-400',
@@ -120,9 +120,9 @@ function StatusCell({ order, onChanged }: { order: AdminOrder; onChanged: () => 
           onChange={e => setBatchInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') confirmDelivery(); if (e.key === 'Escape') { setPendingStatus(''); setEditing(false) } }}
           placeholder="№ выкупа"
-          className="bg-zinc-800 border border-orange-500/50 text-white text-xs rounded-md px-2 h-7 w-20"
+          className="bg-zinc-800 border border-teal-500/50 text-white text-xs rounded-md px-2 h-7 w-20"
         />
-        <button onClick={confirmDelivery} className="text-orange-400 hover:text-orange-300 text-xs px-1">✓</button>
+        <button onClick={confirmDelivery} className="text-teal-400 hover:text-teal-300 text-xs px-1">✓</button>
         <button onClick={() => { setPendingStatus(''); setEditing(false) }} className="text-white/30 hover:text-white/60 text-xs px-1">✕</button>
       </div>
     )
@@ -307,7 +307,7 @@ export default function AdminOrdersTab({
               placeholder="название / бренд"
               className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
           </div>
-          <Button onClick={onLoadArchive} disabled={archiveLoading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
+          <Button onClick={onLoadArchive} disabled={archiveLoading} className="bg-teal-500 hover:bg-teal-600 text-white h-9 text-sm px-5">
             {archiveLoading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
           </Button>
           <Button variant="ghost" onClick={() => { setArchiveFilterNick(''); setArchiveFilterProduct('') }}
@@ -318,7 +318,7 @@ export default function AdminOrdersTab({
         <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${archiveSelected.size > 0 ? 'bg-zinc-700/30 border-zinc-500/40' : 'bg-white/3 border-white/10'}`}>
           <button onClick={() => { if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set()); else setArchiveSelected(new Set(archivedOrders.map(o => o.id))) }}
             className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
-            <input type="checkbox" readOnly checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} className="accent-orange-500 w-4 h-4 pointer-events-none" />
+            <input type="checkbox" readOnly checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} className="accent-teal-500 w-4 h-4 pointer-events-none" />
             {archiveSelected.size > 0 ? <span className="text-zinc-300 font-medium">Выбрано: {archiveSelected.size} из {archivedOrders.length}</span> : <span>Выбрать все</span>}
           </button>
           <div className="flex items-center gap-2 ml-auto">
@@ -334,7 +334,7 @@ export default function AdminOrdersTab({
           <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="border-b border-white/10 bg-white/3">
-                <th className="px-3 py-3 text-left w-10"><input type="checkbox" checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} onChange={() => { if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set()); else setArchiveSelected(new Set(archivedOrders.map(o => o.id))) }} className="accent-orange-500 w-4 h-4 cursor-pointer" /></th>
+                <th className="px-3 py-3 text-left w-10"><input type="checkbox" checked={archivedOrders.length > 0 && archiveSelected.size === archivedOrders.length} onChange={() => { if (archiveSelected.size === archivedOrders.length) setArchiveSelected(new Set()); else setArchiveSelected(new Set(archivedOrders.map(o => o.id))) }} className="accent-teal-500 w-4 h-4 cursor-pointer" /></th>
                 <th className="px-3 py-3 text-left text-white/40 font-medium">Ник</th>
                 <th className="px-3 py-3 text-left text-white/40 font-medium">Товар</th>
                 <th className="px-3 py-3 text-center text-white/40 font-medium">мл</th>
@@ -353,7 +353,7 @@ export default function AdminOrdersTab({
                 const soonDelete = daysLeft !== null && daysLeft <= 30
                 return (
                   <tr key={o.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${archiveSelected.has(o.id) ? 'bg-white/5' : ''}`}>
-                    <td className="px-3 py-3"><input type="checkbox" checked={archiveSelected.has(o.id)} onChange={() => setArchiveSelected(prev => { const n = new Set(prev); if (n.has(o.id)) { n.delete(o.id) } else { n.add(o.id) } return n })} className="accent-orange-500 w-4 h-4 cursor-pointer" /></td>
+                    <td className="px-3 py-3"><input type="checkbox" checked={archiveSelected.has(o.id)} onChange={() => setArchiveSelected(prev => { const n = new Set(prev); if (n.has(o.id)) { n.delete(o.id) } else { n.add(o.id) } return n })} className="accent-teal-500 w-4 h-4 cursor-pointer" /></td>
                     <td className="px-3 py-3 text-white/80 font-medium">{o.nickname}</td>
                     <td className="px-3 py-3"><div className="text-white/80">{o.product_name}</div><div className="text-white/30 text-xs">{o.brand}</div></td>
                     <td className="px-3 py-3 text-center text-white/60">{o.volume_ml}</td>
@@ -434,7 +434,7 @@ export default function AdminOrdersTab({
             className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm"
           />
         </div>
-        <Button onClick={onLoad} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 text-sm px-5">
+        <Button onClick={onLoad} disabled={loading} className="bg-teal-500 hover:bg-teal-600 text-white h-9 text-sm px-5">
           {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
         </Button>
         <Button variant="ghost" onClick={() => { setFilterNick(''); setFilterProduct(''); setFilterStatus(''); setFilterDelivery(''); setFilterBatch('') }}
@@ -444,7 +444,7 @@ export default function AdminOrdersTab({
       </div>
 
       {/* Панель групповых действий */}
-      <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${selected.size > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/3 border-white/10'}`}>
+      <div className={`flex flex-wrap items-center gap-3 mb-4 rounded-xl px-4 py-3 border transition-all ${selected.size > 0 ? 'bg-teal-500/10 border-teal-500/30' : 'bg-white/3 border-white/10'}`}>
         <button
           onClick={toggleAll}
           className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors"
@@ -453,10 +453,10 @@ export default function AdminOrdersTab({
             type="checkbox"
             readOnly
             checked={orders.length > 0 && selected.size === orders.length}
-            className="accent-orange-500 w-4 h-4 pointer-events-none"
+            className="accent-teal-500 w-4 h-4 pointer-events-none"
           />
           {selected.size > 0
-            ? <span className="text-orange-300 font-medium">Выбрано: {selected.size} из {orders.length}</span>
+            ? <span className="text-teal-300 font-medium">Выбрано: {selected.size} из {orders.length}</span>
             : <span>Выбрать все</span>
           }
         </button>
@@ -480,13 +480,13 @@ export default function AdminOrdersTab({
               value={bulkBatch}
               onChange={e => setBulkBatch(e.target.value)}
               placeholder="№ выкупа"
-              className="bg-white/10 border border-orange-500/50 text-white text-sm rounded-md px-3 h-8 w-28 placeholder:text-white/30"
+              className="bg-white/10 border border-teal-500/50 text-white text-sm rounded-md px-3 h-8 w-28 placeholder:text-white/30"
             />
           )}
           <Button
             onClick={onBulkStatus}
             disabled={applying || !bulkStatus || selected.size === 0}
-            className="bg-orange-500 hover:bg-orange-600 text-white h-8 text-xs px-4 disabled:opacity-40"
+            className="bg-teal-500 hover:bg-teal-600 text-white h-8 text-xs px-4 disabled:opacity-40"
           >
             {applying ? 'Применяю...' : 'Применить'}
           </Button>
@@ -569,7 +569,7 @@ export default function AdminOrdersTab({
                   type="checkbox"
                   checked={orders.length > 0 && selected.size === orders.length}
                   onChange={toggleAll}
-                  className="accent-orange-500 w-4 h-4 cursor-pointer"
+                  className="accent-teal-500 w-4 h-4 cursor-pointer"
                 />
               </th>
               <SortTh field="id" className="text-left">№</SortTh>
@@ -600,14 +600,14 @@ export default function AdminOrdersTab({
               sorted.map(order => (
                 <tr
                   key={order.id}
-                  className={`border-b border-white/5 hover:bg-white/3 transition-colors ${selected.has(order.id) ? 'bg-orange-500/5' : ''}`}
+                  className={`border-b border-white/5 hover:bg-white/3 transition-colors ${selected.has(order.id) ? 'bg-teal-500/5' : ''}`}
                 >
                   <td className="px-3 py-3">
                     <input
                       type="checkbox"
                       checked={selected.has(order.id)}
                       onChange={() => toggleSelect(order.id)}
-                      className="accent-orange-500 w-4 h-4 cursor-pointer"
+                      className="accent-teal-500 w-4 h-4 cursor-pointer"
                     />
                   </td>
                   <td className="px-3 py-3 text-white/50 font-mono text-xs">#{order.id}</td>
@@ -616,7 +616,7 @@ export default function AdminOrdersTab({
                     <span className="text-white font-medium">@{order.nickname}</span>
                   </td>
                   <td className="px-3 py-3">
-                    <Link to={`/catalog/${order.product_id}`} className="hover:text-orange-300 transition-colors">
+                    <Link to={`/catalog/${order.product_id}`} className="hover:text-teal-300 transition-colors">
                       <div className="text-white/80 leading-tight">{order.product_name}</div>
                       <div className="text-white/30 text-xs">{order.brand}</div>
                     </Link>
@@ -638,7 +638,7 @@ export default function AdminOrdersTab({
                     )}
                   </td>
                   <td className="px-3 py-3 text-right">
-                    <span className="text-orange-400 font-semibold">{order.total_price} ₽</span>
+                    <span className="text-teal-400 font-semibold">{order.total_price} ₽</span>
                     {order.payment_amount && (
                       <div className={`text-xs mt-1 flex items-center gap-1 ${order.payment_confirmed ? 'text-green-400' : 'text-yellow-400/70'}`}>
                         <Icon name={order.payment_confirmed ? 'CheckCircle' : 'Clock'} size={10} />
@@ -648,7 +648,7 @@ export default function AdminOrdersTab({
                   </td>
                   <td className="px-3 py-3 text-center">
                     {order.pickup_batch
-                      ? <span className="text-orange-400 font-mono font-semibold text-sm">№{order.pickup_batch}</span>
+                      ? <span className="text-teal-400 font-mono font-semibold text-sm">№{order.pickup_batch}</span>
                       : <span className="text-white/20 text-xs">—</span>
                     }
                   </td>
@@ -678,7 +678,7 @@ export default function AdminOrdersTab({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-white/40 text-sm">Сумма:</span>
-            <span className="text-orange-400 font-bold text-lg">{totalSum.toFixed(2)} ₽</span>
+            <span className="text-teal-400 font-bold text-lg">{totalSum.toFixed(2)} ₽</span>
           </div>
         </div>
       )}

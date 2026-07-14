@@ -153,7 +153,7 @@ export default function ProductPage() {
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-10">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-orange-400 transition-colors">
+        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
           Распивошная
         </Link>
         <div className="flex items-center gap-3">
@@ -175,7 +175,7 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
 
           {/* Изображение */}
-          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-orange-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center relative group">
+          <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-teal-500/10 to-purple-500/10 border border-white/10 flex items-center justify-center relative group">
             {(editing ? editForm.image_url : product.image_url) ? (
               <img src={(editing ? editForm.image_url : product.image_url) || ''} alt={product.name} className="w-full h-full object-cover" />
             ) : (
@@ -208,7 +208,7 @@ export default function ProductPage() {
               <div className="flex justify-end">
                 {editing ? (
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                    <Button size="sm" onClick={handleSave} disabled={saving} className="bg-teal-500 hover:bg-teal-600 text-white text-xs">
                       {saving ? 'Сохраняю...' : 'Сохранить'}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditForm(product) }} className="text-white/50 text-xs">
@@ -304,19 +304,19 @@ export default function ProductPage() {
               <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-white/50">Забронировано</span>
-                  <span className={`font-semibold ${isAlmostFull ? 'text-orange-400' : 'text-white'}`}>
+                  <span className={`font-semibold ${isAlmostFull ? 'text-teal-400' : 'text-white'}`}>
                     {product.booked_ml} / {product.bottle_ml} мл
                   </span>
                 </div>
                 <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
                   <div
-                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-orange-500' : 'bg-orange-400/60'}`}
+                    className={`h-full rounded-full transition-all ${isAlmostFull ? 'bg-teal-500' : 'bg-teal-400/60'}`}
                     style={{ width: `${fillPercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-xs text-white/30">
                   <span>Свободно: {product.available_ml} мл</span>
-                  {isAlmostFull && <span className="text-orange-400 font-medium">Скоро выкуп!</span>}
+                  {isAlmostFull && <span className="text-teal-400 font-medium">Скоро выкуп!</span>}
                 </div>
               </div>
             )}
@@ -325,12 +325,12 @@ export default function ProductPage() {
             <div className="flex items-baseline gap-2">
               {isBottle ? (
                 <>
-                  <span className="text-orange-400 text-3xl font-bold">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
+                  <span className="text-teal-400 text-3xl font-bold">{Math.round(product.price_per_ml * product.bottle_ml)} ₽</span>
                   <span className="text-white/40 text-sm">{product.bottle_ml} мл</span>
                 </>
               ) : (
                 <>
-                  <span className="text-orange-400 text-3xl font-bold">{editing ? (editForm.price_per_ml ?? product.price_per_ml) : product.price_per_ml} ₽</span>
+                  <span className="text-teal-400 text-3xl font-bold">{editing ? (editForm.price_per_ml ?? product.price_per_ml) : product.price_per_ml} ₽</span>
                   <span className="text-white/40">/ мл</span>
                 </>
               )}
@@ -401,7 +401,7 @@ export default function ProductPage() {
                 <Button
                   onClick={handleOrder}
                   disabled={placing || (!isBottle && volume < 1)}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl"
+                  className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl"
                 >
                   {placing ? 'Оформляем...' : user ? (isBottle ? 'Заказать флакон' : 'Оформить заказ') : 'Войдите, чтобы заказать'}
                 </Button>
@@ -409,14 +409,14 @@ export default function ProductPage() {
 
               {!user && (
                 <p className="text-white/30 text-xs text-center">
-                  <Link to="/login" className="text-orange-400 hover:underline">Войдите</Link> или{' '}
-                  <Link to="/register" className="text-orange-400 hover:underline">зарегистрируйтесь</Link>
+                  <Link to="/login" className="text-teal-400 hover:underline">Войдите</Link> или{' '}
+                  <Link to="/register" className="text-teal-400 hover:underline">зарегистрируйтесь</Link>
                 </p>
               )}
 
               <p className="text-white/25 text-xs leading-relaxed pt-1 border-t border-white/5">
                 Внимание: товар продаётся на розлив (методом отмеривания) из оригинального флакона строго под ваш заказ после его оплаты. Подробнее о процессе розлива и маркировке читайте в{' '}
-                <Link to="/offer" target="_blank" className="text-white/40 hover:text-orange-400 underline underline-offset-2 transition-colors">
+                <Link to="/offer" target="_blank" className="text-white/40 hover:text-teal-400 underline underline-offset-2 transition-colors">
                   Договоре оферты
                 </Link>.
               </p>

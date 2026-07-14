@@ -46,7 +46,7 @@ export default function TelegramCallback() {
       <div className="text-center space-y-4">
         {status === "loading" && (
           <>
-            <div className="w-10 h-10 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-10 h-10 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-white">Выполняется вход через Telegram...</p>
           </>
         )}
@@ -62,7 +62,7 @@ export default function TelegramCallback() {
             <p className="text-white text-lg">{errorMsg}</p>
             <button
               onClick={() => navigate("/login")}
-              className="text-orange-400 underline text-sm"
+              className="text-teal-400 underline text-sm"
             >
               Вернуться на страницу входа
             </button>

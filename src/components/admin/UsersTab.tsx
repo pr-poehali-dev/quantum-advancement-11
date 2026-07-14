@@ -158,7 +158,7 @@ export default function UsersTab() {
             placeholder="@ник / email / +7..."
             className="bg-white/5 border-white/15 text-white placeholder:text-white/20 h-9 text-sm" />
         </div>
-        <Button onClick={load} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white h-9 px-5 text-sm">
+        <Button onClick={load} disabled={loading} className="bg-teal-500 hover:bg-teal-600 text-white h-9 px-5 text-sm">
           {loading ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Найти'}
         </Button>
         <Button variant="ghost" onClick={() => setSearch('')} className="text-white/30 hover:text-white h-9 text-sm">Сбросить</Button>
@@ -177,7 +177,7 @@ export default function UsersTab() {
           <thead>
             <tr className="border-b border-white/10 bg-white/3">
               <th className="px-3 py-3 w-10">
-                <input type="checkbox" className="accent-orange-500 w-4 h-4 cursor-pointer"
+                <input type="checkbox" className="accent-teal-500 w-4 h-4 cursor-pointer"
                   checked={users.length > 0 && broadcastSelected.size === users.length}
                   onChange={() => setBroadcastSelected(broadcastSelected.size === users.length ? new Set() : new Set(users.map(u => u.id)))} />
               </th>
@@ -200,7 +200,7 @@ export default function UsersTab() {
             {!loading && users.map(u => (
               <tr key={u.id} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${u.is_blocked ? 'opacity-50' : ''}`}>
                 <td className="px-3 py-3">
-                  <input type="checkbox" className="accent-orange-500 w-4 h-4 cursor-pointer"
+                  <input type="checkbox" className="accent-teal-500 w-4 h-4 cursor-pointer"
                     checked={broadcastSelected.has(u.id)}
                     onChange={() => setBroadcastSelected(prev => { const n = new Set(prev); if (n.has(u.id)) { n.delete(u.id) } else { n.add(u.id) } return n })} />
                 </td>
@@ -208,12 +208,12 @@ export default function UsersTab() {
                   <div className="font-medium text-white/90">@{u.nickname}</div>
                   <div className="text-white/35 text-xs">{u.email} · {u.phone}</div>
                   {u.customer_code && (
-                    <div className="text-orange-400/70 text-xs font-mono mt-0.5">{u.customer_code}</div>
+                    <div className="text-teal-400/70 text-xs font-mono mt-0.5">{u.customer_code}</div>
                   )}
                   {u.admin_note && <div className="text-yellow-400/60 text-xs mt-0.5 italic">📝 {u.admin_note}</div>}
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-orange-500/20 text-orange-300' : u.role === 'moderator' ? 'bg-blue-500/20 text-blue-300' : 'bg-white/10 text-white/50'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-teal-500/20 text-teal-300' : u.role === 'moderator' ? 'bg-blue-500/20 text-blue-300' : 'bg-white/10 text-white/50'}`}>
                     {ROLE_LABEL[u.role] || u.role}
                   </span>
                 </td>
@@ -236,7 +236,7 @@ export default function UsersTab() {
                     <button onClick={() => openChat(u)} title="Написать" className="p-1.5 rounded-lg text-white/30 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
                       <Icon name="MessageCircle" size={15} />
                     </button>
-                    <button onClick={() => { setEditUser(u); setEditForm({ ...u, newTag: '' }) }} title="Редактировать" className="p-1.5 rounded-lg text-white/30 hover:text-orange-400 hover:bg-orange-500/10 transition-colors">
+                    <button onClick={() => { setEditUser(u); setEditForm({ ...u, newTag: '' }) }} title="Редактировать" className="p-1.5 rounded-lg text-white/30 hover:text-teal-400 hover:bg-teal-500/10 transition-colors">
                       <Icon name="Pencil" size={15} />
                     </button>
                     <button onClick={() => { setBlockModal({ user: u, unblock: u.is_blocked }); setBlockReason('') }} title={u.is_blocked ? 'Разблокировать' : 'Заблокировать'}
@@ -313,7 +313,7 @@ export default function UsersTab() {
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <Button onClick={saveUser} disabled={saving} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
+              <Button onClick={saveUser} disabled={saving} className="flex-1 bg-teal-500 hover:bg-teal-600 text-white">
                 {saving ? 'Сохраняю...' : 'Сохранить'}
               </Button>
               <Button variant="outline" onClick={() => setEditUser(null)} className="border-white/20 text-white/50 hover:bg-white/10">Отмена</Button>
@@ -353,7 +353,7 @@ export default function UsersTab() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setChatUser(null)}>
           <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-lg flex flex-col h-[560px]" onClick={e => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
-              <Icon name="MessageCircle" size={15} className="text-orange-400" />
+              <Icon name="MessageCircle" size={15} className="text-teal-400" />
               <span className="text-white font-medium text-sm">@{chatUser.nickname}</span>
               <button onClick={() => setChatUser(null)} className="ml-auto text-white/30 hover:text-white"><Icon name="X" size={16} /></button>
             </div>
@@ -364,7 +364,7 @@ export default function UsersTab() {
               )}
               {messages.map(m => (
                 <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${m.is_mine ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-white/8 border border-white/10'}`}>
+                  <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${m.is_mine ? 'bg-teal-500/20 border border-teal-500/30' : 'bg-white/8 border border-white/10'}`}>
                     {!m.is_mine && <div className="text-blue-400 text-xs font-medium mb-1">@{chatUser.nickname}</div>}
                     <div className="text-white text-sm whitespace-pre-wrap">{m.body}</div>
                     <div className="text-xs text-white/25 mt-1 text-right">{fmt(m.created_at)}</div>
@@ -377,8 +377,8 @@ export default function UsersTab() {
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
                 placeholder="Ответить... (Enter — отправить)"
                 rows={1}
-                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-orange-500/50" />
-              <Button onClick={sendReply} disabled={sending || !replyText.trim()} className="bg-orange-500 hover:bg-orange-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
+                className="flex-1 bg-white/5 border border-white/15 text-white placeholder:text-white/25 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-teal-500/50" />
+              <Button onClick={sendReply} disabled={sending || !replyText.trim()} className="bg-teal-500 hover:bg-teal-600 text-white h-9 w-9 p-0 rounded-xl shrink-0">
                 <Icon name="Send" size={15} />
               </Button>
             </div>
@@ -415,7 +415,7 @@ export default function UsersTab() {
               className="w-full bg-white/10 border border-white/20 text-white rounded-xl px-3 py-2 text-sm resize-none outline-none" />
             <div className="flex gap-2">
               <Button onClick={doBroadcast} disabled={broadcasting || !broadcastText.trim()}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
+                className="flex-1 bg-teal-500 hover:bg-teal-600 text-white">
                 {broadcasting ? 'Отправляю...' : 'Отправить'}
               </Button>
               <Button variant="outline" onClick={() => setBroadcastModal(false)} className="border-white/20 text-white/50 hover:bg-white/10">Отмена</Button>
