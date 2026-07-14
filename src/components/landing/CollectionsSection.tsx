@@ -2,20 +2,20 @@ import { Link } from "react-router-dom"
 
 const collections = [
   {
-    title: "Выбор куратора",
-    subtitle: "Кураторская подборка",
+    title: "Скоро ожидаем",
+    subtitle: "Ближайший выкуп",
     image: "https://cdn.poehali.dev/projects/1a5ec0e8-88b9-4062-a5e2-e2ec44d19777/files/7e83235b-6704-4c7e-aa3b-3b685d7d60d1.jpg",
     to: "/catalog",
   },
   {
-    title: "Новые поступления",
+    title: "Новинки в каталоге",
     subtitle: "Свежий распив",
     image: "https://cdn.poehali.dev/projects/1a5ec0e8-88b9-4062-a5e2-e2ec44d19777/files/df785943-8ff1-4221-876e-bf19299f1584.jpg",
     to: "/catalog?sort=",
   },
   {
-    title: "Ограниченная коллекция",
-    subtitle: "Редкие ароматы",
+    title: "Мы советуем",
+    subtitle: "Популярные ароматы",
     image: "https://cdn.poehali.dev/projects/1a5ec0e8-88b9-4062-a5e2-e2ec44d19777/files/42cee0bd-9ac1-4829-88c4-929908f72e18.jpg",
     to: "/catalog?category=bottle",
   },
