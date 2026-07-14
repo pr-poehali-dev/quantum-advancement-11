@@ -25,15 +25,6 @@ export default function ApproachSection() {
   return (
     <section className="px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden border border-gold-500/15 bg-choco-900 relative p-8 sm:p-12 lg:p-16">
-        <div
-          className="absolute inset-0 opacity-[0.12] pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, rgba(212,185,110,0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(212,185,110,0.4) 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
-        />
-
         <div className="relative flex items-center justify-between mb-10 sm:mb-14">
           <span className="text-choco-100/40 text-xs tracking-[0.25em]">02</span>
           <span className="text-choco-100/40 text-xs tracking-[0.25em] uppercase">Наш подход</span>
