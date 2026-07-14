@@ -8,7 +8,7 @@ export default function HeroContent() {
       <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden border border-gold-500/15 bg-choco-900 relative min-h-[480px] lg:min-h-[620px] flex items-end lg:items-center">
         {/* Фоновое изображение, плавно перетекающее в фоновый цвет */}
         <img
-          src="https://cdn.poehali.dev/projects/1a5ec0e8-88b9-4062-a5e2-e2ec44d19777/files/8ffd2a0c-6020-40f1-b8f2-ae79aa442a2a.jpg"
+          src="/images/hero-perfume-collection.jpg"
           alt="Нишевый парфюм"
           className="absolute inset-0 w-full h-full object-cover object-right"
         />
