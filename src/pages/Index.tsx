@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import LandingHeader from "@/components/landing/LandingHeader"
-import HeroBackground from "@/components/landing/HeroBackground"
 import HeroContent from "@/components/landing/HeroContent"
+import ApproachSection from "@/components/landing/ApproachSection"
 import CollectionsSection from "@/components/landing/CollectionsSection"
 import RecentProducts from "@/components/landing/RecentProducts"
 
@@ -10,10 +10,8 @@ export default function Index() {
     <div className="min-h-screen bg-choco-950 flex flex-col">
       <LandingHeader />
 
-      <div className="relative overflow-hidden">
-        <HeroBackground />
-        <HeroContent />
-      </div>
+      <HeroContent />
+      <ApproachSection />
 
       <CollectionsSection />
       <RecentProducts />
