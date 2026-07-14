@@ -1,5 +1,5 @@
 import { Menu, X } from "lucide-react"
-import { ShimmerLink } from "@/components/shimmer-button"
+import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/lib/auth-context"
@@ -10,53 +10,69 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header className="border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-sm z-50">
-        <Link to="/" className="text-white font-bold text-xl tracking-wide hover:text-teal-400 transition-colors">
-          Распивошная
-        </Link>
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-black/5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+          <Link to="/" className="text-neutral-900 font-semibold text-lg sm:text-xl tracking-tight">
+            Распивошная
+          </Link>
 
-        <nav className="hidden md:flex items-center gap-5 text-sm">
-          <Link to="/catalog" className="text-white/50 hover:text-white transition-colors">Каталог</Link>
-          <Link to="/how-it-works" className="text-white/50 hover:text-white transition-colors">Как это работает</Link>
-          <Link to="/forum" className="text-white/50 hover:text-white transition-colors">Форум</Link>
-        </nav>
+          <nav className="hidden md:flex items-center gap-8">
+            <Link to="/catalog" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+              Каталог
+            </Link>
+            <Link to="/how-it-works" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+              Как это работает
+            </Link>
+            <Link to="/forum" className="text-neutral-500 hover:text-teal-600 transition-colors text-sm">
+              Форум
+            </Link>
+          </nav>
 
-        <div className="hidden md:flex items-center gap-2">
-          {user ? (
-            <ShimmerLink to="/cabinet" borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
-              Личный кабинет
-            </ShimmerLink>
-          ) : (
-            <ShimmerLink to="/login" borderRadius="8px" className="px-4 py-2 text-xs font-medium text-white">
-              Войти
-            </ShimmerLink>
-          )}
+          <div className="hidden md:block">
+            {user ? (
+              <Link to="/cabinet">
+                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5">
+                  Личный кабинет
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/login">
+                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5">
+                  Войти
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          <button className="md:hidden text-neutral-900 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-
-        <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
       </header>
 
       {mobileMenuOpen && (
-        <div className="relative z-50 md:hidden bg-black/95 backdrop-blur-sm border-b border-white/10">
+        <div className="relative z-50 md:hidden bg-white border-b border-black/5">
           <nav className="flex flex-col gap-4 px-6 py-6">
-            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-white/70 hover:text-white transition-colors">
+            <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
               Каталог
             </Link>
-            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-white/70 hover:text-white transition-colors">
+            <Link to="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
               Как это работает
             </Link>
-            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-white/70 hover:text-white transition-colors">
+            <Link to="/forum" onClick={() => setMobileMenuOpen(false)} className="text-neutral-600 hover:text-teal-600 transition-colors">
               Форум
             </Link>
             {user ? (
-              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)} className="text-teal-400 font-medium">
-                Личный кабинет
+              <Link to="/cabinet" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5 w-fit">
+                  Личный кабинет
+                </Button>
               </Link>
             ) : (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-teal-400 font-medium">
-                Войти
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-5 w-fit">
+                  Войти
+                </Button>
               </Link>
             )}
           </nav>
