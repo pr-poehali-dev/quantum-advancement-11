@@ -8,6 +8,7 @@ export default function Footer() {
         <div className="flex gap-4">
           <Link to="/offer" className="hover:text-gold-400 transition-colors">Договор оферты</Link>
           <Link to="/privacy" className="hover:text-gold-400 transition-colors">Политика конфиденциальности</Link>
+          <Link to="/consent" className="hover:text-gold-400 transition-colors">Согласие на обработку данных</Link>
           <Link to="/rules" className="hover:text-gold-400 transition-colors">Правила участия</Link>
         </div>
       </div>

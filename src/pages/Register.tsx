@@ -141,7 +141,11 @@ export default function Register() {
                 </div>
               </div>
               <span className="text-white/50 text-sm leading-snug select-none">
-                Я даю согласие на обработку персональных данных в соответствии с{' '}
+                Нажимая кнопку «Зарегистрироваться», я даю своё{' '}
+                <Link to="/consent" target="_blank" onClick={e => e.stopPropagation()} className="text-gold-400 hover:text-gold-300 transition-colors underline underline-offset-2">
+                  Согласие
+                </Link>
+                {' '}на обработку моих персональных данных в соответствии с Федеральным законом от 27.07.2006 года № 152-ФЗ «О персональных данных» на условиях и для целей, определённых{' '}
                 <Link to="/privacy" target="_blank" onClick={e => e.stopPropagation()} className="text-gold-400 hover:text-gold-300 transition-colors underline underline-offset-2">
                   Политикой конфиденциальности
                 </Link>

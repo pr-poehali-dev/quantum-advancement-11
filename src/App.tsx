@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./lib/auth-context";
+import CookieBanner from "@/components/CookieBanner";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -17,6 +18,7 @@ import ForumTopic from "./pages/ForumTopic";
 import Offer from "./pages/Offer";
 import Rules from "./pages/Rules";
 import Privacy from "./pages/Privacy";
+import Consent from "./pages/Consent";
 import NotFound from "./pages/NotFound";
 import TelegramCallback from "./pages/TelegramCallback";
 
@@ -43,10 +45,12 @@ const App = () => (
             <Route path="/offer" element={<Offer />} />
             <Route path="/rules" element={<Rules />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/consent" element={<Consent />} />
             <Route path="/auth/telegram/callback" element={<TelegramCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
